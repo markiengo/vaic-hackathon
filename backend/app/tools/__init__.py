@@ -1,16 +1,22 @@
-"""Typed tool interface stubs for P5 implementation."""
+"""Typed tool interface.
 
-from decimal import Decimal
+P1 supplies reconciliation tools; the remaining P2 contracts are stubs for
+P5's request-scoped implementations.
+"""
+
 from typing import Any
 from typing import Literal
 from typing import NoReturn
 
 from app.schemas.agent import (
-    MatchCandidate,
     MerchantMessageDraft,
-    ReconciliationExceptionDraft,
     TaxReadinessReport,
     ToolCallResult,
+)
+from app.tools.reconciliation import (
+    create_reconciliation_exception,
+    find_payment_reference,
+    score_match_candidates,
 )
 
 JSONValue = str | int | float | bool | None | dict[str, Any] | list[Any]
@@ -41,35 +47,6 @@ def get_cash_sessions(merchant_id: str, period: str) -> JSONList:
 def get_invoices(merchant_id: str, period: str) -> JSONList:
     """Return invoices for a merchant and period."""
     _not_implemented("get_invoices")
-
-
-def find_payment_reference(reference_number: str) -> JSONDict | None:
-    """Look up a payment reference in the canonical ledger."""
-    _not_implemented("find_payment_reference")
-
-
-# Matching tools
-def score_match_candidates(
-    merchant_id: str,
-    amount: Decimal,
-    time_window_minutes: int = 60,
-    sender_name: str | None = None,
-    note: str | None = None,
-) -> list[MatchCandidate]:
-    """Score candidate matches for a bank transaction."""
-    _not_implemented("score_match_candidates")
-
-
-def create_reconciliation_exception(
-    case_id: str,
-    merchant_id: str,
-    period: str,
-    exception_type: str,
-    reason: str,
-    ai_suggestion: JSONDict | None = None,
-) -> ReconciliationExceptionDraft:
-    """Create a reconciliation exception record."""
-    _not_implemented("create_reconciliation_exception")
 
 
 # Tax tools

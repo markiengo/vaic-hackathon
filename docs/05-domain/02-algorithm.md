@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Tech Lead
 > **Applies to:** Reconciliation matching engine
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** P1 deterministic core and DB reconciliation bridge implemented
+> **Last verified against code:** 2026-07-17 (`test_matching.py`, `test_allocation.py`, `test_reconciliation_integration.py`)
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -51,6 +51,7 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
 2. Look up payment_intent bằng reference
    - Nếu không tìm thấy → no exact match, chuyển sang candidate matching
    - Nếu tìm thấy nhưng expired → no exact match, chuyển sang candidate matching
+   - For historical reconciliation, expiry is evaluated at the canonical bank transaction timestamp
 
 3. Verify amount match
    - Nếu bank_transaction.amount == payment_intent.amount → continue

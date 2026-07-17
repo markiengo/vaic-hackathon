@@ -92,11 +92,8 @@ Mỗi tool có typed schema. Tools được gọi qua typed function calling.
 # Example tool contract
 @tool
 def score_match_candidates(
-    merchant_id: str,
-    amount: Decimal,
+    transaction_id: str,
     time_window_minutes: int = 60,
-    sender_name: str | None = None,
-    note: str | None = None,
 ) -> list[MatchCandidate]:
     """Score candidate orders cho một bank transaction.
     

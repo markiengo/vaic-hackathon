@@ -12,7 +12,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
-from app.adapters.sepay import SepayWebhookPayload, get_bank_transactions, process_webhook
+from app.adapters.sepay import get_bank_transactions
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.transaction import BankTransaction
@@ -36,6 +36,8 @@ TEST_PAYLOAD = {
 }
 
 EXPECTED_TX_ID = "SEPAY-99999"
+
+pytestmark = pytest.mark.usefixtures("seeded_db")
 
 
 @pytest.fixture(autouse=True)

@@ -15,6 +15,8 @@ from app.services.tax_rules import (
     validate_rule_version,
 )
 
+pytestmark = pytest.mark.usefixtures("seeded_db")
+
 
 async def test_retrieve_tax_rules_returns_2026_07():
     """retrieve_tax_rules('hộ_kinh_doanh', 'beauty_services') returns version 2026.07."""

@@ -112,6 +112,13 @@ class MatchCandidate(AgentSchema):
     score: Decimal
     confidence: Decimal
     reasoning: list[str] = Field(default_factory=list)
+    action: Literal["AUTO_MATCH", "HUMAN_CONFIRM", "UNMATCHED", "INVALID"] = "UNMATCHED"
+    deterministic_score: int = 0
+    display_score: int = 0
+    match_method: Literal["EXACT", "FUZZY", "MANUAL", "NONE"] = "FUZZY"
+    confidence_method: str = "heuristic_v1"
+    reason_codes: list[str] = Field(default_factory=list)
+    factor_breakdown: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ReconciliationExceptionDraft(AgentSchema):

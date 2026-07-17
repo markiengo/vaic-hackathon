@@ -6,6 +6,7 @@ conftest.py runs seed_data before tests, so these tests verify the result.
 
 from __future__ import annotations
 
+import pytest
 from sqlalchemy import func, select
 
 from app.core.database import AsyncSessionLocal
@@ -18,6 +19,8 @@ from app.models.sale import Sale
 from app.models.tax import TaxRuleVersion
 from app.models.transaction import BankTransaction
 from app.models.user import User
+
+pytestmark = pytest.mark.usefixtures("seeded_db")
 
 
 async def test_seed_merchant_count():

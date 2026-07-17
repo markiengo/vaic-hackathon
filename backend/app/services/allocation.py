@@ -91,7 +91,7 @@ class AllocationPlan:
 class AllocationPlanWriter(Protocol):
     """Persistence port implemented by P4's transactional SQLAlchemy layer."""
 
-    def persist(self, plan: AllocationPlan) -> None:
+    async def persist(self, plan: AllocationPlan) -> None:
         ...
 
 
@@ -141,7 +141,10 @@ def _transaction_allocated_amount(
         if item.bank_transaction_id == transaction.id
     ]
     if detailed:
-        return sum(detailed, ZERO)
+        # The canonical aggregate may include legacy/null-sale rows that cannot
+        # be represented by AllocationSnapshot. Never let partial detail reduce
+        # the transaction capacity already reported by the persistence adapter.
+        return max(sum(detailed, ZERO), abs(transaction.allocated_amount))
     return abs(transaction.allocated_amount)
 
 

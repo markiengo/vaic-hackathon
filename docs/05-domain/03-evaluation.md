@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** QA Lead
 > **Applies to:** Đánh giá chất lượng AI agent output
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** P1 matching/reconciliation cases implemented
+> **Last verified against code:** 2026-07-17 (`test_matching.py`, `test_reconciliation_integration.py`)
 > **Verification:** Xem § Verification bên dưới
 
 ---

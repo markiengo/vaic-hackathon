@@ -87,6 +87,56 @@ through the provided port.
   responsible for models, migrations, row locking, revalidation, and
   transactional writes.
 
+### P1 Sprint 2 — Reconciliation integration
+
+Status: Implemented and tested on branch
+`p1-sprint2-reconciliation-integration` on 2026-07-17.
+
+The Phase 2 implementation follows three explicit integration decisions:
+
+- **1A — isolated truth set:** P1 uses a dedicated in-memory SQLite fixture and
+  leaves P5's shared seed untouched.
+- **2A — canonical scoring input:** DB-backed candidate scoring requires
+  `transaction_id`; callers cannot inject amount, sender, or note values.
+- **3A — caller-owned case:** exception creation requires an existing `case_id`.
+  P1 validates its merchant/period scope and does not create cases.
+
+Delivered behavior:
+
+- `services/reconciliation.py` maps SQLAlchemy rows to the Sprint 1 functional
+  core, derives balances from signed allocation rows, locks and revalidates
+  before persistence, and leaves commit/rollback to the caller. Transaction
+  capacity includes all canonical allocation rows, including legacy null-sale
+  rows, so incomplete detail cannot reopen already-consumed capacity.
+- Period reconciliation runs exact matching before candidate matching,
+  persists only `AUTO_MATCH`, creates idempotent review/no-match exceptions,
+  and is safe to rerun without duplicate allocations or exceptions. Historical
+  intent expiry is evaluated at the canonical bank-transaction timestamp.
+- `services/cash_reconciliation.py` derives cash sales from allocation rows
+  without a bank transaction and applies
+  `opening_cash + cash_sales - cash_expenses`. A non-zero discrepancy requires
+  a reason and remains `CLOSED`; zero discrepancy becomes `RECONCILED`.
+- Reconciliation tools are implemented with typed output. Candidate results
+  expose action, deterministic/display scores, factor breakdown, reason codes,
+  match method, and confidence method.
+- P4's current `payment_allocations` model has no `confidence_method` column.
+  Therefore the adapter does not persist heuristic confidence by itself;
+  `heuristic_v1` remains in the plan/tool result until a migration can persist
+  the value and method together.
+- Shared seed-data tests are now explicitly opt-in. Pure P1 tests and the P1
+  SQLite truth set no longer seed or mutate the external database implicitly.
+
+P1's isolated truth set contains 25 exact references, 2 ambiguous bank
+transactions, 2 no-match transactions, and one cash discrepancy backed by 8
+cash allocations totaling 3,200,000 VND. It verifies 25 matches, 5 exceptions,
+and every transaction-to-sale pair against the expected map (0 false matches).
+
+Shared-seed follow-up for P5: add allocation-backed balances rather than only
+pre-setting sale statuses; add 25 canonical truth mappings and aligned times;
+add the two ambiguous and two no-match transactions; and add 8 cash allocation
+rows totaling 3,200,000 VND for the 5,200,000/5,080,000 cash case. Until then,
+the shared seed is not the normative P1 acceptance set.
+
 ### P4 — Backend infrastructure
 
 Status: Implemented and merged into `main` on 2026-07-17.
@@ -311,6 +361,21 @@ End-to-end webhook verification (2026-07-17):
 - Dashboard page loads and displays live stats from the API.
 
 ## Session history
+
+### 2026-07-17 — P1 Sprint 2 reconciliation integration
+
+- Pulled merged `main` and created branch
+  `p1-sprint2-reconciliation-integration`.
+- Chose 1A/2A/3A: isolated P1 fixture, canonical `transaction_id` scoring, and
+  caller-supplied existing reconciliation cases.
+- Added the SQLAlchemy matching/allocation bridge with row-lock revalidation,
+  idempotent period processing, and exception persistence.
+- Added allocation-backed cash reconciliation and P1 reconciliation tools.
+- Added 17 Phase 2 tests plus an isolated 25/5 truth set; changed shared seeded
+  tests from implicit autouse setup to explicit opt-in setup.
+- Verified 17 Phase 2 tests and the 68-test combined P1/model regression suite.
+  The full local suite reports 68 passed and 26 external-DB tests skipped. The
+  only warnings are Python 3.14 deprecations emitted by pytest-asyncio.
 
 ### 2026-07-17 — P1 Sprint 1 implementation
 

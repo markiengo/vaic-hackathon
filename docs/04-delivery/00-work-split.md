@@ -148,13 +148,13 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 - Kết nối matching logic với DB models và seed data
 - Verify trên seed data: 25 exact, 5 exceptions (2 ambiguous, 2 no-match, 1 cash discrepancy)
 - Xây dựng cash reconciliation: expected = opening + cash sales - expenses, so sánh với counted, tạo exception nếu có discrepancy
-- Implement tool `score_match_candidates`: query candidates theo merchant/amount±5%/time window, áp dụng weights, trả về ranked results
+- Implement tool `score_match_candidates`: load canonical transaction by `transaction_id`, apply the deterministic eligibility/tolerance policy, and return ranked results
 - Implement tool `find_payment_reference`: lookup payment_intents theo code
 - Implement tool `create_reconciliation_exception`: tạo exception record với `ai_suggestion` JSONB
 
 **Exit criteria:**
 - Matching trên seed data cho kết quả: 25 matched, 5 exceptions, 0 false matches
-- `score_match_candidates("M001", 350000, 60, "Nguyen Van A", "cat toc")` trả về ranked candidates
+- `score_match_candidates("TX-001", 60)` returns ranked candidates; amount, sender, and note come from the canonical transaction and cannot be caller-overridden
 - Cash reconciliation: expected 5,200,000, counted 5,080,000, discrepancy -120,000 → exception
 - Toàn bộ integration tests pass
 
