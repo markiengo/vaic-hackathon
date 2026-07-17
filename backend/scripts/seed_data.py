@@ -1,366 +1,551 @@
-"""Seed data script — populates the database with demo data for TaxLens MVP.
+"""Seed the TaxLens demo dataset (product.md §17 / docs/04-delivery/00-work-split.md).
 
-Creates:
-  - 1 merchant (M001, Salon Hoa)
-  - 1 store (S001)
-  - 1 device (D001)
-  - 1 user (U001, rm)
-  - 5 products (services)
-  - 30 sales (mix of UNPAID/PAID/PARTIAL, July 2026)
-  - 5 payment_intents (linked to 5 unpaid sales)
-  - 23 bank_transactions (various matching scenarios)
-  - 1 cash_session (CLOSED, not RECONCILED)
-  - 28 invoices (2 intentionally missing)
-  - 1 tax_rule_version (2026.07, APPROVED)
+Populates one merchant (Salon Hoa) with a full month of July 2026 activity:
+
+- 1 merchant, 1 store, 1 device, 5 users, 10 products
+- 30 sales: 15 paid by bank transfer with a payment reference (exact-match
+  candidates), 3 paid by bank transfer with no reference (fuzzy-match
+  candidates), 2 unpaid sales that share one ambiguous amount, 8 paid by
+  cash, 2 plain unpaid
+- 23 bank_transactions: the 15 exact-match transfers, 1 refund against one
+  of them, 3 fuzzy transfers, 2 ambiguous same-amount transfers, and 2
+  non-revenue transfers (an internal/owner transfer and a supplier payment)
+- 1 cash session with a -120,000 VND discrepancy
+- 28 invoices (2 of the 8 cash sales are deliberately left un-invoiced)
+- 1 APPROVED tax rule version (2026.07)
+
+bank_transactions use the same `SEPAY-{id}` canonical ID / bare source_id
+convention as the live webhook handler in `app/adapters/sepay.py`, so seeded
+rows and any real webhook-inserted rows share one consistent ID scheme.
+
+Only bank_transactions, payment_intents, cash records, invoices, and sales
+are inserted here — reconciliation (payment_allocations, exceptions) is not
+run by this script. That is P1/P2's Sprint 2 integration against this raw,
+ingested data; pre-computing it here would just be redone (and could
+silently diverge) once the real matching engine runs against these rows.
 
 Usage:
-    cd backend
-    py -3.12 scripts/seed_data.py
+    python scripts/seed_data.py            # seed once; aborts if M001 exists
+    python scripts/seed_data.py --reset     # wipe all TaxLens data, then seed
+
+Also importable (e.g. from tests/conftest.py):
+    from scripts.seed_data import seed
+    await seed(reset=True)
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
-import sys
-from datetime import date, datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from pathlib import Path
 
-# Ensure backend dir is on sys.path so `app` package is importable
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from sqlalchemy import delete, func, select
 
-from sqlalchemy import text
-
+from app.adapters import invoice as invoice_adapter
+from app.adapters import shb
+from app.adapters.sepay import normalize_note, split_sender_and_note
 from app.core.database import AsyncSessionLocal, engine
+from app.models.agent import AgentRun, AuditEvent, ToolCall
 from app.models.cash import CashSession
 from app.models.invoice import Invoice
 from app.models.merchant import Device, Merchant, Store
-from app.models.payment import PaymentIntent
+from app.models.payment import PaymentAllocation, PaymentIntent
 from app.models.product import Product
+from app.models.reconciliation import ExceptionRecord, ReconciliationCase
 from app.models.sale import Sale, SaleLine
-from app.models.tax import TaxRuleVersion
+from app.models.tax import TaxClassification, TaxRuleVersion
 from app.models.transaction import BankTransaction
 from app.models.user import User
 
-
-async def clear_data(session):
-    """Delete all existing data in FK-safe order."""
-    tables = [
-        "payment_allocations",
-        "payment_intents",
-        "invoices",
-        "cash_sessions",
-        "bank_transactions",
-        "sale_lines",
-        "sales",
-        "tax_classifications",
-        "tax_rule_versions",
-        "products",
-        "devices",
-        "stores",
-        "users",
-        "merchants",
-        "reconciliation_cases",
-        "exceptions",
-        "agent_runs",
-        "tool_calls",
-        "audit_events",
-    ]
-    for table in tables:
-        await session.execute(text(f'DELETE FROM "{table}"'))
-    await session.commit()
+MERCHANT_ID = "M001"
+STORE_ID = "S001"
+DEVICE_ID = "D001"
+ACCOUNT_NUMBER = "0778478888"
+PERIOD_YEAR = 2026
+PERIOD_MONTH = 7
 
 
-async def seed():
-    session = AsyncSessionLocal()
+def _dt(day: int, hour: int, minute: int = 0) -> datetime:
+    return datetime(PERIOD_YEAR, PERIOD_MONTH, day, hour, minute, tzinfo=timezone.utc)
 
-    try:
-        print("Clearing existing data...")
-        await clear_data(session)
 
-        # --- Merchant ---
-        merchant = Merchant(
-            id="M001",
+async def reset_all(db) -> None:
+    """Delete all TaxLens rows in FK-safe (child-first) order."""
+
+    for model in (
+        AuditEvent,
+        ToolCall,
+        AgentRun,
+        ExceptionRecord,
+        ReconciliationCase,
+        TaxClassification,
+        TaxRuleVersion,
+        Invoice,
+        PaymentAllocation,
+        CashSession,
+        PaymentIntent,
+        BankTransaction,
+        SaleLine,
+        Sale,
+        Product,
+        Device,
+        User,
+        Store,
+        Merchant,
+    ):
+        await db.execute(delete(model))
+    await db.commit()
+
+
+async def seed_merchant_and_org(db) -> None:
+    db.add(
+        Merchant(
+            id=MERCHANT_ID,
             name="Salon Hoa",
             business_type="salon",
             business_category="beauty_services",
-            tax_id="0123456789",
+            tax_id="8012345678",
             contact_phone="0901234567",
-            contact_email="salonhoa@example.com",
+            contact_email="salonhoa@gmail.com",
             status="ACTIVE",
         )
-        session.add(merchant)
-        await session.flush()
+    )
+    await db.flush()
 
-        # --- Store ---
-        store = Store(
-            id="S001",
-            merchant_id="M001",
-            name="Salon Hoa - Quan 1",
-            address="123 Nguyen Hue, Q1, TP.HCM",
-            phone="0901234567",
+    db.add(
+        Store(
+            id=STORE_ID,
+            merchant_id=MERCHANT_ID,
+            name="Salon Hoa - Chi nhánh Quận 1",
+            address="12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM",
+            phone="0281234567",
         )
-        session.add(store)
-        await session.flush()
+    )
+    await db.flush()
 
-        # --- Device ---
-        device = Device(
-            id="D001",
-            store_id="S001",
-            name="Tablet POS",
+    db.add(
+        Device(
+            id=DEVICE_ID,
+            store_id=STORE_ID,
+            name="iPad quầy thu ngân",
             device_type="tablet",
             is_active=True,
         )
-        session.add(device)
-        await session.flush()
+    )
 
-        # --- Users (5) ---
-        users_data = [
-            ("U001", "Nguyen Van A", "nguyenvana@salonhoa.com", "rm"),
-            ("U002", "Tran Thi B", "tranthib@salonhoa.com", "staff"),
-            ("U003", "Le Van C", "levanc@salonhoa.com", "staff"),
-            ("U004", "Pham Thi D", "phamthid@salonhoa.com", "compliance"),
-            ("U005", "Hoang Van E", "hoangvane@shb.com", "shb_staff"),
-        ]
-        for uid, uname, uemail, urole in users_data:
-            session.add(User(
-                id=uid,
-                name=uname,
-                email=uemail,
-                role=urole,
-                merchant_id="M001",
-                is_active=True,
-            ))
-        await session.flush()
+    users = [
+        User(
+            id="U001",
+            name="Đỗ Minh Admin",
+            email="admin@shb.com.vn",
+            role="admin",
+            merchant_id=None,
+        ),
+        User(
+            id="U002",
+            name="Trần Văn Long",
+            email="long.ops@shb.com.vn",
+            role="ops_staff",
+            merchant_id=None,
+        ),
+        User(
+            id="U003",
+            name="Phạm Văn Đức",
+            email="duc.rm@shb.com.vn",
+            role="rm",
+            merchant_id=None,
+        ),
+        User(
+            id="U004",
+            name="Vũ Thị Lan",
+            email="lan.compliance@shb.com.vn",
+            role="compliance",
+            merchant_id=None,
+        ),
+        User(
+            id="U005",
+            name="Nguyễn Thị Hương",
+            email="huong.salonhoa@gmail.com",
+            role="merchant",
+            merchant_id=MERCHANT_ID,
+        ),
+    ]
+    for user in users:
+        db.add(user)
 
-        # --- Products (5 services) ---
-        products_data = [
-            ("P001", "Cat toc", Decimal("50000")),
-            ("P002", "Uon toc", Decimal("150000")),
-            ("P003", "Nhuom toc", Decimal("300000")),
-            ("P004", "Goi dau", Decimal("80000")),
-            ("P005", "Massage da", Decimal("200000")),
-        ]
-        products = {}
-        for pid, name, price in products_data:
-            p = Product(
-                id=pid,
-                merchant_id="M001",
-                name=name,
-                category="beauty_services",
-                price=price,
-                is_service=True,
-                is_active=True,
+    products = [
+        Product(id="P001", merchant_id=MERCHANT_ID, name="Cắt tóc nữ", category="hair", price=Decimal("150000"), is_service=True),
+        Product(id="P002", merchant_id=MERCHANT_ID, name="Cắt tóc nam", category="hair", price=Decimal("100000"), is_service=True),
+        Product(id="P003", merchant_id=MERCHANT_ID, name="Nhuộm tóc", category="hair", price=Decimal("450000"), is_service=True),
+        Product(id="P004", merchant_id=MERCHANT_ID, name="Uốn tóc", category="hair", price=Decimal("600000"), is_service=True),
+        Product(id="P005", merchant_id=MERCHANT_ID, name="Gội đầu dưỡng sinh", category="hair", price=Decimal("80000"), is_service=True),
+        Product(id="P006", merchant_id=MERCHANT_ID, name="Chăm sóc da mặt", category="skincare", price=Decimal("350000"), is_service=True),
+        Product(id="P007", merchant_id=MERCHANT_ID, name="Massage thư giãn", category="spa", price=Decimal("300000"), is_service=True),
+        Product(id="P008", merchant_id=MERCHANT_ID, name="Làm nail", category="nail", price=Decimal("200000"), is_service=True),
+        Product(id="P009", merchant_id=MERCHANT_ID, name="Trang điểm", category="makeup", price=Decimal("500000"), is_service=True),
+        Product(id="P010", merchant_id=MERCHANT_ID, name="Dầu gội dưỡng tóc", category="retail", price=Decimal("180000"), is_service=False),
+    ]
+    for product in products:
+        db.add(product)
+
+    await db.flush()
+
+
+async def _create_sale(
+    db,
+    sale_id: str,
+    *,
+    created_at: datetime,
+    lines: list[tuple[str | None, str, int, Decimal]],
+    discount: Decimal = Decimal("0"),
+    staff_id: str = "U005",
+) -> Sale:
+    """lines: (product_id_or_None, product_name, quantity, unit_price)"""
+
+    gross = sum((qty * price for _, _, qty, price in lines), Decimal("0"))
+    net = gross - discount
+    sale = Sale(
+        id=sale_id,
+        merchant_id=MERCHANT_ID,
+        store_id=STORE_ID,
+        device_id=DEVICE_ID,
+        staff_id=staff_id,
+        gross_amount=gross,
+        discount=discount,
+        net_amount=net,
+        payment_status="UNPAID",
+        invoice_status="PENDING",
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    db.add(sale)
+    for product_id, name, qty, price in lines:
+        db.add(
+            SaleLine(
+                sale_id=sale_id,
+                product_id=product_id,
+                product_name=name,
+                quantity=qty,
+                unit_price=price,
+                line_total=qty * price,
             )
-            session.add(p)
-            products[pid] = p
-        await session.flush()
+        )
+    await db.flush()
+    return sale
 
-        # --- Sales (30) ---
-        # Mix of UNPAID/PAID/PARTIAL, spread across July 2026
-        # Sales 1-15: PAID, 16-20: PARTIAL, 21-30: UNPAID
-        sales = {}
-        sale_amounts = [
-            50000, 80000, 150000, 200000, 50000,   # 1-5
-            300000, 80000, 50000, 150000, 200000,  # 6-10
-            100000, 50000, 300000, 150000, 80000,  # 11-15
-            200000, 150000, 300000, 50000, 100000, # 16-20
-            80000, 200000, 150000, 50000, 300000,  # 21-25
-            100000, 150000, 80000, 200000, 50000,  # 26-30
-        ]
-        payment_statuses = (
-            ["PAID"] * 15 +
-            ["PARTIAL"] * 5 +
-            ["UNPAID"] * 10
+
+async def _insert_bank_tx(
+    db,
+    *,
+    sepay_id: int,
+    account_number: str,
+    transaction_date: datetime,
+    amount: Decimal,
+    transaction_content: str,
+    transaction_type: str = "in",
+    payment_code: str | None = None,
+    reference_number: str | None = None,
+    sub_account: str | None = None,
+    accumulated: Decimal | None = None,
+) -> BankTransaction:
+    """Insert one bank_transactions row using the same `SEPAY-{id}` canonical
+    ID / bare source_id convention as the live webhook handler
+    (`app.adapters.sepay.process_webhook`), so seeded and live-inserted rows
+    are consistent.
+    """
+
+    sender_name, _ = split_sender_and_note(transaction_content)
+    row = BankTransaction(
+        id=f"SEPAY-{sepay_id}",
+        merchant_id=MERCHANT_ID,
+        account_number=account_number,
+        amount=amount,
+        sender_name=sender_name,
+        raw_note=transaction_content,
+        normalized_note=normalize_note(transaction_content),
+        transaction_type=transaction_type,
+        reference_number=reference_number,
+        payment_code=payment_code,
+        sub_account=sub_account,
+        accumulated=accumulated,
+        source="sepay",
+        source_id=str(sepay_id),
+        transaction_date=transaction_date,
+    )
+    db.add(row)
+    await db.flush()
+    return row
+
+
+# (sale_id, day, hour, minute, [(product_id, name, qty, price)])
+EXACT_MATCH_SALES = [
+    ("ORDER-1842", 2, 9, 10, [("P001", "Cắt tóc nữ", 1, Decimal("150000")), ("P008", "Làm nail", 1, Decimal("200000"))]),
+    ("ORDER-1843", 2, 10, 30, [("P003", "Nhuộm tóc", 1, Decimal("450000"))]),
+    ("ORDER-1844", 3, 9, 45, [("P004", "Uốn tóc", 1, Decimal("600000"))]),
+    ("ORDER-1845", 3, 14, 0, [("P006", "Chăm sóc da mặt", 1, Decimal("350000"))]),
+    ("ORDER-1846", 4, 11, 15, [("P007", "Massage thư giãn", 1, Decimal("300000"))]),
+    ("ORDER-1847", 4, 16, 20, [("P009", "Trang điểm", 1, Decimal("500000"))]),
+    ("ORDER-1848", 5, 9, 0, [("P002", "Cắt tóc nam", 1, Decimal("100000"))]),
+    ("ORDER-1849", 5, 13, 40, [("P005", "Gội đầu dưỡng sinh", 1, Decimal("80000"))]),
+    ("ORDER-1850", 6, 10, 10, [("P010", "Dầu gội dưỡng tóc", 1, Decimal("180000"))]),  # refunded later
+    ("ORDER-1851", 6, 15, 30, [("P001", "Cắt tóc nữ", 1, Decimal("150000"))]),
+    ("ORDER-1852", 7, 9, 20, [("P008", "Làm nail", 1, Decimal("200000"))]),
+    ("ORDER-1853", 7, 14, 50, [("P003", "Nhuộm tóc", 1, Decimal("450000"))]),
+    ("ORDER-1854", 8, 10, 0, [("P007", "Massage thư giãn", 1, Decimal("300000"))]),
+    ("ORDER-1855", 8, 16, 0, [("P009", "Trang điểm", 1, Decimal("500000"))]),
+    ("ORDER-1856", 9, 11, 30, [("P006", "Chăm sóc da mặt", 1, Decimal("350000"))]),
+]
+REFUNDED_SALE_ID = "ORDER-1850"
+
+FUZZY_MATCH_SALES = [
+    ("ORDER-1857", 10, 9, 15, [(None, "Combo chăm sóc tóc", 1, Decimal("620000"))], "TRAN THI BICH", "chuyen khoan tien cat toc hom nay"),
+    ("ORDER-1858", 10, 15, 0, [(None, "Combo trang điểm + gội đầu", 1, Decimal("275000"))], "LE VAN NAM", "ck tien lam dep"),
+    ("ORDER-1859", 11, 10, 45, [(None, "Combo chăm sóc da + nail", 1, Decimal("430000"))], "PHAM THI HANH", "thanh toan dich vu salon"),
+]
+
+AMBIGUOUS_AMOUNT = Decimal("85000")
+AMBIGUOUS_SALES = [
+    ("ORDER-1860", 12, 9, 0),
+    ("ORDER-1861", 12, 9, 5),
+]
+
+CASH_SALES = [
+    ("ORDER-1862", 13, 9, 0, [("P004", "Uốn tóc", 1, Decimal("600000"))]),
+    ("ORDER-1863", 13, 11, 0, [("P009", "Trang điểm", 1, Decimal("500000"))]),
+    ("ORDER-1864", 13, 13, 0, [("P003", "Nhuộm tóc", 1, Decimal("450000"))]),
+    ("ORDER-1865", 13, 14, 30, [("P004", "Uốn tóc", 1, Decimal("600000")), ("P005", "Gội đầu dưỡng sinh", 1, Decimal("100000"))]),
+    ("ORDER-1866", 13, 15, 30, [("P006", "Chăm sóc da mặt", 1, Decimal("350000")), ("P008", "Làm nail", 1, Decimal("200000"))]),
+    ("ORDER-1867", 13, 16, 30, [("P002", "Cắt tóc nam", 1, Decimal("100000")), ("P005", "Gội đầu dưỡng sinh", 1, Decimal("300000"))]),
+    ("ORDER-1868", 13, 17, 15, [("P009", "Trang điểm", 1, Decimal("500000")), ("P007", "Massage thư giãn", 1, Decimal("300000"))]),
+    ("ORDER-1869", 13, 18, 0, [("P001", "Cắt tóc nữ", 1, Decimal("150000")), ("P008", "Làm nail", 1, Decimal("200000")), ("P010", "Dầu gội dưỡng tóc", 1, Decimal("150000"))]),
+]
+CASH_MISSING_INVOICE_IDS = {"ORDER-1868", "ORDER-1869"}
+
+PLAIN_UNPAID_SALES = [
+    ("ORDER-1870", 15, 17, 0, [("P003", "Nhuộm tóc", 1, Decimal("450000"))]),
+    ("ORDER-1871", 16, 18, 0, [("P004", "Uốn tóc", 1, Decimal("600000"))]),
+]
+
+
+def _pay_ref(seed: int) -> str:
+    # Deterministic 6-char [A-Z0-9] token satisfying PAY-[A-Z0-9]{6}.
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    token = []
+    n = seed
+    for _ in range(6):
+        token.append(alphabet[n % len(alphabet)])
+        n //= len(alphabet)
+    return "PAY-" + "".join(token)
+
+
+async def seed_sales_and_bank_transactions(db) -> dict[str, Sale]:
+    sales: dict[str, Sale] = {}
+
+    # --- Exact-match group: sale + payment_intent + matching bank_transaction ---
+    for index, (sale_id, day, hour, minute, lines) in enumerate(EXACT_MATCH_SALES):
+        created_at = _dt(day, hour, minute)
+        sale = await _create_sale(db, sale_id, created_at=created_at, lines=lines)
+        sales[sale_id] = sale
+
+        pay_ref = "PAY-A8F21X" if sale_id == "ORDER-1842" else _pay_ref(1000 + index)
+        intent = PaymentIntent(
+            id=pay_ref,
+            sale_id=sale_id,
+            merchant_id=MERCHANT_ID,
+            amount=sale.net_amount,
+            status="PENDING",
+            expires_at=created_at + timedelta(minutes=15),
+            created_at=created_at,
+        )
+        db.add(intent)
+        await db.flush()
+
+        tx_time = created_at + timedelta(minutes=3)
+        if sale_id == "ORDER-1842":
+            # Documented fixture (docs/05-domain/02-algorithm.md): reference
+            # carried in the free-text note, not the SePay 'code' field.
+            await _insert_bank_tx(
+                db,
+                sepay_id=902194810,
+                account_number=ACCOUNT_NUMBER,
+                transaction_date=tx_time,
+                amount=sale.net_amount,
+                transaction_content=f"NGUYEN VAN A chuyen tien {pay_ref}",
+                accumulated=Decimal("1200541768"),
+            )
+        else:
+            await _insert_bank_tx(
+                db,
+                sepay_id=902194900 + index,
+                account_number=ACCOUNT_NUMBER,
+                transaction_date=tx_time,
+                amount=sale.net_amount,
+                transaction_content="KHACH HANG chuyen khoan thanh toan dich vu",
+                payment_code=pay_ref,
+                accumulated=Decimal("1200541768") + sale.net_amount,
+            )
+
+    # --- Refund against ORDER-1850 ---
+    refunded_sale = sales[REFUNDED_SALE_ID]
+    refund_intent_stmt = select(PaymentIntent).where(PaymentIntent.sale_id == REFUNDED_SALE_ID)
+    refund_intent = (await db.execute(refund_intent_stmt)).scalar_one()
+    refund_time = refunded_sale.created_at + timedelta(days=1, hours=2)
+    await _insert_bank_tx(
+        db,
+        sepay_id=902194950,
+        account_number=ACCOUNT_NUMBER,
+        transaction_date=refund_time,
+        amount=-refunded_sale.net_amount,
+        transaction_content=f"HOAN TIEN {refund_intent.id} khach doi tra hang",
+        transaction_type="out",
+        payment_code=refund_intent.id,
+    )
+
+    # --- Fuzzy-match group: sale with no payment reference ---
+    for sepay_id, (sale_id, day, hour, minute, lines, sender, note) in enumerate(FUZZY_MATCH_SALES, start=902194960):
+        created_at = _dt(day, hour, minute)
+        sale = await _create_sale(db, sale_id, created_at=created_at, lines=lines)
+        sales[sale_id] = sale
+
+        tx_time = created_at + timedelta(minutes=2)
+        await _insert_bank_tx(
+            db,
+            sepay_id=sepay_id,
+            account_number=ACCOUNT_NUMBER,
+            transaction_date=tx_time,
+            amount=sale.net_amount,
+            transaction_content=f"{sender} {note}",
         )
 
-        for i in range(30):
-            sale_id = f"ORDER-{i+1:04d}"
-            amount = Decimal(str(sale_amounts[i]))
-            status = payment_statuses[i]
-            day = (i // 2) + 1  # spread across days 1-15
-            created = datetime(2026, 7, day, 10 + (i % 8), (i * 7) % 60, tzinfo=timezone.utc)
+    # --- Ambiguous same-amount group: two unpaid sales, two unreferenced transfers ---
+    for sale_id, day, hour, minute in AMBIGUOUS_SALES:
+        created_at = _dt(day, hour, minute)
+        sale = await _create_sale(
+            db,
+            sale_id,
+            created_at=created_at,
+            lines=[(None, "Gội đầu + sấy", 1, AMBIGUOUS_AMOUNT)],
+        )
+        sales[sale_id] = sale
 
-            sale = Sale(
-                id=sale_id,
-                merchant_id="M001",
-                store_id="S001",
-                device_id="D001",
-                staff_id="U001",
-                gross_amount=amount,
-                discount=Decimal("0"),
-                net_amount=amount,
-                payment_status=status,
-                invoice_status="PENDING",
-                created_at=created,
-                updated_at=created,
-            )
-            session.add(sale)
-            sales[sale_id] = sale
+    ambiguous_tx_time = _dt(*AMBIGUOUS_SALES[0][1:])
+    # Documented fixture (docs/05-domain/02-algorithm.md): empty note, 85,000.
+    await _insert_bank_tx(
+        db,
+        sepay_id=902194820,
+        account_number=ACCOUNT_NUMBER,
+        transaction_date=ambiguous_tx_time + timedelta(minutes=10),
+        amount=AMBIGUOUS_AMOUNT,
+        transaction_content="",
+    )
+    await _insert_bank_tx(
+        db,
+        sepay_id=902194821,
+        account_number=ACCOUNT_NUMBER,
+        transaction_date=ambiguous_tx_time + timedelta(minutes=15),
+        amount=AMBIGUOUS_AMOUNT,
+        transaction_content="chuyen khoan 85000",
+    )
 
-            # Add a sale line for each sale (pick a product cyclically)
-            pid = list(products.keys())[i % 5]
-            session.add(SaleLine(
-                sale_id=sale_id,
-                product_id=pid,
-                product_name=products[pid].name,
-                quantity=1,
-                unit_price=amount,
-                line_total=amount,
-            ))
+    # --- Non-revenue transactions: no matching sale ---
+    # Documented fixture: owner/relative transfer, no order, suggested internal_transfer.
+    await _insert_bank_tx(
+        db,
+        sepay_id=902194815,
+        account_number=ACCOUNT_NUMBER,
+        transaction_date=_dt(14, 10, 0),
+        amount=Decimal("5000000"),
+        transaction_content="ck cho em",
+    )
 
-        await session.flush()
+    # Supplier/purchase payment note (product.md §10 example): not revenue.
+    await _insert_bank_tx(
+        db,
+        sepay_id=902194970,
+        account_number=ACCOUNT_NUMBER,
+        transaction_date=_dt(14, 15, 30),
+        amount=Decimal("2300000"),
+        transaction_content="NGUYEN SUPPLIER nhap hang 20/10",
+    )
 
-        # --- Payment Intents (5) — linked to 5 unpaid sales (ORDER-0021 to ORDER-0025) ---
-        for i in range(5):
-            sale_id = f"ORDER-{21+i:04d}"
-            pi_id = f"PAY-{100001+i:06d}"
-            pi = PaymentIntent(
-                id=pi_id,
-                sale_id=sale_id,
-                merchant_id="M001",
-                amount=Decimal(str(sale_amounts[20 + i])),
-                status="PENDING",
-                expires_at=datetime(2026, 7, 31, 23, 59, 59, tzinfo=timezone.utc),
-                created_at=datetime(2026, 7, 10 + i, 9, 0, 0, tzinfo=timezone.utc),
-            )
-            session.add(pi)
-        await session.flush()
+    # --- Cash sales ---
+    for sale_id, day, hour, minute, lines in CASH_SALES:
+        created_at = _dt(day, hour, minute)
+        sale = await _create_sale(db, sale_id, created_at=created_at, lines=lines)
+        sale.payment_status = "PAID"
+        sales[sale_id] = sale
 
-        # --- Bank Transactions (23) ---
-        # SEPAY-0001 to SEPAY-0005: payment_code matching payment intents
-        payment_codes = ["PAY-100001", "PAY-100002", "PAY-100003", "PAY-100004", "PAY-100005"]
-        for i in range(5):
-            tx_id = f"SEPAY-{i+1:04d}"
-            session.add(BankTransaction(
-                id=tx_id,
-                merchant_id="M001",
-                account_number="99998888777766",
-                amount=Decimal(str(sale_amounts[20 + i])),
-                raw_note=f"Chuyen khoan {payment_codes[i]} Salon Hoa",
-                transaction_type="in",
-                transaction_date=datetime(2026, 7, 10 + i, 10, 30, tzinfo=timezone.utc),
-                reference_number=payment_codes[i],
-                payment_code=payment_codes[i],
-                source="sepay",
-                source_id=str(i + 1),
-                accumulated=Decimal(str(5000000 + (i + 1) * 100000)),
-            ))
+    # --- Plain unpaid sales (no transaction at all yet) ---
+    for sale_id, day, hour, minute, lines in PLAIN_UNPAID_SALES:
+        created_at = _dt(day, hour, minute)
+        sale = await _create_sale(db, sale_id, created_at=created_at, lines=lines)
+        sales[sale_id] = sale
 
-        # SEPAY-0006 to SEPAY-0015: amount matching unpaid sales but no reference
-        unpaid_amounts = [80000, 200000, 150000, 50000, 300000, 100000, 150000, 80000, 200000, 50000]
-        for i in range(10):
-            tx_id = f"SEPAY-{i+6:04d}"
-            session.add(BankTransaction(
-                id=tx_id,
-                merchant_id="M001",
-                account_number="99998888777766",
-                amount=Decimal(str(unpaid_amounts[i])),
-                raw_note=f"KH chuyen tien lam dich vu Salon Hoa",
-                transaction_type="in",
-                transaction_date=datetime(2026, 7, 11 + i, 14, 0, tzinfo=timezone.utc),
-                source="sepay",
-                source_id=str(i + 6),
-                accumulated=Decimal(str(6000000 + (i + 1) * 50000)),
-            ))
+    await db.flush()
+    return sales
 
-        # SEPAY-0016 to SEPAY-0018: no matching amount (random amounts)
-        random_amounts = [75000, 125000, 99999]
-        for i in range(3):
-            tx_id = f"SEPAY-{i+16:04d}"
-            session.add(BankTransaction(
-                id=tx_id,
-                merchant_id="M001",
-                account_number="99998888777766",
-                amount=Decimal(str(random_amounts[i])),
-                raw_note=f"Chuyen khoan khong xac dinh",
-                transaction_type="in",
-                transaction_date=datetime(2026, 7, 16 + i, 9, 15, tzinfo=timezone.utc),
-                source="sepay",
-                source_id=str(i + 16),
-                accumulated=Decimal(str(7000000 + (i + 1) * 30000)),
-            ))
 
-        # SEPAY-0019 to SEPAY-0020: same amount pointing to same sale (duplicate-ish)
-        for i in range(2):
-            tx_id = f"SEPAY-{i+19:04d}"
-            session.add(BankTransaction(
-                id=tx_id,
-                merchant_id="M001",
-                account_number="99998888777766",
-                amount=Decimal("150000"),
-                raw_note=f"Chuyen khoan ORDER-0007 Salon Hoa",
-                transaction_type="in",
-                transaction_date=datetime(2026, 7, 18, 11 + i, 0, tzinfo=timezone.utc),
-                source="sepay",
-                source_id=str(i + 19),
-                accumulated=Decimal(str(8000000 + (i + 1) * 150000)),
-            ))
+async def seed_cash_session(db) -> None:
+    cash_sales_total = sum(
+        (
+            db_sale_net
+            for _, _, _, _, lines in CASH_SALES
+            for db_sale_net in [sum((qty * price for _, _, qty, price in lines), Decimal("0"))]
+        ),
+        Decimal("0"),
+    )
+    assert cash_sales_total == Decimal("4500000"), cash_sales_total
 
-        # SEPAY-0021 to SEPAY-0023: internal transfers (transferType="out" or special notes)
-        internal_notes = [
-            "Chuyen tien noi bo chi hoat dong",
-            "Tra luong nhan vien",
-            "Chuyen tien qua tai khoan khac",
-        ]
-        for i in range(3):
-            tx_id = f"SEPAY-{i+21:04d}"
-            session.add(BankTransaction(
-                id=tx_id,
-                merchant_id="M001",
-                account_number="99998888777766",
-                amount=Decimal(str([500000, 2000000, 300000][i])),
-                raw_note=internal_notes[i],
-                transaction_type="out",
-                transaction_date=datetime(2026, 7, 20 + i, 8, 0, tzinfo=timezone.utc),
-                source="sepay",
-                source_id=str(i + 21),
-                accumulated=Decimal(str(9000000 + (i + 1) * 100000)),
-            ))
+    opening_cash = Decimal("1000000")
+    cash_expenses = Decimal("300000")
+    expected_cash = opening_cash + cash_sales_total - cash_expenses
+    counted_cash = Decimal("5080000")
+    discrepancy = counted_cash - expected_cash
 
-        await session.flush()
+    session = CashSession(
+        store_id=STORE_ID,
+        staff_id="U005",
+        opening_cash=opening_cash,
+        expected_cash=expected_cash,
+        counted_cash=counted_cash,
+        cash_expenses=cash_expenses,
+        discrepancy=discrepancy,
+        discrepancy_reason=None,
+        status="RECONCILED",
+        opened_at=_dt(13, 8, 0),
+        closed_at=_dt(13, 20, 0),
+    )
+    db.add(session)
+    await db.flush()
 
-        # --- Cash Session (1) — CLOSED, not RECONCILED ---
-        session.add(CashSession(
-            id=1,
-            store_id="S001",
-            staff_id="U001",
-            opening_cash=Decimal("2000000"),
-            expected_cash=Decimal("5200000"),
-            counted_cash=Decimal("5080000"),
-            cash_expenses=Decimal("0"),
-            discrepancy=Decimal("-120000"),
-            discrepancy_reason="Thieu tien khong xac dinh",
-            status="CLOSED",
-            opened_at=datetime(2026, 7, 1, 8, 0, 0, tzinfo=timezone.utc),
-            closed_at=datetime(2026, 7, 15, 22, 0, 0, tzinfo=timezone.utc),
-        ))
-        await session.flush()
 
-        # --- Invoices (28) — linked to 28 of 30 sales (ORDER-0001 to ORDER-0028) ---
-        # ORDER-0029 and ORDER-0030 intentionally missing invoices
-        for i in range(28):
-            sale_id = f"ORDER-{i+1:04d}"
-            inv_id = f"INV-{i+1:03d}"
-            session.add(Invoice(
-                id=inv_id,
-                sale_id=sale_id,
-                merchant_id="M001",
-                invoice_number=f"HD-{i+1:03d}",
-                amount=Decimal(str(sale_amounts[i])),
-                invoice_date=datetime(2026, 7, (i // 2) + 1, 12, 0, 0, tzinfo=timezone.utc),
-                status="ISSUED",
-                source="mock_api",
-                source_id=inv_id,
-            ))
-        await session.flush()
+async def seed_invoices(db, sales: dict[str, Sale]) -> None:
+    invoiced_ids = [
+        sale_id
+        for sale_id in sales
+        if sale_id not in CASH_MISSING_INVOICE_IDS
+    ]
+    for sale_id in invoiced_ids:
+        sale = sales[sale_id]
+        await invoice_adapter.create_invoice(
+            db,
+            merchant_id=MERCHANT_ID,
+            amount=sale.net_amount,
+            sale_id=sale_id,
+            invoice_date=sale.created_at + timedelta(hours=1),
+        )
+        sale.invoice_status = "ISSUED"
+    await db.flush()
 
-        # --- Tax Rule Version (1) ---
-        session.add(TaxRuleVersion(
+
+async def seed_tax_rule(db) -> None:
+    db.add(
+        TaxRuleVersion(
             version="2026.07",
-            merchant_type="hộ_kinh_doanh",
+            merchant_type="salon",
             business_category="beauty_services",
-            effective_from=date(2026, 7, 1),
+            effective_from=datetime(2021, 7, 1).date(),
             effective_to=None,
             required_fields=[
                 "merchant_name",
@@ -371,58 +556,80 @@ async def seed():
                 "bank_revenue",
             ],
             formula_or_validation={
-                "revenue_total_formula": "sum(sale.net_amount where payment_status=PAID)",
-                "invoice_coverage": "count(invoices) / count(sales where payment_status=PAID) >= 0.9",
+                "revenue_total_formula": "sum(sale.net_amount where payment_status in (PAID, REFUNDED))",
+                "invoice_coverage": "count(invoices) / count(sales where payment_status in (PAID, REFUNDED)) >= 0.9",
                 "cash_session_required": "all cash_sessions.status = RECONCILED",
             },
             legal_source="Thông tư 40/2021/TT-BTC",
             approval_status="APPROVED",
             approved_by="compliance_lead",
-            approved_at=datetime(2026, 7, 1, 0, 0, 0, tzinfo=timezone.utc),
-        ))
-        await session.commit()
+            approved_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        )
+    )
+    await db.flush()
 
-        # --- Summary ---
-        from sqlalchemy import func as sa_func, select as sa_select
-        counts = {}
-        for model, label in [
-            (Merchant, "merchants"), (Store, "stores"), (Device, "devices"),
-            (User, "users"), (Product, "products"), (Sale, "sales"),
-            (SaleLine, "sale_lines"), (PaymentIntent, "payment_intents"),
-            (BankTransaction, "bank_transactions"), (CashSession, "cash_sessions"),
-            (Invoice, "invoices"), (TaxRuleVersion, "tax_rule_versions"),
-        ]:
-            result = await session.scalar(
-                sa_select(sa_func.count(model.id))
-            )
-            counts[label] = result
 
-        print("\n=== Seed Data Summary ===")
-        for label, count in counts.items():
-            print(f"  {label}: {count}")
+async def _counts(db) -> dict[str, int]:
+    async def count(model):
+        return (await db.execute(select(func.count()).select_from(model))).scalar_one()
 
-        expected = {
-            "merchants": 1, "stores": 1, "devices": 1, "users": 5,
-            "products": 5, "sales": 30, "sale_lines": 30,
-            "payment_intents": 5, "bank_transactions": 23,
-            "cash_sessions": 1, "invoices": 28, "tax_rule_versions": 1,
-        }
+    return {
+        "merchants": await count(Merchant),
+        "stores": await count(Store),
+        "devices": await count(Device),
+        "users": await count(User),
+        "products": await count(Product),
+        "sales": await count(Sale),
+        "bank_transactions": await count(BankTransaction),
+        "cash_sessions": await count(CashSession),
+        "invoices": await count(Invoice),
+        "payment_intents": await count(PaymentIntent),
+        "tax_rule_versions": await count(TaxRuleVersion),
+    }
 
-        all_ok = True
-        for label, expected_count in expected.items():
-            if counts.get(label) != expected_count:
-                print(f"  WARNING: {label} expected {expected_count}, got {counts.get(label)}")
-                all_ok = False
 
-        if all_ok:
-            print("\nAll counts match expected values!")
-        else:
-            print("\nSome counts don't match!")
+def print_summary(counts: dict[str, int]) -> None:
+    print("Seed summary:")
+    for label, value in counts.items():
+        print(f"  {label:<18} = {value}")
 
-    finally:
-        await session.close()
-        await engine.dispose()
+
+async def seed(reset: bool = True) -> dict[str, int]:
+    """Seed the demo dataset. Importable entrypoint (e.g. from conftest.py).
+
+    ``reset=True`` (the default for test/CI use) always wipes existing
+    TaxLens data first, for a clean, reproducible dataset. The CLI defaults
+    to ``reset=False`` so an interactive run doesn't destroy data by
+    accident — pass ``--reset`` explicitly there.
+    """
+
+    async with AsyncSessionLocal() as db:
+        existing = await db.get(Merchant, MERCHANT_ID)
+        if existing is not None:
+            if not reset:
+                print(f"Merchant {MERCHANT_ID} already exists — pass --reset to reseed.")
+                return await _counts(db)
+            await reset_all(db)
+
+        await seed_merchant_and_org(db)
+        sales = await seed_sales_and_bank_transactions(db)
+        await seed_cash_session(db)
+        await seed_invoices(db, sales)
+        await seed_tax_rule(db)
+        await db.commit()
+
+        counts = await _counts(db)
+        print_summary(counts)
+        return counts
+
+
+async def _cli_main(reset: bool) -> None:
+    await seed(reset=reset)
+    await engine.dispose()
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    parser = argparse.ArgumentParser(description="Seed the TaxLens demo dataset.")
+    parser.add_argument("--reset", action="store_true", help="wipe all TaxLens data before seeding")
+    args = parser.parse_args()
+    asyncio.run(_cli_main(reset=args.reset))

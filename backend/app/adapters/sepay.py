@@ -7,11 +7,13 @@ bank_transactions rows, and provides an API client for fetching transactions.
 from __future__ import annotations
 
 import logging
+import unicodedata
 from datetime import datetime, timezone
 from decimal import Decimal
 
 import httpx
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +26,69 @@ from app.models.transaction import BankTransaction
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+# Verbs/markers that typically separate "sender name" from the free-text note
+# in a SePay transaction_content string, e.g. "NGUYEN VAN A chuyen tien ...".
+_SPLIT_MARKERS = (
+    "chuyen khoan",
+    "chuyen tien",
+    "thanh toan",
+    "chuyển khoản",
+    "chuyển tiền",
+    "thanh toán",
+    "chuyen",
+    "chuyển",
+    "thanhtoan",
+    "ck",
+    "tt",
+)
+
+
+def split_sender_and_note(content: str | None) -> tuple[str | None, str | None]:
+    """Split a SePay transaction_content into (sender_name, note).
+
+    ``transaction_content``/``content`` bundles the sender name and
+    free-text note with no delimiter, e.g. "NGUYEN VAN A chuyen tien mua
+    iphone". The sender name is the text before the first transfer-verb
+    marker; everything from the marker onward is the note. If no marker is
+    found, the whole string is the note and no sender name is extracted —
+    per docs/03-engineering/05-integration.md § "Trích sender name".
+    """
+
+    if not content:
+        return None, None
+    text = content.strip()
+    if not text:
+        return None, None
+
+    folded = text.casefold()
+    best_index: int | None = None
+    for marker in _SPLIT_MARKERS:
+        idx = folded.find(marker)
+        if idx > 0 and (best_index is None or idx < best_index):
+            best_index = idx
+
+    if best_index is None:
+        return None, text
+
+    sender_raw = text[:best_index].strip()
+    note = text[best_index:].strip()
+    sender_name = sender_raw.title() if sender_raw else None
+    return sender_name, note or None
+
+
+def normalize_note(raw_note: str | None) -> str | None:
+    """Lightweight, deterministic placeholder normalization (NFC + whitespace).
+
+    Full Vietnamese diacritic restoration and abbreviation expansion (ck ->
+    chuyển khoản, toc -> tóc, ...) is P2's Vietnamese NLP service
+    (Sprint 3). This only guarantees a consistent, comparable string.
+    """
+
+    if raw_note is None:
+        return None
+    normalized = unicodedata.normalize("NFC", raw_note)
+    return " ".join(normalized.split())
 
 
 async def get_bank_transactions(
@@ -100,12 +165,16 @@ async def process_webhook(
         logger.info("SePay webhook duplicate: %s already exists", canonical_id)
         return False
 
+    raw_note = payload.content or payload.description
+    sender_name, _ = split_sender_and_note(payload.content)
     tx = BankTransaction(
         id=canonical_id,
         merchant_id=merchant_id,
         account_number=payload.accountNumber,
         amount=_parse_amount(payload.transferAmount),
-        raw_note=payload.content or payload.description,
+        sender_name=sender_name,
+        raw_note=raw_note,
+        normalized_note=normalize_note(raw_note),
         transaction_type=payload.transferType,
         transaction_date=_parse_transaction_date(payload.transactionDate),
         reference_number=payload.referenceCode,
@@ -124,11 +193,19 @@ async def process_webhook(
 @router.post("/sepay")
 async def sepay_webhook(
     request: Request,
-    authorization: str = Header(...),
-) -> dict:
+    authorization: str | None = Header(default=None),
+):
     expected = f"Apikey {settings.SEPAY_WEBHOOK_API_KEY}"
     if authorization != expected:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+        return JSONResponse(
+            status_code=401,
+            content={
+                "error": {
+                    "code": "ERR-WEBHOOK-001",
+                    "message": "Invalid webhook API key.",
+                }
+            },
+        )
 
     body = await request.json()
     payload = SepayWebhookPayload(**body)

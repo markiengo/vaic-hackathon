@@ -146,6 +146,106 @@ Status: Implemented and merged into `main` on 2026-07-17.
 - Still excluded: NLP implementation, agent execution logic, and real
   external integrations (SePay API token is dummy).
 
+### P5 Sprint 1 — Data pipeline and Tax Rules Engine (reconciled 2026-07-17)
+
+Status: Two independent implementations of this Sprint existed in parallel
+(one committed directly to `main` by another session, one built locally
+without knowledge of the first). Reconciled by comparing both against the
+work-split's literal exit criteria and running both against a live DB.
+Corrections below supersede claims in the "Sprint 1 — Router
+implementations..." entry further down where they conflict.
+
+#### What was kept from the first implementation (proven, do not re-derive)
+
+- `app/adapters/sepay.py`'s webhook mechanism: `SepayWebhookPayload`,
+  `process_webhook()`, the router mounted at `POST /api/v1/webhooks/sepay`,
+  the `SEPAY-{id}` canonical-ID / bare `source_id` convention, and the
+  WebSocket broadcast on insert (`app/core/ws_manager.py`,
+  `app/routers/ws.py`). This has been **live-tested against a real MB Bank
+  account with a real money transfer** (see `docs/sepay.md` and the
+  "Real-time transaction notifications" session entry below) — that is
+  strong, hard-to-reproduce evidence and was not touched structurally.
+- `app/adapters/csv.py` and `app/adapters/invoice.py` from the first
+  implementation were considered but replaced (see below) since nothing
+  else in the codebase depends on their internals — replacing them was
+  zero-risk and fixed concrete gaps.
+
+#### Corrections made
+
+1. **`retrieve_tax_rules("salon", "beauty")` — the literal Sprint 1 exit
+   criterion — did not work in the first implementation.** Its
+   `retrieve_tax_rules()` used exact equality on both `merchant_type` and
+   `business_category`, and its seed data stored the rule under
+   `merchant_type="hộ_kinh_doanh"`, `business_category="beauty_services"`.
+   Confirmed by reading its own test, which calls
+   `retrieve_tax_rules(session, "hộ_kinh_doanh", "beauty_services")` — a
+   different query than the one the work-split specifies. Fixed by
+   rewriting `retrieve_tax_rules()`/`check_required_fields()`/
+   `validate_rule_version()` in `app/services/tax_rules.py` with loose,
+   case-insensitive category matching (`"beauty"` matches a stored
+   `"beauty_services"`) and by seeding `merchant_type="salon"`.
+2. **`check_required_fields()`'s missing-invoice check was checking the
+   wrong population and the wrong date column.** It compared invoice count
+   against *all* sales in the period (not just paid ones — compliance.md
+   defines "missing invoices" as paid orders lacking one), and filtered
+   invoices by `Invoice.ingested_at` (when the row was inserted) rather
+   than the sale's own period. It also returned bare pass/fail labels with
+   no sale IDs, so nothing downstream could say *which* orders were
+   missing invoices. Rewritten to join through actually-`PAID`/`REFUNDED`
+   sales for the period and return the specific `missing_invoice_sales`
+   IDs.
+3. **`app/adapters/shb.py` had no data-generation capability at all** — it
+   only delegated to the SePay API client, so it could not fulfill the
+   work-split's explicit "SHB mock adapter with realistic Vietnamese bank
+   transactions" requirement. Added `mock_transaction()` (realistic
+   Vietnamese content, with and without diacritics) alongside the existing
+   delegation.
+4. **`app/adapters/sepay.py` never populated `sender_name` or
+   `normalized_note`** (both real canonical-schema columns per
+   `docs/03-engineering/05-integration.md`). Added
+   `split_sender_and_note()`/`normalize_note()` and wired them into
+   `process_webhook()` — purely additive, verified live against a real
+   webhook payload shape (see Verification).
+5. **The webhook's 401 response used FastAPI's default
+   `{"detail": "..."}` body** instead of the project's standard
+   `{"error": {"code": ..., "message": ...}}` envelope used everywhere
+   else (`07-error-codes.md`, `app/main.py`'s global handler). Fixed;
+   zero risk to the live SePay integration, which only checks the HTTP
+   status code, never the body.
+6. **Seed data's two "missing invoice" sales (`ORDER-0029`/`ORDER-0030`)
+   were UNPAID**, not paid-but-uninvoiced — the actual scenario
+   compliance.md describes. Its cash session was `CLOSED` with
+   `discrepancy_reason` pre-filled, rather than `RECONCILED` as
+   `docs/03-engineering/03-api-specifications.md`'s own documented example
+   shows. Its seed had only 5 products (work-split specifies 10) and no
+   refund scenario at all. Replaced with a seed design (30 sales / 23
+   bank_transactions / 1 cash session / 28 invoices — same target counts)
+   where the 2 missing-invoice sales are 2 of the 8 *cash* sales — the only
+   sales genuinely `PAID` before Sprint 2's matcher runs — and which
+   includes a refund, an ambiguous same-amount pair, and reuses the literal
+   fixture IDs/amounts already documented in
+   `docs/05-domain/02-algorithm.md` (`SHB-902194810`/`PAY-A8F21X`/350,000;
+   `SHB-902194815`/"ck cho em"/5,000,000; `SHB-902194820`/empty-note/85,000
+   — now as `SEPAY-902194810`/`SEPAY-902194815`/`SEPAY-902194820`, matching
+   the ID convention above). `scripts/seed_data.py` is now also importable
+   (`from scripts.seed_data import seed`) with `reset=True` by default, so
+   `tests/conftest.py`'s autouse session fixture reseeds cleanly every run.
+7. **`app/services/tax_rules.py` had no tests exercising the specific query
+   the work-split specifies**, and `app/tools/__init__.py` (P2's already-
+   authored tool-stub scaffold) is untouched — Sprint 2 will wire its
+   `get_bank_transactions`/`retrieve_tax_rules`/etc. stubs to call into
+   these corrected service functions.
+
+#### Still open
+
+- `app/adapters/invoice.py` (kept from the first implementation) calls a
+  external `INVOICE_API_URL` mock service that was never built — currently
+  harmless because nothing calls `sync_invoices()` yet (seed data inserts
+  `Invoice` rows directly), but this needs a decision before any Sprint 2
+  tool wraps it: build the standalone mock-services image
+  `docker-compose.yml` still has commented out, or make it a direct
+  DB-writer like the corrected adapters above.
+
 ## Created and updated files
 
 ### P1 — Matching and allocation
@@ -270,6 +370,40 @@ Status: Implemented and merged into `main` on 2026-07-17.
 - `docs/design/screens/` — Design reference screens from Google Stitch (moved
   from `stitch-screens/` during reorganization, folder names cleaned up).
 
+### P5 — Reconciliation with the parallel implementation
+
+- `backend/app/adapters/sepay.py` — patched in place (not replaced): added
+  `split_sender_and_note()`, `normalize_note()`, wired both into
+  `process_webhook()`; fixed the 401 path to return the standard error
+  envelope with an optional (not required) `Authorization` header.
+- `backend/app/adapters/shb.py` — patched in place: added `mock_transaction()`
+  realistic-payload generator alongside the existing `SHBAdapter`.
+- `backend/app/adapters/csv.py` — replaced: pure `parse_csv()` (no DB) +
+  `ingest_csv()`, structured `CsvRowError`/`CsvParseResult` instead of
+  string error messages, so parsing is unit-testable without a database.
+- `backend/app/adapters/invoice.py` — replaced: direct DB-writer
+  (`create_invoice`/`get_invoice`/`get_invoice_for_sale`/`list_invoices`);
+  see the "Still open" note above on the unresolved mock-service question.
+- `backend/app/services/tax_rules.py` — replaced: loose category matching,
+  dataclass returns (`RuleValidation`, `RequiredFieldsResult`,
+  `FieldCheck`) instead of plain dicts, `missing_invoice_sales` IDs.
+- `backend/scripts/seed_data.py` — replaced: see "Corrections made" #6
+  above; now also an importable `async def seed(reset: bool = True)`.
+- `backend/tests/test_seed_data.py`, `backend/tests/test_tax_rules.py` —
+  rewritten to match the corrected implementations and actual seed values
+  (were asserting against the superseded implementation's behavior, e.g.
+  1 user instead of 5, `hộ_kinh_doanh`/`beauty_services` instead of
+  `salon`/`beauty`, `CLOSED` instead of `RECONCILED`).
+- `backend/tests/test_sepay_webhook.py` — extended (not replaced) with
+  tests for the new sender_name extraction, the standard error envelope,
+  and a missing-header request; the 6 original tests needed no changes.
+- `backend/tests/test_adapters/{test_sepay,test_shb,test_csv}.py` — new
+  pure-logic unit tests for the corrected/added adapter functions.
+- `backend/requirements.txt` — added `pytest`/`pytest-asyncio`/`pytest-cov`
+  (the project already had a separate `requirements-dev.txt` with these;
+  kept both since `requirements.txt` is what CI/other sessions may install
+  and it was silently missing test dependencies).
+
 ## Verification
 
 ### P1 tests (no external dependencies)
@@ -318,6 +452,38 @@ End-to-end webhook verification (2026-07-17):
   45.5% reconciliation rate, 2 open exceptions.
 - Frontend at `localhost:3001` proxies API calls to backend successfully.
 - Dashboard page loads and displays live stats from the API.
+
+### P5 — Reconciliation verification (2026-07-17)
+
+No Docker in this environment; ran against a real local PostgreSQL 16
+(Homebrew, `LC_ALL=en_US.UTF-8` — macOS Sequoia requires this to start) and
+a `backend/.venv`, not sqlite or mocks.
+
+```
+cd backend && alembic upgrade head
+PYTHONPATH=. python scripts/seed_data.py --reset
+PYTHONPATH=. python -m pytest tests -v
+```
+
+```text
+100 passed in 0.66s
+```
+
+Seed summary:
+
+```text
+merchants=1 stores=1 devices=1 users=5 products=10 sales=30
+bank_transactions=23 cash_sessions=1 invoices=28 payment_intents=15
+tax_rule_versions=1
+```
+
+Also booted the real app (`uvicorn app.main:app`) and re-verified the
+merged webhook over real HTTP (not `TestClient`): valid key → `200
+{"success": true}` with `sender_name`/`normalized_note` now populated
+(previously always null); wrong key → `401` with the standard error
+envelope; a payload shaped exactly like the real MB Bank webhook example in
+`docs/sepay.md` ("NGO NHAT TAN chuyen tien ...") correctly split into
+sender_name="Ngo Nhat Tan".
 
 ## Session history
 
@@ -434,4 +600,47 @@ End-to-end webhook verification (2026-07-17):
 - Created `docs/sepay.md` — comprehensive SePay webhook setup and testing guide.
 - Security verified: `.env` in `.gitignore`, never committed. No hardcoded secrets.
   Webhook requires auth header. Duplicate transactions handled by canonical ID.
+
+### 2026-07-17 — P5 Sprint 1: independent implementation, then reconciliation
+
+- Started Sprint 1 P5 (adapters, Tax Rules Engine, seed data) from a local
+  checkout that was, unknown at the time, 6 commits behind `origin/main`.
+  Built adapters, `services/tax_rules.py`, `scripts/seed_data.py`, a
+  webhook router, and a minimal `get_bank_transactions`, verified end-to-end
+  against a local Postgres, all Sprint 1 exit criteria passing.
+- Ran `git status` before considering the work done and discovered
+  `origin/main` was 6 commits ahead, one of which
+  (`3446872`, author `markiengo`) already implemented almost exactly the
+  same scope independently, plus P2's agent/schema scaffolding, P4's full
+  router set, and P3's entire frontend.
+- Stopped and asked the user how to proceed rather than silently
+  overwriting or merging. Directed to compare both, evaluate, and finalize.
+- Extracted every overlapping file from `origin/main` via `git show` for a
+  side-by-side read (without touching the working tree), read the new
+  `tests/conftest.py`/`test_seed_data.py`/`test_sepay_webhook.py`/
+  `test_tax_rules.py`, and read `docs/sepay.md` — which revealed the first
+  implementation's webhook had been live-tested against a real MB Bank
+  account with a real money transfer. That materially changed the plan:
+  the webhook's core mechanism and ID convention were treated as proven
+  and preserved, not replaced.
+- Found and fixed six concrete defects in the first implementation (see
+  "Corrections made" under the P5 entry in Current Implementation above),
+  the most significant being that its `retrieve_tax_rules()` could not
+  satisfy the work-split's literal exit criterion
+  `retrieve_tax_rules("salon", "beauty") → 2026.07` at all (confirmed by
+  reading its own test, which queries different, non-matching arguments).
+- `git stash -u` before pulling (never a commit — nothing was committed
+  without being asked), fast-forward pulled `origin/main`, then
+  reintroduced the corrected work file by file: patched the proven
+  `sepay.py`/`shb.py` in place rather than replacing them; replaced
+  `csv.py`/`invoice.py`/`tax_rules.py`/`seed_data.py` wholesale after
+  confirming via `grep` that nothing else in the codebase depended on
+  their specific internals; rewrote the three DB-integration test files to
+  match the corrected behavior; left every P2/P3/P4 file untouched.
+- Final verification: 100 tests passed (was 77 before the merge); reseeded
+  and reverified every Sprint 1 exit criterion; booted the live app and
+  re-tested the webhook over real HTTP, including a payload shaped exactly
+  like the real SePay/MB Bank example from `docs/sepay.md`.
+- Not committed — left for the user to review and commit, since committing
+  wasn't requested.
 

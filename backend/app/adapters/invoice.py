@@ -1,101 +1,89 @@
-"""Invoice mock adapter — fetch invoices from mock API and map to invoices table."""
+"""Mock e-invoice provider adapter.
+
+MVP status is "mock provider" (see ``docs/03-engineering/05-integration.md``
+§ Invoice Mock Adapter): there is no real e-invoice sandbox integration, so
+this module simulates the create/retrieve contract a real provider would
+expose, writing directly to the ``invoices`` table. Invoices can exist
+without a linked sale (``sale_id IS NULL``) — a real e-invoice system is a
+separate source of truth from POS/bank data, which is exactly the kind of
+cross-source gap TaxLens is meant to surface.
+"""
 
 from __future__ import annotations
 
-import logging
+import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.models.invoice import Invoice
 
-logger = logging.getLogger(__name__)
+SOURCE = "mock_einvoice"
 
 
-async def fetch_invoices(
+def _generate_invoice_number(sequence: int) -> str:
+    # Realistic-looking Vietnamese e-invoice number: template "C" + 8 digits.
+    return f"C{sequence:08d}"
+
+
+async def create_invoice(
+    db: AsyncSession,
+    *,
     merchant_id: str,
-    period: str,
-) -> list[dict]:
-    """Fetch invoices from the mock invoice API.
+    amount: Decimal,
+    sale_id: str | None = None,
+    invoice_date: datetime | None = None,
+    invoice_number: str | None = None,
+    status: str = "ISSUED",
+) -> Invoice:
+    """Create a mock e-invoice, optionally linked to a sale."""
 
-    Args:
-        merchant_id: TaxLens merchant ID.
-        period: Period string like '2026-07'.
-
-    Returns:
-        List of raw invoice dicts from the API.
-    """
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(
-            settings.INVOICE_API_URL,
-            params={"merchant_id": merchant_id, "period": period},
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-    invoices = data.get("invoices", data) if isinstance(data, dict) else data
-    if not isinstance(invoices, list):
-        invoices = []
-
-    logger.info(
-        "Invoice fetch: merchant=%s period=%s count=%d",
-        merchant_id, period, len(invoices),
+    sequence = await _next_sequence(db)
+    record = Invoice(
+        id=f"INV-{uuid.uuid4().hex[:10].upper()}",
+        sale_id=sale_id,
+        merchant_id=merchant_id,
+        invoice_number=invoice_number or _generate_invoice_number(sequence),
+        amount=amount,
+        invoice_date=invoice_date or datetime.now(timezone.utc),
+        status=status,
+        source=SOURCE,
+        source_id=f"MOCKINV-{uuid.uuid4().hex[:12]}",
     )
-    return invoices
+    db.add(record)
+    await db.flush()
+    return record
 
 
-async def sync_invoices(
-    session: AsyncSession,
+async def _next_sequence(db: AsyncSession) -> int:
+    from sqlalchemy import func
+
+    count = (await db.execute(select(func.count(Invoice.id)))).scalar_one()
+    return count + 1
+
+
+async def get_invoice(db: AsyncSession, invoice_id: str) -> Invoice | None:
+    return await db.get(Invoice, invoice_id)
+
+
+async def get_invoice_for_sale(db: AsyncSession, sale_id: str) -> Invoice | None:
+    stmt = select(Invoice).where(Invoice.sale_id == sale_id)
+    return (await db.execute(stmt)).scalars().first()
+
+
+async def list_invoices(
+    db: AsyncSession,
+    *,
     merchant_id: str,
-    period: str,
-) -> dict:
-    """Fetch invoices from mock API and insert into invoices table (idempotent).
-
-    Returns: {"synced": int, "skipped": int}
-    """
-    raw_invoices = await fetch_invoices(merchant_id, period)
-    synced = 0
-    skipped = 0
-
-    for raw in raw_invoices:
-        inv_id = raw.get("id") or raw.get("invoice_id")
-        if not inv_id:
-            logger.warning("Invoice missing id, skipping: %s", raw)
-            skipped += 1
-            continue
-
-        existing = await session.execute(
-            select(Invoice).where(Invoice.id == str(inv_id))
-        )
-        if existing.scalar_one_or_none() is not None:
-            skipped += 1
-            continue
-
-        inv_date = None
-        if raw.get("invoice_date"):
-            try:
-                inv_date = datetime.fromisoformat(raw["invoice_date"])
-            except (ValueError, TypeError):
-                inv_date = None
-
-        inv = Invoice(
-            id=str(inv_id),
-            sale_id=raw.get("sale_id"),
-            merchant_id=merchant_id,
-            invoice_number=raw.get("invoice_number"),
-            amount=Decimal(str(raw.get("amount", 0))),
-            invoice_date=inv_date,
-            status=raw.get("status", "PENDING"),
-            source="mock_api",
-            source_id=str(inv_id),
-        )
-        session.add(inv)
-        synced += 1
-
-    await session.commit()
-    logger.info("Invoice sync: synced=%d skipped=%d", synced, skipped)
-    return {"synced": synced, "skipped": skipped}
+    period_start: datetime | None = None,
+    period_end: datetime | None = None,
+) -> list[Invoice]:
+    stmt = select(Invoice).where(Invoice.merchant_id == merchant_id)
+    if period_start is not None:
+        stmt = stmt.where(Invoice.invoice_date >= period_start)
+    if period_end is not None:
+        stmt = stmt.where(Invoice.invoice_date < period_end)
+    stmt = stmt.order_by(Invoice.invoice_date)
+    return list((await db.execute(stmt)).scalars().all())

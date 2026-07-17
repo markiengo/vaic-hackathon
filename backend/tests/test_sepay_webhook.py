@@ -120,7 +120,7 @@ async def test_webhook_idempotency():
 
 
 async def test_webhook_invalid_api_key():
-    """POST with invalid API key returns 401."""
+    """POST with invalid API key returns 401 with the standard error envelope."""
     from app.main import app
 
     transport = ASGITransport(app=app)
@@ -132,6 +132,41 @@ async def test_webhook_invalid_api_key():
         )
 
     assert resp.status_code == 401
+    assert resp.json() == {
+        "error": {"code": "ERR-WEBHOOK-001", "message": "Invalid webhook API key."}
+    }
+
+
+async def test_webhook_missing_api_key_header():
+    """Omitting the Authorization header entirely also returns a clean 401
+    (not FastAPI's default 422 for a missing required header)."""
+    from app.main import app
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(WEBHOOK_URL, json=TEST_PAYLOAD)
+
+    assert resp.status_code == 401
+
+
+async def test_webhook_extracts_sender_name_from_content():
+    """content = "NGUYEN VAN A chuyen tien ..." splits into sender_name +
+    note on the transfer-verb marker."""
+    from app.main import app
+
+    payload = dict(TEST_PAYLOAD, content="NGUYEN VAN A chuyen tien PAY-TEST001")
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            WEBHOOK_URL, json=payload, headers={"Authorization": API_KEY}
+        )
+    assert resp.status_code == 200
+
+    async with AsyncSessionLocal() as session:
+        tx = await session.get(BankTransaction, EXPECTED_TX_ID)
+        assert tx.sender_name == "Nguyen Van A"
+        assert tx.normalized_note == "NGUYEN VAN A chuyen tien PAY-TEST001"
 
 
 async def test_get_bank_transactions_returns_23():
