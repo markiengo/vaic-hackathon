@@ -124,12 +124,11 @@ async def process_webhook(
 @router.post("/sepay")
 async def sepay_webhook(
     request: Request,
-    authorization: str | None = Header(None),
+    authorization: str = Header(...),
 ) -> dict:
-    if authorization is not None:
-        expected = f"Apikey {settings.SEPAY_WEBHOOK_API_KEY}"
-        if authorization != expected:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+    expected = f"Apikey {settings.SEPAY_WEBHOOK_API_KEY}"
+    if authorization != expected:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
     body = await request.json()
     payload = SepayWebhookPayload(**body)

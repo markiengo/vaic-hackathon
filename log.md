@@ -409,3 +409,29 @@ End-to-end webhook verification (2026-07-17):
   (P1–P5) pointing to `docs/04-delivery/00-work-split.md` as source of truth.
 - TypeScript compiles with 0 errors (`tsc --noEmit` clean).
 - All Sprint 1 exit criteria now met. Ready for Sprint 2.
+
+### 2026-07-17 — Real-time transaction notifications (Sprint 2 early)
+
+- Built real-time transaction notification system (Sprint 2 P3 feature):
+  - **Backend:** Created `backend/app/core/ws_manager.py` (WebSocket connection
+    manager), `backend/app/routers/ws.py` (WebSocket endpoint at
+    `/api/v1/ws/transactions`), and modified `backend/app/adapters/sepay.py`
+    to broadcast transaction data via WebSocket after successful webhook insert.
+  - **Frontend:** Created `frontend/src/hooks/useTransactionSocket.ts` (WebSocket
+    hook with auto-reconnect), `frontend/src/components/TransactionToast.tsx`
+    (toast popup with green "Tiền vào" badge, amount, note, auto-dismiss 8s),
+    and mounted globally in `frontend/src/components/Providers.tsx`.
+  - Added `animate-slide-in-right` CSS animation to `globals.css`.
+- SePay webhook integration tested end-to-end:
+  - Connected MB Bank account (0917963988, NGO NHAT TAN) via SePay.
+  - Configured webhook with API Key auth in SePay.
+  - Used ngrok tunnel (localtunnel has interstitial page issue blocking webhooks).
+  - Real money transfer (10,000đ) successfully triggered webhook → DB insert →
+    WebSocket broadcast → toast popup on frontend.
+  - SePay webhook logs show `200 OK` with `{"success": true}`.
+- Re-enabled strict API key auth on webhook endpoint (was temporarily disabled
+  for testing). SePay sends `Authorization: Apikey <key>` header.
+- Created `docs/sepay.md` — comprehensive SePay webhook setup and testing guide.
+- Security verified: `.env` in `.gitignore`, never committed. No hardcoded secrets.
+  Webhook requires auth header. Duplicate transactions handled by canonical ID.
+
