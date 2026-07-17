@@ -246,6 +246,133 @@ implementations..." entry further down where they conflict.
   `docker-compose.yml` still has commented out, or make it a direct
   DB-writer like the corrected adapters above.
 
+### P5 Sprint 2 — 19 tool implementations and audit tracing (2026-07-18)
+
+Status: Implemented and verified against a live local PostgreSQL 16.
+
+All 19 tools P2 stubbed in `app/tools/__init__.py` (`raise
+NotImplementedError`) now have real, DB-backed implementations. The
+specialist LangGraph nodes (`reconciliation_agent`, `tax_compliance_agent`,
+`merchant_ops_agent`) are still placeholders that never call these — this
+is the tool layer itself, ready for P2 to wire in when the specialist
+nodes stop being placeholders.
+
+#### Interface note: sync stubs became async
+
+P2's stubs were plain `def`s raising `NotImplementedError` synchronously.
+Every implementation needs async DB I/O, so all 19 are now `async def`.
+Confirmed via `grep` that nothing in the codebase called any of them yet
+(the placeholder nodes don't), so this is a zero-risk interface
+completion, not a breaking change — P2's future wiring will need `await`.
+
+#### Traceability infrastructure (DEC-001/DEC-004)
+
+`app/tools/_tracing.py` — a `@traced_tool` decorator wraps every one of
+the 19 functions. Since tool signatures carry no `db`/`agent_run_id`
+parameter (LLM function-calling needs plain JSON-serializable arguments —
+see docs/05-domain/01-ai-advisor.md § Tool contracts), a contextvar-based
+`agent_run_scope(agent_run_id, agent_name)` async context manager lets the
+future agent-execution layer attach a run to whatever tool calls happen
+inside it. Every call — with or without an active run — writes an
+`audit_events` row (`actor_type="system"` when there's no run in scope);
+`tool_calls` additionally gets a row only when a run is in scope, since
+`tool_calls.agent_run_id` is a required FK. Only SHA-256 hashes of
+input/output are stored, never raw content, per the AI-advisor spec's
+privacy section.
+
+#### Return types: honored P2's declared Pydantic schemas, not just params
+
+6 of the 19 stubs declared Pydantic return types (`list[MatchCandidate]`,
+`ReconciliationExceptionDraft`, `TaxReadinessReport`, `ToolCallResult`
+(×2), `MerchantMessageDraft`) rather than plain `JSONDict`. All of these
+schemas set `extra="forbid"` (via the shared `AgentSchema` base), so a
+naive dict return would either violate the contract or silently drop
+fields a real caller expects. Two implementation consequences:
+- `draft_merchant_message`'s confirmation link has no dedicated schema
+  field (`MerchantMessageDraft` only has `message`), so the signed token
+  is embedded directly in the message text as a URL rather than returned
+  as a separate field — which is also just what a real merchant-facing
+  message needs anyway.
+- `create_reconciliation_exception`'s `ReconciliationExceptionDraft` has
+  no `id`/`status` fields, so the persisted exception's actual DB id and
+  status are folded into its (flexible, `dict[str, Any]`) `ai_suggestion`
+  field so callers aren't blind to what was actually written.
+
+#### Tool-by-tool notes
+
+- **Bank tools** (`get_bank_transactions`, `get_sales_orders`,
+  `get_cash_sessions`, `get_invoices`, `find_payment_reference`) — direct
+  period-scoped reads; `get_sales_orders` nests each sale's line items;
+  `get_cash_sessions` joins through `stores.merchant_id` since
+  `cash_sessions` has no direct merchant column; `find_payment_reference`
+  looks up a `payment_intents` row by id (that table *is* the "payment
+  reference" ledger, not `bank_transactions.reference_number`, which is
+  the bank's own separate reference).
+- **`score_match_candidates`** — a thin wrapper around P1's
+  `app.services.matching.candidate_match()`. The tool signature has no
+  `transaction_date`/`transaction_id` (only amount/sender/note), so there
+  is no real bank_transaction row to anchor time-proximity scoring to;
+  it builds an ephemeral, unpersisted probe transaction using the current
+  time. This is correct for real usage (an agent scoring a transaction
+  that just arrived), but means testing/demo calls against seed data from
+  a different date need a deliberately large `time_window_minutes` to see
+  candidates at all — documented in the test file, not a bug in the tool.
+  `known_sender_names` is approximated as the distinct sender names seen
+  on the merchant's past bank_transactions (no separate "customer" table
+  exists to draw this from).
+- **`create_reconciliation_exception`** — tolerant of a not-yet-created
+  `case_id`: opens the case if missing rather than failing, since
+  `exceptions.case_id` is a required FK and the natural agent order
+  (Reconciliation finds exceptions; Merchant Ops normally opens cases) can
+  run either way depending on the plan.
+- **Tax tools** — `retrieve_tax_rules`/`validate_rule_version`/
+  `check_required_fields` are thin wrappers over the Sprint 1
+  `services/tax_rules.py` functions (dataclasses converted to dicts).
+  **`classify_revenue_category`** takes P2's actual declared signature
+  (`transaction: JSONDict`) — not the two-string-argument form
+  (`classify_revenue_category("SEPAY-49682", "M001")`) originally used to
+  illustrate the exit criterion, which predates P2's committed stub.
+  Delegates the actual classification to a new pure, deterministic module
+  `app/services/revenue_classifier.py` (base 0.50 + weighted evidence
+  signals for loan/personal/purchase keyword phrases, an
+  amount-matches-a-pending-sale signal, and a prior-pattern-count bonus,
+  capped at 0.95) so the documented fixture
+  (`{"classification": "internal_transfer", "confidence": 0.82}` for a
+  personal-phrase transfer with no matching order) is exactly reproducible
+  every run — an LLM call would not guarantee that. Persists the result to
+  `tax_classifications` as a side effect (`classified_by="ai"`).
+  **`generate_tax_readiness_report`** assembles the full 5-item checklist
+  from compliance.md (bank reconciliation rate, cash session closure,
+  unclassified transactions, missing invoices, rule version validity) —
+  distinct from `check_required_fields`, which only covers the narrower
+  "required fields" table in the same doc. Bank-reconciliation rate and
+  classification coverage are honestly 0%/low right now since no
+  reconciliation matching or classification has run against the seed data
+  yet (Sprint 3's job) — `ready=False` at this stage is correct, not a bug.
+  **`create_draft_export`** calls `generate_tax_readiness_report`
+  internally and refuses (`ERR-TAX-002`) unless it's ready, per
+  compliance.md's "only available when tax-readiness = pass" rule.
+- **Case tools** — `create_case` is idempotent on a deterministic
+  `CASE-{merchant_id}-{period}` id (one case per merchant per period,
+  rather than proliferating cases across repeated reconciliation runs).
+  `send_confirmation_request(token, message)` takes an opaque,
+  already-minted token — nothing among the 19 tools generates one
+  explicitly, and `/confirm/{token}` has no backing `confirmation_tokens`
+  table, so `draft_merchant_message` mints an HMAC-signed, stateless token
+  (`app/services/confirmation_tokens.py` — signed `exception_id:expiry`,
+  no new table/migration needed) when it drafts a message, and
+  `send_confirmation_request` just validates and "sends" (mocked — no
+  real SMS/Zalo/email integration exists) it.
+  `export_to_accounting_system` is deliberately *not* gated on
+  tax-readiness like `create_draft_export` is — it's a practical MISA-format
+  accounting handoff, not the compliance-tied draft tax export ERR-TAX-002
+  guards.
+- **`app/services/export.py`** — shared data collection
+  (`collect_draft_export_data`) plus three renderers: `to_json_dict`,
+  `to_csv_text` (flattened sales rows), `to_misa_csv_text` (MISA-shaped
+  columns) — used by both `create_draft_export` and
+  `export_to_accounting_system`.
+
 ## Created and updated files
 
 ### P1 — Matching and allocation
@@ -404,6 +531,28 @@ implementations..." entry further down where they conflict.
   kept both since `requirements.txt` is what CI/other sessions may install
   and it was silently missing test dependencies).
 
+### P5 Sprint 2 — 19 tools and audit tracing
+
+- `backend/app/tools/__init__.py` — all 19 stub functions replaced with
+  real, `@traced_tool`-wrapped, async DB-backed implementations.
+- `backend/app/tools/_tracing.py` — new: `agent_run_scope` contextvar
+  scope, `@traced_tool` decorator, SHA-256 input/output hashing,
+  `tool_calls`/`audit_events` persistence.
+- `backend/app/services/revenue_classifier.py` — new: deterministic
+  revenue-classification scoring (`classify_revenue`), no DB/LLM
+  dependency, independently unit-testable.
+- `backend/app/services/confirmation_tokens.py` — new: HMAC-signed,
+  stateless confirmation-link tokens (`generate_confirmation_token`/
+  `decode_confirmation_token`), no new table/migration.
+- `backend/app/services/export.py` — new: `collect_draft_export_data`,
+  `to_json_dict`, `to_csv_text`, `to_misa_csv_text`.
+- `backend/tests/test_tools.py` — new: integration tests for all 19 tools
+  against the seeded DB, including the exact `classify_revenue_category`
+  fixture and two dedicated traceability tests (audit_events written with
+  no agent context; tool_calls written with one).
+- `docs/05-domain/01-ai-advisor.md` — updated "Implementation state" to
+  reflect the 19 real tool implementations.
+
 ## Verification
 
 ### P1 tests (no external dependencies)
@@ -484,6 +633,59 @@ merged webhook over real HTTP (not `TestClient`): valid key → `200
 envelope; a payload shaped exactly like the real MB Bank webhook example in
 `docs/sepay.md` ("NGO NHAT TAN chuyen tien ...") correctly split into
 sender_name="Ngo Nhat Tan".
+
+### P5 Sprint 2 — 19 tools verification (2026-07-18)
+
+Run from `backend/` against the same local PostgreSQL 16 used for Sprint 1
+(reseeded with `--reset` first):
+
+```
+PYTHONPATH=. python -m pytest tests -v
+```
+
+```text
+127 passed in 1.34s
+```
+
+Every tool called directly against the seeded DB and checked against its
+literal exit criterion or expected behavior:
+
+- `get_bank_transactions("M001","2026-07")` → 23; `get_sales_orders` → 30
+  (with nested line items); `get_cash_sessions` → 1
+  (`discrepancy=-120000.00`); `get_invoices` → 28.
+- `find_payment_reference("PAY-A8F21X")` → `ORDER-1842`;
+  `find_payment_reference("PAY-NOPE99")` → `None`.
+- `score_match_candidates("M001", 85000, ...)` → exactly the 2 sales
+  sharing that amount (`ORDER-1860`/`ORDER-1861`), both scoring 20/100 —
+  the duplicate-amount penalty from P1's algorithm applying correctly, not
+  a scoring bug.
+- `create_reconciliation_exception(...)` → auto-opens the case, persists
+  the exception, returns it.
+- `retrieve_tax_rules("salon","beauty")` → version `2026.07`;
+  `validate_rule_version("2026.07")` → valid.
+- `classify_revenue_category({"id": "SEPAY-902194815", ..., "raw_note": "ck
+  cho em", "amount": "5000000", "sender_name": None})` →
+  `{"classification": "internal_transfer", "confidence": 0.82}` — the
+  literal exit criterion, exact match.
+- `check_required_fields` → `missing_invoice_sales=["ORDER-1868",
+  "ORDER-1869"]`.
+- `generate_tax_readiness_report` → `ready=False` (bank_reconciliation 0%,
+  22 unclassified — both correct pre-Sprint-3, before any matching or bulk
+  classification has run).
+- `create_draft_export` → refused with `ERR-TAX-002` (correct, not ready).
+- `create_case` → idempotent on `CASE-M001-2026-07`; `assign_task_to_rm`,
+  `draft_merchant_message` (message included a real
+  `https://taxlens.shb.com.vn/confirm/{token}` link),
+  `send_confirmation_request` (decoded that exact token → `SENT`),
+  `update_case_status`, `export_to_accounting_system` (MISA CSV,
+  `MaChungTu` header present) — all verified.
+- Traceability: called a tool with no agent context → `audit_events` row
+  written (`actor_type="system"`); called one inside
+  `agent_run_scope(run_id, "tax_compliance")` → exactly one `tool_calls`
+  row with the correct `agent_name`, `tool_name`, non-null
+  `input_hash`/`output_hash`, and `duration_ms`.
+- Booted the real app (`uvicorn app.main:app`) after all of the above —
+  still starts cleanly.
 
 ## Session history
 
@@ -785,4 +987,52 @@ sender_name="Ngo Nhat Tan".
 - Doc count reduced from 37 to 24 project markdown files
 
 **Status:** Doc cleanup complete. 37 → 24 files. All cross-references in kept files point to valid locations. `04-decisions.md` preserved as unique initial decision register.
+
+### 2026-07-18 — P5 Sprint 2: 19 tool implementations
+
+- Before starting, fetched `origin/main` and found no new P5-relevant
+  surprises this time (unlike Sprint 1) — one new docs-reorganization
+  commit landed mid-session (`44d3721`, renumbering doc subfolders and
+  touching `docs/05-domain/01-ai-advisor.md`, the exact file I was
+  updating), so stashed the in-progress Sprint 2 code, pulled, reconciled
+  the one-line overlap (clean, no real conflict), and popped the stash
+  back.
+- Read `app/tools/__init__.py`'s 19 stub signatures (P2's actual committed
+  interface, not the informal examples from the original task briefing),
+  `app/schemas/agent.py`'s Pydantic contracts, `app/agents/graph.py`
+  (confirmed the specialist nodes are still placeholders — nothing calls
+  these tools yet), and the AI-advisor/compliance docs for the exact
+  checklist items and confidence-fixture requirements.
+- Built the traceability layer first (`app/tools/_tracing.py`) since every
+  one of the 19 tools needs it: a contextvar-based `agent_run_scope` plus
+  a `@traced_tool` decorator, since the tool signatures (constrained to
+  JSON-serializable LLM function-calling arguments) have no room for a
+  `db` session or `agent_run_id` parameter.
+- Implemented all 19 tools, wrapping P1's `candidate_match()` for
+  `score_match_candidates`, Sprint 1's `tax_rules.py` service for the tax
+  tools, and building three new small services along the way:
+  `revenue_classifier.py` (deterministic, so the documented 0.82
+  confidence fixture is exactly reproducible — an LLM call alone could not
+  guarantee that), `confirmation_tokens.py` (stateless signed tokens,
+  since `/confirm/{token}` has no backing table), and `export.py`
+  (shared JSON/CSV/MISA-CSV export rendering).
+- Initially wrote 6 of the 19 to return plain dicts where P2 had declared
+  actual Pydantic return types (`MatchCandidate`, `ReconciliationExceptionDraft`,
+  `TaxReadinessReport`, `ToolCallResult` ×2, `MerchantMessageDraft`) —
+  caught this on review and fixed all 6 to construct the real declared
+  types, which surfaced that `MerchantMessageDraft` and
+  `ReconciliationExceptionDraft` both set `extra="forbid"` and have no
+  field for a confirmation token/persisted id respectively, so adjusted
+  the design (token embedded in the message text; id/status folded into
+  the flexible `ai_suggestion` dict) rather than fighting the schema.
+- Verified against the live seeded DB with a throwaway script before
+  writing formal tests, found and fixed one real bug this way
+  (`score_match_candidates` returned zero candidates against seed data
+  because its "now" time anchor is ~a week off from the July seed dates —
+  correct behavior for real-time production use, a test-only artifact
+  here), then wrote `tests/test_tools.py` (22 tests) covering every tool
+  plus two dedicated traceability tests.
+- Full suite: 127 passed (105 before Sprint 2 + 22 new). Re-booted the app
+  to confirm nothing broke.
+- Not committed — left for the user to review.
 

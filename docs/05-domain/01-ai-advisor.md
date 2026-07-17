@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Tech Lead
 > **Applies to:** Tất cả module AI agent
-> **Implementation state:** Partial — agent scaffolding and prompts implemented; specialist agent nodes are placeholders; tool stubs raise NotImplementedError
-> **Last verified against code:** 2026-07-17
+> **Implementation state:** Partial — agent scaffolding and prompts implemented; all 19 tools have real DB-backed implementations with tool_calls/audit_events tracing (`app/tools/__init__.py`); specialist LangGraph nodes are still placeholders that do not yet call these tools
+> **Last verified against code:** 2026-07-18
 > **Verification:** Xem § Verification bên dưới
 
 ---
