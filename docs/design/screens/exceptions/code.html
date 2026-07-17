@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TaxLens - Quản lý ngoại lệ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#83d99c",
+                      "error": "#ba1a1a",
+                      "on-error": "#ffffff",
+                      "surface": "#f6fbf3",
+                      "text-primary": "#111827",
+                      "surface-container-low": "#f1f5ee",
+                      "surface-variant": "#dfe4dd",
+                      "on-secondary-fixed-variant": "#144392",
+                      "on-tertiary": "#ffffff",
+                      "secondary": "#345cab",
+                      "surface-container-high": "#e5e9e2",
+                      "on-error-container": "#93000a",
+                      "inverse-on-surface": "#eef2eb",
+                      "secondary-container": "#85aaff",
+                      "on-primary-container": "#8ee4a6",
+                      "border-default": "#E5E7EB",
+                      "background": "#f6fbf3",
+                      "secondary-fixed-dim": "#b0c6ff",
+                      "on-surface-variant": "#3f4940",
+                      "primary-container": "#006837",
+                      "success": "#16A34A",
+                      "outline-variant": "#bec9be",
+                      "tertiary": "#762730",
+                      "secondary-light": "#EEF2FA",
+                      "surface-container-highest": "#dfe4dd",
+                      "on-secondary-container": "#043b8a",
+                      "inverse-primary": "#83d99c",
+                      "surface-container": "#ebefe8",
+                      "on-secondary": "#ffffff",
+                      "tertiary-fixed": "#ffdada",
+                      "primary-light": "#E6F2EC",
+                      "warning-light": "#FEF3C7",
+                      "danger": "#DC2626",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed-variant": "#00522a",
+                      "tertiary-container": "#943e46",
+                      "on-tertiary-container": "#ffc3c5",
+                      "error-container": "#ffdad6",
+                      "inverse-surface": "#2d322d",
+                      "surface-bright": "#f6fbf3",
+                      "on-tertiary-fixed": "#40000c",
+                      "primary-fixed": "#9ef6b6",
+                      "surface-dim": "#d7dbd4",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-fixed-dim": "#ffb3b6",
+                      "warning": "#F59E0B",
+                      "on-surface": "#181d19",
+                      "on-secondary-fixed": "#001944",
+                      "primary": "#004d27",
+                      "surface-tint": "#0b6d3b",
+                      "secondary-fixed": "#d9e2ff",
+                      "on-primary-fixed": "#00210e",
+                      "outline": "#6f7a70",
+                      "on-background": "#181d19",
+                      "danger-light": "#FEE2E2",
+                      "border-strong": "#D1D5DB",
+                      "text-tertiary": "#9CA3AF",
+                      "on-tertiary-fixed-variant": "#7b2b34",
+                      "text-secondary": "#6B7280",
+                      "primary-dark": "#004D27",
+                      "success-light": "#DCFCE7"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-sm": "0.5rem",
+                      "container-margin": "2rem",
+                      "stack-md": "1rem",
+                      "gutter": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "body": [
+                              "inter"
+                      ],
+                      "label-caps": [
+                              "inter"
+                      ],
+                      "default": [
+                              "inter"
+                      ],
+                      "page-title": [
+                              "inter"
+                      ],
+                      "hero-numbers": [
+                              "inter"
+                      ],
+                      "data-mono": [
+                              "jetbrainsMono"
+                      ],
+                      "section-header": [
+                              "inter"
+                      ]
+              },
+              "fontSize": {
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "default": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "page-title": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "hero-numbers": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "data-mono": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "section-header": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #F9FAFB; /* Base gray background per guidelines */
+        }
+        .card-hover:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+        }
+        .focus-ring:focus-within {
+            box-shadow: 0 0 0 3px #E6F2EC; /* primary-light */
+            border-color: #004d27; /* primary */
+        }
+        
+        /* Custom scrollbar for tables/lists */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+    </style>
+</head>
+<body class="font-default text-default text-text-primary antialiased flex h-screen overflow-hidden">
+<!-- JSON SIDENAV INJECTION -->
+<nav class="bg-surface-container-low dark:bg-inverse-surface text-primary dark:text-primary-fixed-dim font-label-caps text-label-caps h-screen w-64 flex flex-col fixed left-0 top-0 z-50 bg-gradient-to-b from-surface-container-lowest to-surface-container-low dark:from-inverse-surface dark:to-surface-dim shadow-sm flex flex-col h-full py-stack-lg border-r border-border-default dark:border-outline hidden md:flex">
+<!-- Header -->
+<div class="px-container-margin mb-stack-lg flex items-center gap-stack-sm">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary font-bold">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<div>
+<h1 class="font-section-header text-section-header font-bold text-on-surface dark:text-on-primary-fixed">TaxLens</h1>
+<p class="text-[10px] text-text-secondary uppercase tracking-wider">Merchant TaxOps</p>
+</div>
+</div>
+<!-- Main Tabs -->
+<div class="flex-1 flex flex-col gap-2 px-stack-sm">
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant/50 hover:translate-x-1 transition-transform duration-200 active:scale-95 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Bảng điều khiển
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant/50 hover:translate-x-1 transition-transform duration-200 active:scale-95 rounded-lg" href="#">
+<span class="material-symbols-outlined">sync_alt</span>
+                Đối soát
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 bg-primary-light text-primary dark:bg-primary-container dark:text-on-primary-container rounded-lg font-semibold hover:translate-x-1 transition-transform duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">priority_high</span>
+                Ngoại lệ
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant/50 hover:translate-x-1 transition-transform duration-200 active:scale-95 rounded-lg" href="#">
+<span class="material-symbols-outlined">storefront</span>
+                Hồ sơ ĐVCNTT
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant/50 hover:translate-x-1 transition-transform duration-200 active:scale-95 rounded-lg" href="#">
+<span class="material-symbols-outlined">description</span>
+                Báo cáo thuế
+            </a>
+</div>
+<!-- Footer Tabs -->
+<div class="mt-auto flex flex-col gap-2 px-stack-sm pt-stack-md border-t border-border-default mx-4">
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant/50 hover:translate-x-1 transition-transform duration-200 active:scale-95 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Cài đặt
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant/50 hover:translate-x-1 transition-transform duration-200 active:scale-95 rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+                Đăng xuất
+            </a>
+</div>
+</nav>
+<!-- MAIN CONTENT CANVAS -->
+<main class="flex-1 flex flex-col md:ml-64 relative min-w-0">
+<!-- JSON TOPNAV INJECTION -->
+<header class="bg-surface/80 backdrop-blur-md dark:bg-surface-dim/80 text-primary dark:text-primary-fixed font-body text-body docked full-width top-0 z-40 border-b border-border-default dark:border-outline-variant flat no shadows flex justify-between items-center w-full px-container-margin h-16 sticky top-0 hidden md:flex">
+<div class="flex items-center gap-stack-md">
+<!-- Mobile Menu Trigger -->
+<button class="md:hidden p-2 -ml-2 text-on-surface hover:bg-surface-variant/50 rounded-full transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="font-page-title text-page-title font-bold text-primary dark:text-primary-fixed hidden">TaxLens</div>
+</div>
+<!-- Global Search - Left aligned per JSON -->
+<div class="flex-1 max-w-xl mr-auto ml-4">
+<div class="relative flex items-center w-full h-10 rounded bg-surface-container-lowest border border-border-default focus-ring transition-colors">
+<span class="material-symbols-outlined absolute left-3 text-text-tertiary">search</span>
+<input class="w-full h-full pl-10 pr-4 bg-transparent border-none outline-none font-body text-body text-text-primary placeholder-text-tertiary" placeholder="Tìm kiếm mã giao dịch, MID..." type="text"/>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-stack-sm">
+<button class="p-2 text-on-surface-variant hover:bg-primary-light/50 dark:hover:bg-primary-container/30 transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-primary-light/50 dark:hover:bg-primary-container/30 transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-primary-light/50 dark:hover:bg-primary-container/30 transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="ml-stack-sm pl-stack-sm border-l border-border-default">
+<div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold border border-primary-fixed overflow-hidden">
+<img alt="Staff User Profile Avatar" class="object-cover w-full h-full" data-alt="A small, professional headshot photo of a banking staff member used as an avatar. The person is smiling slightly, set against a clean, light green studio background. High quality, clear, well-lit portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBG8RWVs34cUWHo6aGaY4ySWRGPMAEDKOthSlWQA0B89IgkxJdIJosZP9T2HhNGEbL6ulHErnhcbZmqepeEDs3ViJi1uOdQhu8yx4Hh0YVFsZbzeQPAQfsbc3kvlvTw5lz-8PWKNrPRBYYrHKVGiMVzFPYKgc95Og0EVslPWJfxcZ7gC9OUhszg_-RdW_B-rf5L7tfVwZ0lD6QLJ7tIxUlRHYrnBpFiiKsis7Yk9mAM4OuAfnWKTr2n"/>
+</div>
+</div>
+</div>
+</header>
+<!-- PAGE CONTENT -->
+<div class="flex-1 overflow-auto p-gutter md:p-container-margin">
+<div class="mb-stack-lg flex flex-col md:flex-row md:items-end justify-between gap-stack-md">
+<div>
+<div class="flex items-center gap-2 text-text-secondary font-label-caps text-label-caps mb-1">
+<span class="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+<span>ĐỐI SOÁT &amp; QUYẾT TOÁN</span>
+</div>
+<h2 class="font-page-title text-page-title text-text-primary">Quản lý ngoại lệ</h2>
+<p class="font-body text-body text-text-secondary mt-1">Xử lý các giao dịch có độ sai lệch so với dữ liệu quyết toán.</p>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-4 py-2 bg-white border border-border-strong text-text-primary rounded font-body text-body font-medium hover:bg-surface-variant/20 transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                        Lọc
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded font-body text-body font-medium hover:opacity-90 transition-opacity shadow-sm">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Xuất báo cáo
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter h-[calc(100vh-200px)] min-h-[600px]">
+<!-- Exception Queue (List) -->
+<div class="lg:col-span-4 flex flex-col bg-white border border-border-default rounded-lg shadow-sm overflow-hidden">
+<div class="p-4 border-b border-border-default bg-surface-container-lowest flex justify-between items-center">
+<h3 class="font-section-header text-section-header text-text-primary">Danh sách cần xử lý</h3>
+<span class="bg-warning-light text-warning px-2 py-0.5 rounded font-data-mono text-[12px] font-bold">24</span>
+</div>
+<div class="flex-1 overflow-y-auto bg-surface-bright p-2 flex flex-col gap-2">
+<!-- Active Item -->
+<div class="p-3 bg-primary-light border-l-4 border-primary rounded-r cursor-pointer card-hover">
+<div class="flex justify-between items-start mb-2">
+<span class="bg-danger-light text-danger px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Cao</span>
+<span class="font-data-mono text-[12px] text-text-secondary">10:45 12/10</span>
+</div>
+<div class="font-data-mono text-[14px] text-text-primary font-medium mb-1">TXN-99823-A</div>
+<div class="font-body text-body text-text-secondary truncate">Sai lệch số tiền: 50.000₫</div>
+</div>
+<!-- Inactive Item -->
+<div class="p-3 bg-white border border-border-default rounded cursor-pointer card-hover hover:border-primary-fixed-dim">
+<div class="flex justify-between items-start mb-2">
+<span class="bg-warning-light text-warning px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Trung bình</span>
+<span class="font-data-mono text-[12px] text-text-secondary">09:15 12/10</span>
+</div>
+<div class="font-data-mono text-[14px] text-text-primary font-medium mb-1">TXN-99821-C</div>
+<div class="font-body text-body text-text-secondary truncate">Trùng lặp giao dịch (Core)</div>
+</div>
+<!-- Inactive Item -->
+<div class="p-3 bg-white border border-border-default rounded cursor-pointer card-hover hover:border-primary-fixed-dim">
+<div class="flex justify-between items-start mb-2">
+<span class="bg-surface-variant text-on-surface-variant px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Thấp</span>
+<span class="font-data-mono text-[12px] text-text-secondary">16:30 11/10</span>
+</div>
+<div class="font-data-mono text-[14px] text-text-primary font-medium mb-1">TXN-99750-X</div>
+<div class="font-body text-body text-text-secondary truncate">Mã Merchant không khớp</div>
+</div>
+<!-- Inactive Item -->
+<div class="p-3 bg-white border border-border-default rounded cursor-pointer card-hover hover:border-primary-fixed-dim">
+<div class="flex justify-between items-start mb-2">
+<span class="bg-danger-light text-danger px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Cao</span>
+<span class="font-data-mono text-[12px] text-text-secondary">15:00 11/10</span>
+</div>
+<div class="font-data-mono text-[14px] text-text-primary font-medium mb-1">TXN-99742-Y</div>
+<div class="font-body text-body text-text-secondary truncate">Giao dịch không tồn tại trên NAPAS</div>
+</div>
+</div>
+</div>
+<!-- Detail & Resolution Canvas -->
+<div class="lg:col-span-8 flex flex-col gap-gutter overflow-y-auto">
+<!-- Top Panel: Mismatch Details -->
+<div class="bg-white border border-border-default rounded-lg shadow-sm p-6 relative overflow-hidden">
+<!-- Decorative background element for bank feel -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-light rounded-bl-full opacity-30 -z-10 pointer-events-none"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-page-title text-[20px] text-text-primary mb-1">Chi tiết ngoại lệ: TXN-99823-A</h3>
+<p class="font-body text-body text-text-secondary">Merchant: <span class="font-medium text-text-primary">Highlands Coffee (MID: HLC-0921)</span></p>
+</div>
+<div class="flex items-center gap-2 bg-danger-light text-danger px-3 py-1 rounded-full font-label-caps text-[12px]">
+<span class="material-symbols-outlined text-[16px]">error</span>
+                                Sai lệch số tiền
+                            </div>
+</div>
+<!-- Data Comparison Table (The core focus) -->
+<div class="border border-border-default rounded overflow-hidden">
+<table class="w-full text-left font-body text-body">
+<thead class="bg-surface-container-low text-text-secondary">
+<tr>
+<th class="p-3 font-medium border-b border-border-default">Trường dữ liệu</th>
+<th class="p-3 font-medium border-b border-l border-border-default">Dữ liệu Core Banking</th>
+<th class="p-3 font-medium border-b border-l border-border-default">Dữ liệu Đối tác (NAPAS)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-border-default">
+<td class="p-3 text-text-secondary">Thời gian GD</td>
+<td class="p-3 font-data-mono border-l border-border-default">2023-10-12 10:42:15</td>
+<td class="p-3 font-data-mono border-l border-border-default">2023-10-12 10:42:16</td>
+</tr>
+<tr class="border-b border-border-default bg-danger-light/20">
+<td class="p-3 text-text-secondary font-medium">Số tiền</td>
+<td class="p-3 font-data-mono border-l border-border-default font-bold text-text-primary">150.000₫</td>
+<td class="p-3 font-data-mono border-l border-border-default font-bold text-danger">100.000₫</td>
+</tr>
+<tr>
+<td class="p-3 text-text-secondary">Mã chuẩn chi</td>
+<td class="p-3 font-data-mono border-l border-border-default">APP-88219</td>
+<td class="p-3 font-data-mono border-l border-border-default">APP-88219</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Bottom Grid: Workflow & Timeline -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter flex-1">
+<!-- Resolution Workflow -->
+<div class="bg-white border border-border-default rounded-lg shadow-sm p-5 flex flex-col">
+<h4 class="font-section-header text-[16px] text-text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">gavel</span>
+                                Quyết định xử lý
+                            </h4>
+<div class="space-y-3 mb-6">
+<label class="flex items-center p-3 border border-border-strong rounded cursor-pointer hover:bg-surface-variant/20 focus-ring">
+<input checked="" class="w-4 h-4 text-primary border-border-strong focus:ring-primary" name="resolution" type="radio"/>
+<span class="ml-3 font-body text-body text-text-primary font-medium">Cập nhật thủ công</span>
+</label>
+<label class="flex items-center p-3 border border-border-default rounded cursor-pointer hover:bg-surface-variant/20 focus-ring">
+<input class="w-4 h-4 text-primary border-border-strong focus:ring-primary" name="resolution" type="radio"/>
+<span class="ml-3 font-body text-body text-text-primary">Yêu cầu Merchant xác nhận</span>
+</label>
+<label class="flex items-center p-3 border border-border-default rounded cursor-pointer hover:bg-surface-variant/20 focus-ring">
+<input class="w-4 h-4 text-primary border-border-strong focus:ring-primary" name="resolution" type="radio"/>
+<span class="ml-3 font-body text-body text-text-primary">Đánh dấu là lỗi hệ thống</span>
+</label>
+</div>
+<div class="mt-auto">
+<label class="block font-label-caps text-[12px] text-text-secondary mb-1">Ghi chú nghiệp vụ (Staff Notes)</label>
+<textarea class="w-full border border-border-strong rounded p-3 font-body text-body focus-ring mb-4 resize-none h-24 placeholder-text-tertiary" placeholder="Nhập lý do điều chỉnh để lưu vết audit..."></textarea>
+<button class="w-full bg-primary text-white py-2.5 rounded font-body text-body font-medium hover:bg-primary-dark transition-colors shadow-sm">
+                                    Xác nhận xử lý
+                                </button>
+</div>
+</div>
+<!-- Lifecycle Timeline -->
+<div class="bg-white border border-border-default rounded-lg shadow-sm p-5">
+<h4 class="font-section-header text-[16px] text-text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+                                Vòng đời giao dịch
+                            </h4>
+<div class="relative pl-6 border-l-2 border-surface-variant space-y-6 mt-6 ml-2">
+<!-- Step 1 -->
+<div class="relative">
+<div class="absolute -left-[31px] bg-white p-1 rounded-full border-2 border-surface-variant">
+<div class="w-2.5 h-2.5 rounded-full bg-text-tertiary"></div>
+</div>
+<p class="font-data-mono text-[12px] text-text-secondary">10:42 12/10/2023</p>
+<p class="font-body text-body text-text-primary">Giao dịch phát sinh tại POS</p>
+</div>
+<!-- Step 2 -->
+<div class="relative">
+<div class="absolute -left-[31px] bg-white p-1 rounded-full border-2 border-surface-variant">
+<div class="w-2.5 h-2.5 rounded-full bg-text-tertiary"></div>
+</div>
+<p class="font-data-mono text-[12px] text-text-secondary">23:55 12/10/2023</p>
+<p class="font-body text-body text-text-primary">Hệ thống Core Banking ghi nhận</p>
+</div>
+<!-- Step 3 (Exception) -->
+<div class="relative">
+<div class="absolute -left-[31px] bg-danger-light p-1 rounded-full border-2 border-danger/30">
+<div class="w-2.5 h-2.5 rounded-full bg-danger"></div>
+</div>
+<p class="font-data-mono text-[12px] text-danger font-medium">02:15 13/10/2023</p>
+<p class="font-body text-body text-text-primary font-medium">Chạy Batch đối soát: Phát hiện sai lệch</p>
+<p class="text-[12px] text-text-secondary mt-1 border border-border-default p-2 rounded bg-surface-bright inline-block">Rule: AMT_MISMATCH_NAPAS</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

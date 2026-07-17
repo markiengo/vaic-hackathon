@@ -5,7 +5,7 @@
 > **Owner:** PM
 > **Applies to:** Toàn bộ tài liệu TaxLens
 > **Implementation state:** Current
-> **Last verified against code:** N/A (greenfield)
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---

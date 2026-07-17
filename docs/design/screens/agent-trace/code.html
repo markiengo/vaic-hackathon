@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-surface" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TaxLens - Agent Trace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#dfe4dd",
+                        "on-secondary-fixed-variant": "#144392",
+                        "success": "#16A34A",
+                        "inverse-on-surface": "#eef2eb",
+                        "text-primary": "#111827",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#3f4940",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#ebefe8",
+                        "surface-tint": "#0b6d3b",
+                        "secondary-fixed": "#d9e2ff",
+                        "surface-dim": "#d7dbd4",
+                        "text-tertiary": "#9CA3AF",
+                        "primary": "#004d27",
+                        "border-default": "#E5E7EB",
+                        "tertiary-fixed-dim": "#ffb3b6",
+                        "on-tertiary": "#ffffff",
+                        "text-secondary": "#6B7280",
+                        "background": "#f6fbf3",
+                        "surface": "#f6fbf3",
+                        "surface-container-low": "#f1f5ee",
+                        "tertiary": "#762730",
+                        "warning-light": "#FEF3C7",
+                        "tertiary-container": "#943e46",
+                        "primary-container": "#006837",
+                        "danger-light": "#FEE2E2",
+                        "on-surface": "#181d19",
+                        "outline-variant": "#bec9be",
+                        "border-strong": "#D1D5DB",
+                        "on-secondary-container": "#043b8a",
+                        "primary-fixed-dim": "#83d99c",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#2d322d",
+                        "surface-container-highest": "#dfe4dd",
+                        "warning": "#F59E0B",
+                        "on-secondary-fixed": "#001944",
+                        "primary-dark": "#004D27",
+                        "on-background": "#181d19",
+                        "secondary": "#345cab",
+                        "on-tertiary-fixed-variant": "#7b2b34",
+                        "primary-fixed": "#9ef6b6",
+                        "tertiary-fixed": "#ffdada",
+                        "on-primary-fixed": "#00210e",
+                        "secondary-fixed-dim": "#b0c6ff",
+                        "error": "#ba1a1a",
+                        "success-light": "#DCFCE7",
+                        "on-tertiary-fixed": "#40000c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f6fbf3",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#8ee4a6",
+                        "outline": "#6f7a70",
+                        "danger": "#DC2626",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#83d99c",
+                        "secondary-container": "#85aaff",
+                        "primary-light": "#E6F2EC",
+                        "on-primary-fixed-variant": "#00522a",
+                        "surface-container-high": "#e5e9e2",
+                        "secondary-light": "#EEF2FA",
+                        "on-tertiary-container": "#ffc3c5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-lg": "1.5rem",
+                        "stack-md": "1rem",
+                        "container-margin": "2rem",
+                        "gutter": "1rem",
+                        "stack-sm": "0.5rem"
+                    },
+                    "fontFamily": {
+                        "default": ["inter"],
+                        "body": ["inter"],
+                        "section-header": ["inter"],
+                        "label-caps": ["inter"],
+                        "hero-numbers": ["inter"],
+                        "data-mono": ["jetbrainsMono"],
+                        "page-title": ["inter"]
+                    },
+                    "fontSize": {
+                        "default": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "section-header": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "hero-numbers": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "page-title": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full flex font-default text-default text-text-primary bg-background antialiased selection:bg-primary-light">
+<!-- SideNavBar (from JSON) -->
+<nav class="hidden md:flex flex-col py-stack-lg fixed left-0 top-0 h-full overflow-y-auto bg-primary-dark dark:bg-inverse-surface shadow-lg w-64 z-40">
+<div class="px-container-margin mb-stack-lg flex items-center gap-3">
+<div aria-label="SHB Logo" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-primary-dark font-bold text-lg">
+                S
+            </div>
+<div>
+<h1 class="font-page-title text-page-title text-on-primary">SHB Bank</h1>
+<p class="font-label-caps text-label-caps text-primary-light/70 uppercase">Merchant TaxOps</p>
+</div>
+</div>
+<ul class="flex-1 space-y-1 mt-4">
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps text-primary-light/70 hover:text-on-primary hover:bg-primary/50 transition-all duration-200 cursor-pointer active:scale-95 mx-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps text-primary-light/70 hover:text-on-primary hover:bg-primary/50 transition-all duration-200 cursor-pointer active:scale-95 mx-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="warning">warning</span>
+<span>Exceptions</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps text-primary-light/70 hover:text-on-primary hover:bg-primary/50 transition-all duration-200 cursor-pointer active:scale-95 mx-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_balance">account_balance</span>
+<span>Tax</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps text-primary-light/70 hover:text-on-primary hover:bg-primary/50 transition-all duration-200 cursor-pointer active:scale-95 mx-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="assignment">assignment</span>
+<span>Cases</span>
+</a>
+</li>
+<!-- Active State -->
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps bg-primary-container text-on-primary-container rounded-lg mx-2 transition-all duration-200 cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="location_searching">location_searching</span>
+<span>Agent Trace</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps text-primary-light/70 hover:text-on-primary hover:bg-primary/50 transition-all duration-200 cursor-pointer active:scale-95 mx-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="history_edu">history_edu</span>
+<span>Audit</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps text-primary-light/70 hover:text-on-primary hover:bg-primary/50 transition-all duration-200 cursor-pointer active:scale-95 mx-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="point_of_sale">point_of_sale</span>
+<span>Mini POS</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto border-t border-primary/30 pt-4">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps text-primary-light/70 hover:text-on-primary hover:bg-primary/50 transition-all duration-200 cursor-pointer active:scale-95 mx-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 font-label-caps text-label-caps text-primary-light/70 hover:text-on-primary hover:bg-primary/50 transition-all duration-200 cursor-pointer active:scale-95 mx-2 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="contact_support">contact_support</span>
+<span>Support</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 md:ml-64 flex flex-col min-h-screen relative">
+<!-- TopNavBar (from JSON) -->
+<header class="bg-surface/80 backdrop-blur-md dark:bg-surface-container/80 docked full-width top-0 sticky z-50 border-b border-border-default dark:border-outline-variant shadow-sm flex justify-between items-center px-container-margin w-full h-16">
+<div class="flex items-center gap-4">
+<span class="font-page-title text-page-title text-primary dark:text-primary-fixed font-bold">TaxLens</span>
+<div class="h-6 w-px bg-border-strong mx-2"></div>
+<!-- Merchant Selector Active Link -->
+<nav class="flex gap-4 h-full items-center">
+<a class="font-default text-default text-primary font-bold border-b-2 border-primary pb-1 flex items-center h-full pt-1 hover:bg-surface-container-low transition-colors duration-200 cursor-pointer active:opacity-80" href="#">
+                        Merchant Selector
+                    </a>
+</nav>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:bg-surface-container-low transition-colors duration-200 cursor-pointer active:opacity-80 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-surface-container-low transition-colors duration-200 cursor-pointer active:opacity-80 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+</button>
+<img alt="User profile photo" class="w-8 h-8 rounded-full ml-2 border border-border-default object-cover cursor-pointer hover:opacity-80 transition-opacity" data-alt="A small circular avatar placeholder image showing a silhouette of a person, set against a light background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTts4PwnQZy6-4BFMV-p5mhB-UqmturROg5vrW0vvMvog9TKIfQEh_6v2dPHmr6YOxmxdNtcFrD5Gu_tDxLdyvcFHT9cdAUg4Rlgjsa7bTrph7IrJ2hiCoGPj2eqVLqrXBMp705RZnJtFs_76cpfvv62wpoTmoFgcgFIg3RZeCx688ryz6yhwBVCAyd6jfeqM2iIU3hsSoMIvT2UIL-S9o7_b8u1jui_xGnnwFEOS0MlYyVikSn6bd"/>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 p-container-margin overflow-y-auto">
+<!-- Page Header -->
+<div class="mb-stack-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<h2 class="font-page-title text-[24px] font-bold text-text-primary m-0">Agent Trace</h2>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-success-light text-success border border-success/20">
+                        HOÀN THÀNH
+                    </span>
+<span class="font-data-mono text-data-mono text-text-secondary bg-surface-container px-2 py-0.5 rounded text-xs border border-border-default">
+                        RUN-001
+                    </span>
+</div>
+<button class="inline-flex items-center px-4 py-2 border border-border-default rounded-lg shadow-sm text-sm font-medium text-text-primary bg-white hover:bg-surface-container-low transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary h-10">
+<span class="material-symbols-outlined text-[18px] mr-2" data-icon="download">download</span>
+                    Export Log
+                </button>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Main Timeline Area (Takes 2/3 space on large screens) -->
+<div class="lg:col-span-2">
+<div class="bg-white rounded-xl shadow-sm border border-border-default p-stack-lg relative overflow-hidden bg-gradient-to-b from-white to-surface-container-lowest">
+<h3 class="font-section-header text-section-header text-text-primary mb-stack-md border-b border-border-default pb-2">Execution Flow</h3>
+<!-- Timeline -->
+<div class="relative pl-6 pt-4 pb-4">
+<!-- Vertical Rail -->
+<div class="absolute left-[11px] top-6 bottom-6 w-[2px] bg-border-default rounded-full z-0"></div>
+<ul class="space-y-8 relative z-10">
+<!-- Step 1 -->
+<li class="relative">
+<div class="absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full bg-primary-container border-4 border-white shadow-sm flex items-center justify-center">
+<div class="h-2 w-2 rounded-full bg-white"></div>
+</div>
+<div class="flex justify-between items-start ml-2">
+<div>
+<h4 class="font-default text-[15px] font-semibold text-text-primary m-0 flex items-center gap-2">
+                                                Lấy hồ sơ merchant
+                                            </h4>
+<div class="mt-1 flex items-center gap-2">
+<span class="font-data-mono text-[12px] bg-surface-container-low text-text-secondary px-1.5 py-0.5 rounded font-medium border border-border-default">get_merchant_profile</span>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-mono text-[13px] text-text-secondary">120ms</div>
+<div class="font-data-mono text-[11px] text-text-tertiary">14:01:00</div>
+</div>
+</div>
+</li>
+<!-- Step 2 -->
+<li class="relative">
+<div class="absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full bg-primary-container border-4 border-white shadow-sm flex items-center justify-center">
+<div class="h-2 w-2 rounded-full bg-white"></div>
+</div>
+<div class="flex justify-between items-start ml-2">
+<div>
+<h4 class="font-default text-[15px] font-semibold text-text-primary m-0 flex items-center gap-2">
+                                                Lấy giao dịch ngân hàng
+                                            </h4>
+<div class="mt-1 flex items-center gap-2">
+<span class="font-data-mono text-[12px] bg-surface-container-low text-text-secondary px-1.5 py-0.5 rounded font-medium border border-border-default">get_bank_transactions</span>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-mono text-[13px] text-text-secondary">95ms</div>
+<div class="font-data-mono text-[11px] text-text-tertiary">14:01:01</div>
+</div>
+</div>
+</li>
+<!-- Step 3 -->
+<li class="relative">
+<div class="absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full bg-primary-container border-4 border-white shadow-sm flex items-center justify-center">
+<div class="h-2 w-2 rounded-full bg-white"></div>
+</div>
+<div class="flex justify-between items-start ml-2">
+<div>
+<h4 class="font-default text-[15px] font-semibold text-text-primary m-0 flex items-center gap-2">
+                                                Đối soát thanh toán
+                                            </h4>
+<div class="mt-1 flex items-center gap-2 flex-wrap">
+<span class="font-data-mono text-[12px] bg-surface-container-low text-text-secondary px-1.5 py-0.5 rounded font-medium border border-border-default">score_match_candidates</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-warning-light text-warning border border-warning/20">
+                                                    Confidence: 82%
+                                                </span>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-mono text-[13px] text-text-secondary">350ms</div>
+<div class="font-data-mono text-[11px] text-text-tertiary">14:01:02</div>
+</div>
+</div>
+</li>
+<!-- Step 4 (Pending/Warning) -->
+<li class="relative">
+<div class="absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full bg-warning border-4 border-white shadow-sm flex items-center justify-center z-20">
+<span class="material-symbols-outlined text-[12px] text-white font-bold" data-icon="priority_high">priority_high</span>
+</div>
+<!-- Highlight box for pending step -->
+<div class="ml-2 bg-warning-light/30 border border-warning/30 rounded-lg p-3 relative">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h4 class="font-default text-[15px] font-semibold text-text-primary m-0">
+                                                        Phê duyệt ngoại lệ
+                                                    </h4>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning text-white shadow-sm tracking-wide">
+                                                        CHỜ DUYỆT
+                                                    </span>
+</div>
+<p class="font-body text-body text-text-secondary m-0">Đang chờ con người xác nhận giao dịch <span class="font-data-mono font-medium text-text-primary">5.000.000₫</span></p>
+</div>
+<div class="text-right">
+<div class="font-data-mono text-[11px] text-text-tertiary">14:01:03</div>
+</div>
+</div>
+<button class="mt-2 inline-flex items-center px-3 py-1.5 border border-warning/50 rounded text-xs font-medium text-warning bg-white hover:bg-warning-light transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-warning">
+                                            Xem ngoại lệ
+                                        </button>
+</div>
+</li>
+<!-- Step 5 -->
+<li class="relative">
+<div class="absolute -left-[30px] top-1 h-[20px] w-[20px] rounded-full bg-primary-container border-4 border-white shadow-sm flex items-center justify-center">
+<div class="h-2 w-2 rounded-full bg-white"></div>
+</div>
+<div class="flex justify-between items-start ml-2">
+<div>
+<h4 class="font-default text-[15px] font-semibold text-text-primary m-0 flex items-center gap-2">
+                                                Kiểm tra tax rules
+                                            </h4>
+<div class="mt-1 flex items-center gap-2 flex-wrap">
+<span class="font-data-mono text-[12px] bg-surface-container-low text-text-secondary px-1.5 py-0.5 rounded font-medium border border-border-default">validate_rule_version</span>
+<span class="font-data-mono text-[11px] text-text-secondary bg-surface-dim px-1.5 py-0.5 rounded">
+                                                    Rule version: 2026.07
+                                                </span>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-mono text-[13px] text-text-secondary">200ms</div>
+<div class="font-data-mono text-[11px] text-text-tertiary">14:01:05</div>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Side Summary Card -->
+<div class="lg:col-span-1">
+<div class="bg-white rounded-xl shadow-sm border border-border-default p-stack-lg sticky top-stack-lg bg-gradient-to-br from-white to-surface-container-lowest">
+<h3 class="font-section-header text-section-header text-text-primary mb-stack-md border-b border-border-default pb-2">Tổng quan run</h3>
+<div class="space-y-4">
+<div class="flex justify-between items-center py-2 border-b border-border-default/50">
+<span class="font-body text-body text-text-secondary flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+                                    Matched
+                                </span>
+<span class="font-data-mono text-data-mono font-semibold text-text-primary">25</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-border-default/50">
+<span class="font-body text-body text-text-secondary flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-warning"></span>
+                                    Unmatched
+                                </span>
+<span class="font-data-mono text-data-mono font-semibold text-warning">5</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-border-default/50">
+<span class="font-body text-body text-text-secondary flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-danger"></span>
+                                    Missing invoice
+                                </span>
+<span class="font-data-mono text-data-mono font-semibold text-danger">2</span>
+</div>
+<div class="flex justify-between items-center py-2 mt-4 bg-surface-container rounded-lg px-3">
+<span class="font-body text-[13px] font-medium text-text-primary">Total Duration</span>
+<span class="font-data-mono text-data-mono font-bold text-primary-dark">4.2s</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

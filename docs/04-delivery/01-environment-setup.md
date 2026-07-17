@@ -4,8 +4,8 @@
 > **Authority:** Informative
 > **Owner:** DevOps
 > **Applies to:** Môi trường development và demo
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Partial — Docker, DB, Redis, backend, frontend all configured; mock services container commented out
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -56,10 +56,17 @@ Tạo file `.env` ở project root:
 | `SEPAY_WEBHOOK_API_KEY` | SePay webhook API key cho auth verification | Yes | — | (set trong SePay webhook config) |
 | `INVOICE_API_URL` | URL mock invoice provider | Yes | — | `http://localhost:8001/mock/invoice` |
 | `CASE_API_URL` | URL mock case management API | Yes | — | `http://localhost:8001/mock/case` |
-| `LLM_PROVIDER` | LLM provider name | Yes | — | `deepseek` |
-| `LLM_API_KEY` | DeepSeek API key | Yes | — | `sk-...` |
-| `LLM_MODEL_PLANNER` | Model cho Planner Agent (with thinking) | Yes | — | `deepseek-chat` |
-| `LLM_MODEL_SPECIALIST` | Model cho specialist agents | Yes | — | `deepseek-chat` |
+| `LLM_PROVIDER` | LLM provider name (used by config.py) | Yes | — | `deepseek` |
+| `LLM_API_KEY` | DeepSeek API key (used by config.py) | Yes | — | `sk-...` |
+| `LLM_MODEL_PLANNER` | Model cho Planner Agent (with thinking) | Yes | — | `deepseek-v4-flash` |
+| `LLM_MODEL_SPECIALIST` | Model cho specialist agents | Yes | — | `deepseek-v4-flash` |
+| `DEEPSEEK_API_KEY` | DeepSeek API key (used by agent layer deepseek.py) | Yes | — | `sk-...` |
+| `OPENROUTER_API_KEY` | OpenRouter API key (fallback provider) | No | — | `sk-or-...` |
+| `DEEPSEEK_BASE_URL` | Override DeepSeek API base URL | No | `https://api.deepseek.com/v1` | — |
+| `DEEPSEEK_MODEL` | Override model name | No | `deepseek-v4-flash` | — |
+| `DEEPSEEK_TEMPERATURE` | Deterministic task temperature | No | `0.1` | `0.1` |
+| `DEEPSEEK_MESSAGE_TEMPERATURE` | Message drafting temperature | No | `0.3` | `0.3` |
+| `DEEPSEEK_PLANNER_THINKING_ENABLED` | Enable thinking mode for Planner | No | `true` | `true` |
 | `CORS_ORIGINS` | CORS origins cho phép | No | `http://localhost:3000` | `http://localhost:3000` |
 | `ENVIRONMENT` | Tên environment | No | `development` | `development` |
 

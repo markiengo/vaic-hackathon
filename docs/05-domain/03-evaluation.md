@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** QA Lead
 > **Applies to:** Đánh giá chất lượng AI agent output
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Partial — matching tests exist (12 cases); agent evaluation not yet implemented
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---

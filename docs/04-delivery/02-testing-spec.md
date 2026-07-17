@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** QA Lead
 > **Applies to:** Tất cả module TaxLens
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Partial — backend unit tests for matching and allocation exist; E2E and frontend tests not yet implemented
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -50,13 +50,13 @@
 
 ## Tóm tắt acceptance criteria
 
-Mỗi FR có binary acceptance criteria định nghĩa trong `02-requirements/04-functional-requirements.md`. Tests verify từng criterion.
+Mỗi FR có binary acceptance criteria định nghĩa trong `02-requirements/03-srs.md` §5. Tests verify từng criterion.
 
 ## Test data và fixtures strategy
 
 ### Demo dataset (MVP)
 
-Theo product.md §17:
+Theo `01-foundation/03-product-spec.md` §17:
 - 1 merchant (Salon Hoa, M001)
 - 1 store (S001)
 - 30 sales orders (mix paid, unpaid, partial)
@@ -90,7 +90,7 @@ Theo product.md §17:
 ### Production data
 
 - Không dùng production data trong MVP
-- Pilot phase: chỉ dùng anonymized data (theo product.md §22)
+- Pilot phase: chỉ dùng anonymized data (theo `01-foundation/03-product-spec.md` §22)
 
 ## Coverage targets
 

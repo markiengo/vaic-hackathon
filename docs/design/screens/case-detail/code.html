@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-background antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TaxLens TaxOps - Case Detail View</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#00210e",
+                        "on-error": "#ffffff",
+                        "primary-dark": "#004D27",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#83d99c",
+                        "border-default": "#E5E7EB",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-light": "#E6F2EC",
+                        "secondary-fixed-dim": "#b0c6ff",
+                        "success-light": "#DCFCE7",
+                        "surface-bright": "#f6fbf3",
+                        "danger": "#DC2626",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f1f5ee",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#85aaff",
+                        "on-primary-fixed-variant": "#00522a",
+                        "inverse-primary": "#83d99c",
+                        "primary-container": "#006837",
+                        "on-tertiary-container": "#ffc3c5",
+                        "text-secondary": "#6B7280",
+                        "surface-tint": "#0b6d3b",
+                        "surface-container-high": "#e5e9e2",
+                        "on-surface": "#181d19",
+                        "on-secondary-fixed-variant": "#144392",
+                        "on-secondary-fixed": "#001944",
+                        "tertiary": "#762730",
+                        "secondary-fixed": "#d9e2ff",
+                        "danger-light": "#FEE2E2",
+                        "text-tertiary": "#9CA3AF",
+                        "surface-dim": "#d7dbd4",
+                        "on-primary-container": "#8ee4a6",
+                        "on-background": "#181d19",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#bec9be",
+                        "surface": "#f6fbf3",
+                        "on-surface-variant": "#3f4940",
+                        "tertiary-container": "#943e46",
+                        "primary": "#004d27",
+                        "warning": "#F59E0B",
+                        "background": "#f6fbf3",
+                        "surface-container-highest": "#dfe4dd",
+                        "secondary-light": "#EEF2FA",
+                        "secondary": "#345cab",
+                        "border-strong": "#D1D5DB",
+                        "text-primary": "#111827",
+                        "warning-light": "#FEF3C7",
+                        "inverse-surface": "#2d322d",
+                        "outline": "#6f7a70",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#ebefe8",
+                        "on-tertiary-fixed": "#40000c",
+                        "tertiary-fixed": "#ffdada",
+                        "tertiary-fixed-dim": "#ffb3b6",
+                        "on-secondary-container": "#043b8a",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#dfe4dd",
+                        "on-tertiary-fixed-variant": "#7b2b34",
+                        "primary-fixed": "#9ef6b6",
+                        "inverse-on-surface": "#eef2eb",
+                        "success": "#16A34A"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-lg": "1.5rem",
+                        "gutter": "1rem",
+                        "container-margin": "2rem",
+                        "stack-md": "1rem",
+                        "stack-sm": "0.5rem"
+                    },
+                    "fontFamily": {
+                        "default": ["inter"],
+                        "data-mono": ["jetbrainsMono"],
+                        "body": ["inter"],
+                        "page-title": ["inter"],
+                        "label-caps": ["inter"],
+                        "hero-numbers": ["inter"],
+                        "section-header": ["inter"]
+                    },
+                    "fontSize": {
+                        "default": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "page-title": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "hero-numbers": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "section-header": ["18px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    },
+                    "boxShadow": {
+                        "card-hover": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        .primary-gradient {
+            background: linear-gradient(135deg, #004D27 0%, #006837 100%);
+        }
+        .primary-gradient:hover {
+            background: linear-gradient(135deg, #003a1d 0%, #00522a 100%);
+        }
+    </style>
+</head>
+<body class="font-body text-body bg-background text-on-background m-0 p-0 overflow-x-hidden">
+<!-- Shell: SideNavBar -->
+<nav class="h-screen w-64 fixed left-0 top-0 bg-primary-dark shadow-md flex flex-col py-stack-lg z-50">
+<!-- Brand Logo -->
+<div class="px-6 mb-8 flex items-center space-x-3">
+<div class="h-10 w-10 bg-primary-container rounded-lg flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white" data-weight="fill">receipt_long</span>
+</div>
+<div>
+<h1 class="font-page-title text-page-title text-white leading-tight">TaxLens</h1>
+<p class="text-[11px] text-primary-fixed-dim uppercase tracking-wider font-semibold">Merchant TaxOps</p>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 px-4 space-y-1">
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-on-primary-fixed-variant hover:text-white hover:bg-primary-container/10 transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-white font-bold bg-primary-container/20 border-l-4 border-primary-fixed active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">assignment_late</span>
+<span>Cases</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-on-primary-fixed-variant hover:text-white hover:bg-primary-container/10 transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<span>Merchants</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-on-primary-fixed-variant hover:text-white hover:bg-primary-container/10 transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">assessment</span>
+<span>Reports</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-on-primary-fixed-variant hover:text-white hover:bg-primary-container/10 transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+</div>
+<!-- CTA & Footer Nav -->
+<div class="px-4 mt-auto pt-6 border-t border-primary-container/30 space-y-4">
+<button class="w-full flex items-center justify-center space-x-2 py-2.5 rounded-md bg-white text-primary-dark font-semibold hover:bg-primary-light transition-colors duration-200 shadow-sm active:scale-95">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span>New Case</span>
+</button>
+<div class="space-y-1">
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-on-primary-fixed-variant hover:text-white hover:bg-primary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="text-sm">Support</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-on-primary-fixed-variant hover:text-white hover:bg-primary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span class="text-sm">Logout</span>
+</a>
+</div>
+<!-- User Profile Snippet -->
+<div class="flex items-center space-x-3 px-3 pt-4 pb-2">
+<img alt="Relationship Manager Profile" class="h-8 w-8 rounded-full object-cover border border-primary-container" data-alt="A professional headshot of a female Asian banking relationship manager in a bright, modern corporate office setting. Soft, natural lighting. She is wearing a smart dark blazer over a light blouse. The background is slightly blurred showing glass partitions." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8ABjQaJACjEDboa2bdXWA4DriBprU-r9JIUAOQn4wkiZJ5Rhs-qKz8Wyq60Ji_P-xXpd7d--HK6dHP6t8bjgHDEZf_KKH8zZy7Q6kW8e3urTg_cn3Dw9GS7eyIffUKD_2E-hbQuLodwQPu6PZNRDYwUNsiKiC4loZQ97uc4aRpTeAMgch7s4ZlTML9b3DJUPuTKdcX8DaoCPg1U81k-x0vLmKLUCIW-pe3LtwCmdK8A1hADmk4I1E"/>
+<div class="overflow-hidden">
+<p class="text-sm text-white font-medium truncate">RM Profile</p>
+<p class="text-xs text-primary-fixed-dim truncate">rm.profile@taxlens.com</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-64 px-8 py-8 min-h-screen">
+<div class="max-w-[1440px] mx-auto">
+<!-- Context / Back Link -->
+<div class="mb-6">
+<a class="inline-flex items-center text-[14px] text-[#1A4796] hover:underline font-medium transition-colors" href="#">
+<span class="material-symbols-outlined text-[16px] mr-1">arrow_back</span>
+                Danh sách cases
+            </a>
+</div>
+<!-- Detail Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+<div class="flex items-center flex-wrap gap-4">
+<h2 class="text-[24px] font-bold text-[#111827]" style="font-family: 'JetBrains Mono', monospace;">CASE-001</h2>
+<div class="flex gap-2">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-warning-light text-warning-dark border border-warning/20">
+<span class="w-1.5 h-1.5 rounded-full bg-warning mr-1.5"></span>
+                        CHỜ XÁC NHẬN
+                    </span>
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-danger-light text-danger-dark border border-danger/20">
+<span class="w-1.5 h-1.5 rounded-full bg-danger mr-1.5"></span>
+                        CAO
+                    </span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-white border border-border-strong text-text-primary rounded-md text-sm font-medium hover:bg-surface-container-lowest shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                   Đóng Case
+               </button>
+</div>
+</div>
+<!-- Two-column layout grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Column (60% -> roughly 7 columns) -->
+<div class="col-span-12 lg:col-span-7 space-y-6">
+<!-- Case Info Card -->
+<div class="bg-surface-container-lowest shadow-sm rounded-[10px] p-[24px] border border-border-default transition-shadow hover:shadow-card-hover duration-300">
+<h3 class="text-[18px] font-semibold text-text-primary mb-4 pb-4 border-b border-border-default">Thông tin case</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 mb-6">
+<div>
+<p class="text-text-secondary text-xs font-medium uppercase tracking-wider mb-1">Merchant</p>
+<p class="text-[14px] text-text-primary font-medium flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-1.5 text-primary">storefront</span>
+                                Salon Hoa
+                            </p>
+</div>
+<div>
+<p class="text-text-secondary text-xs font-medium uppercase tracking-wider mb-1">Kỳ báo cáo</p>
+<p class="text-[14px] text-text-primary font-medium flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-1.5 text-primary">calendar_today</span>
+                                07/2026
+                            </p>
+</div>
+<div>
+<p class="text-text-secondary text-xs font-medium uppercase tracking-wider mb-1">RM Phụ trách</p>
+<p class="text-[14px] text-text-primary font-medium flex items-center">
+<img alt="Phong" class="w-5 h-5 rounded-full mr-1.5 object-cover" data-alt="A small circular avatar portrait of a male Asian relationship manager named Phong, looking professional in a suit and tie, against a neutral grey background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALNF4UByOinHgEy4wkycYu4Pg0VfUmGeL0Sbs36PrSmf5HXDUVVkQpHd-Tk0y6i_RISoirNFWPPcW1V1IvOvV2-nE3vX056_Nj-i6vpblmkzs0l1xDkvGYLZy6wMth9JT4vqzupRgZvhx1pNkdefCtb9xk1HWS4rn1KEFNLOIKVxXjeoY5lb4k4qkhoK4aHIYIv5-jxFnGLOhGkyWWnxVqovgpNpeZss52lAhjmmA6UcLD4Y2dW31F"/>
+                                Phong
+                            </p>
+</div>
+<div>
+<p class="text-text-secondary text-xs font-medium uppercase tracking-wider mb-1">Số ngoại lệ</p>
+<p class="text-[14px] text-text-primary font-medium flex items-center" style="font-family: 'JetBrains Mono', monospace;">
+<span class="inline-block bg-primary-light text-primary-dark px-2 py-0.5 rounded text-sm mr-1.5 font-bold">5</span>
+</p>
+</div>
+</div>
+<div class="mt-[16px]">
+<h4 class="text-[14px] font-semibold text-text-primary mb-3 flex items-center">
+<span class="material-symbols-outlined text-[18px] mr-1.5 text-warning">warning</span>
+                            Ngoại lệ liên quan
+                        </h4>
+<!-- Mini List of Exceptions -->
+<div class="border border-border-default rounded-lg overflow-hidden">
+<!-- Row 1 -->
+<div class="flex items-center justify-between p-3 border-b border-border-default hover:bg-surface transition-colors"><div class="flex items-center justify-between p-4 border-b border-border-default hover:bg-surface transition-colors">
+<div class="flex items-center gap-4">
+<span class="text-[14px] font-medium text-text-primary w-24" style="font-family: 'JetBrains Mono', monospace;">5.000.000₫</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-danger-light text-danger-dark">
+                                        AMBIGUOUS_MATCH
+                                    </span>
+</div>
+<span class="text-[12px] font-medium text-text-secondary bg-surface-container-high px-2 py-1 rounded flex items-center justify-center">CHỜ</span>
+</div></div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between p-4 border-b border-border-default hover:bg-surface transition-colors">
+<div class="flex items-center gap-4">
+<span class="text-[14px] font-medium text-text-primary w-24" style="font-family: 'JetBrains Mono', monospace;">350.000₫</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-danger-light text-danger-dark">
+                                        NO_MATCH
+                                    </span>
+</div>
+<span class="text-[12px] font-medium text-text-secondary bg-surface-container-high px-2 py-1 rounded flex items-center justify-center">CHỜ</span>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between p-4 hover:bg-surface transition-colors">
+<div class="flex items-center gap-4">
+<span class="text-[14px] font-medium text-text-primary w-24" style="font-family: 'JetBrains Mono', monospace;">1.200.000₫</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-warning-light text-warning-dark">
+                                        MISSING_INVOICE
+                                    </span>
+</div>
+<span class="text-[12px] font-medium text-text-secondary bg-surface-container-high px-2 py-1 rounded flex items-center justify-center">CHỜ</span>
+</div>
+</div>
+<div class="mt-3 text-right">
+<a class="text-sm text-primary font-medium hover:underline inline-flex items-center" href="#">
+                                Xem tất cả 5 ngoại lệ <span class="material-symbols-outlined text-[16px] ml-1">chevron_right</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column (40% -> roughly 5 columns) -->
+<div class="col-span-12 lg:col-span-5 space-y-6">
+<!-- Actions Card -->
+<div class="bg-surface-container-lowest shadow-sm rounded-[10px] p-[24px] border border-border-default transition-shadow hover:shadow-card-hover duration-300">
+<h3 class="text-[18px] font-semibold text-text-primary mb-4 pb-4 border-b border-border-default">Hành động</h3>
+<div class="space-y-[12px]">
+<button class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md text-white font-medium primary-gradient shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-[0.98] transition-all h-10">
+<span class="material-symbols-outlined text-[20px]">description</span>
+                            Soạn tin nhắn cho merchant
+                        </button>
+<button class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md bg-white border border-border-strong text-text-primary font-medium hover:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-[0.98] transition-all h-10">
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+                            Giao RM khác
+                        </button>
+</div>
+<!-- Spacing -->
+<div class="mt-[16px] pt-[16px] border-t border-border-default">
+<!-- Draft Message Preview -->
+<div class="bg-[#F9FAFB] rounded-[10px] p-[16px] border border-border-default relative mt-2">
+<span class="absolute -top-1.5 -right-1.5 flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+</span>
+<h4 class="text-[12px] uppercase font-bold text-[#6B7280] mb-2 tracking-wider flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">edit_note</span>
+                                Tin nhắn nháp
+                            </h4>
+<p class="text-sm text-text-primary leading-relaxed bg-white p-3 rounded-md border border-border-strong mb-4 italic focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
+                                "Chị Hương thân mến, SHB xin xác nhận khoản chuyển 5.000.000đ từ Nguyễn Văn A ngày 15/07. Khoản này là chuyển nội bộ hay doanh thu salon ạ?"
+                            </p>
+<div class="flex gap-3 mt-4">
+<button class="flex-1 py-2 bg-primary text-white rounded font-medium hover:bg-primary-dark transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-sm">
+                                    Gửi
+                                </button>
+<button class="flex-1 py-2 bg-transparent text-primary border border-primary rounded font-medium hover:bg-primary-light transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-sm">
+                                    Sửa
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Auxiliary Info (Audit stub) -->
+<div class="bg-surface-container-lowest shadow-sm rounded-[10px] p-[24px] border border-border-default">
+<h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">history</span>
+                        Lịch sử hoạt động
+                    </h3>
+<div class="relative border-l border-border-strong ml-2 space-y-6 pb-2 ml-4">
+<div class="relative pl-5">
+<span class="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-white"></span>
+<p class="text-xs text-text-secondary mb-0.5">10 phút trước</p>
+<p class="text-sm font-medium text-text-primary">Hệ thống tạo case tự động</p>
+</div>
+<div class="relative pl-5">
+<span class="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-border-strong ring-4 ring-white"></span>
+<p class="text-xs text-text-secondary mb-0.5">Hôm nay, 08:30</p>
+<p class="text-sm font-medium text-text-primary">Phát hiện 5 giao dịch ngoại lệ</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
