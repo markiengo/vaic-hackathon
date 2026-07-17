@@ -1,12 +1,12 @@
-# System Architecture — KHỚP
+# System Architecture — TaxLens
 
 > **Status:** Canonical
 > **Authority:** Normative
 > **Owner:** Tech Lead
-> **Applies to:** All KHỚP modules
+> **Applies to:** Tất cả module của TaxLens
 > **Implementation state:** Target
 > **Last verified against code:** N/A (greenfield)
-> **Verification:** See § Verification below
+> **Verification:** Xem § Verification bên dưới
 
 ---
 
@@ -45,21 +45,21 @@
 └──────────────────────────────────────────────────────────┘
 ```
 
-*Figure 1: KHỚP high-level architecture*
+*Figure 1: Kiến trúc tổng quan TaxLens*
 
 ## Component description
 
 | Component | Technology | Purpose |
 |---|---|---|
 | Frontend UI | Next.js + TypeScript | Dashboard, Exception Inbox, Agent Trace, Mini POS, Tax-readiness View |
-| Backend API | FastAPI (Python) | REST endpoints, WebSocket for real-time agent trace |
-| Planner Agent | LangGraph | Decomposes requests, delegates to specialists, manages state |
-| Reconciliation Agent | LangGraph + tools | Matches transactions to orders, creates exceptions |
-| Tax & Compliance Agent | LangGraph + deterministic engine | Validates tax rules, generates readiness report |
-| Merchant Operations Agent | LangGraph + tools | Creates cases, drafts messages, assigns RM, exports data |
-| Tool Layer | MCP or typed function calling | Adapter interfaces for bank, POS, invoice, case, rules, RAG |
-| Database | PostgreSQL + pgvector | Canonical ledger, audit log, tax rules, RAG embeddings |
-| Queue | Redis + background worker | Webhook processing, async agent tasks |
+| Backend API | FastAPI (Python) | REST endpoint, WebSocket cho agent trace real-time |
+| Planner Agent | LangGraph | Phân tách yêu cầu, delegate cho specialist, quản lý state |
+| Reconciliation Agent | LangGraph + tool | Match giao dịch với đơn hàng, tạo ngoại lệ |
+| Tax & Compliance Agent | LangGraph + deterministic engine | Kiểm tra tax rule, tạo readiness report |
+| Merchant Operations Agent | LangGraph + tool | Tạo case, draft tin nhắn, giao RM, xuất dữ liệu |
+| Tool Layer | Typed function calling (Python) | Adapter interface cho bank, POS, invoice, case, rule, RAG |
+| Database | PostgreSQL + pgvector | Canonical ledger, audit log, tax rule, RAG embedding |
+| Queue | Redis + background worker | Webhook processing, async agent task |
 
 ## Request flow: Reconciliation workflow
 
@@ -88,7 +88,7 @@ Planner Agent
 Result: Agent trace + exceptions + tax-readiness report + cases
 ```
 
-*Figure 2: Reconciliation workflow request flow*
+*Figure 2: Flow yêu cầu reconciliation workflow*
 
 ## Request flow: Dynamic QR payment
 
@@ -113,12 +113,12 @@ Reconciliation Agent: find_payment_reference("PAY-X7K92P")
   └── Audit event logged
 ```
 
-*Figure 3: Dynamic QR payment flow*
+*Figure 3: Flow thanh toán Dynamic QR*
 
 ## Module structure and directory map
 
 ```text
-khop/
+taxlens/
 ├── frontend/                 # Next.js application
 │   ├── src/
 │   │   ├── app/              # App router pages
@@ -176,30 +176,30 @@ khop/
 └── product.md                # Original product spec
 ```
 
-*Figure 4: Project directory map. This document owns the directory map; other documents reference it.*
+*Figure 4: Bản đồ thư mục dự án. Tài liệu này sở hữu directory map; tài liệu khác tham chiếu nó.*
 
 ## Authentication architecture overview
 
-Authentication is handled at the FastAPI backend using JWT tokens. See `11-security.md` for details.
+Authentication được xử lý tại FastAPI backend bằng JWT token. Xem `03-engineering/06-security.md` cho chi tiết.
 
-- SHB staff: username/password → JWT
-- Merchant confirmation: token-based links (no login required)
-- API endpoints: JWT in Authorization header
-- WebSocket: JWT in connection params
+- Nhân viên SHB: username/password → JWT
+- Xác nhận merchant: link dựa trên token (không cần login)
+- API endpoint: JWT trong Authorization header
+- WebSocket: JWT trong connection param
 
 ## Environment overview
 
-See `13-environment-setup.md` for complete setup instructions.
+Xem `04-delivery/01-environment-setup.md` cho hướng dẫn setup đầy đủ.
 
 | Environment | Purpose | Database |
 |---|---|---|
-| Development | Local dev | PostgreSQL in Docker |
-| Demo | Hackathon demo | PostgreSQL in Docker with seed data |
-| Pilot (future) | SHB internal | PostgreSQL in VPC |
+| Development | Dev local | PostgreSQL trong Docker |
+| Demo | Demo hackathon | PostgreSQL trong Docker với seed data |
+| Pilot (tương lai) | SHB internal | PostgreSQL trong VPC |
 
 ## Key technical decisions
 
-See `DECISIONS.md` for rationale:
+Xem `01-foundation/03-decisions.md` cho rationale:
 
 - DEC-001: Multi-agent architecture
 - DEC-002: Canonical Event Ledger
@@ -209,7 +209,7 @@ See `DECISIONS.md` for rationale:
 
 ## Shared Case State
 
-Agents exchange data through a structured schema, not free text:
+Agent trao đổi dữ liệu qua schema structured, không phải free text:
 
 ```json
 {
@@ -226,21 +226,21 @@ Agents exchange data through a structured schema, not free text:
 }
 ```
 
-This schema is the inter-agent contract. Agents read and write specific fields; they do not pass unstructured text as truth.
+Schema này là inter-agent contract. Agent đọc và ghi field cụ thể; không truyền unstructured text làm truth.
 
 ## Verification
 
 ### Automated
 
-- `cd backend && python -c "from app.main import app"` — verifies backend imports
-- `cd frontend && npm run build` — verifies frontend builds
-- `docker-compose config` — verifies compose file
+- `cd backend && python -c "from app.main import app"` — verify backend import
+- `cd frontend && npm run build` — verify frontend build
+- `docker-compose config` — verify compose file
 
 ### Manual
 
-- Verify directory structure matches Figure 4
-- Verify architecture diagram matches described components
-- Verify request flows cover main use cases (reconciliation, QR payment)
+- Verify cấu trúc thư mục khớp Figure 4
+- Verify architecture diagram khớp component mô tả
+- Verify request flow cover use case chính (reconciliation, QR payment)
 
 ---
 

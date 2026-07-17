@@ -1,4 +1,4 @@
-# KHỚP — Merchant TaxOps Agents cho SHB
+# TaxLens — Merchant TaxOps Agents cho SHB
 
 > **Một đội AI chuyên gia giúp SHB biến dữ liệu giao dịch, đơn hàng, tiền mặt và hóa đơn rời rạc của hộ kinh doanh thành sổ doanh thu sạch, có thể kiểm tra và sẵn sàng cho quy trình thuế.**
 
@@ -6,9 +6,9 @@
 
 ## 1. Tóm tắt sản phẩm
 
-KHỚP là hệ thống **multi-agent AI dành cho vận hành ngân hàng**, tập trung vào nhóm khách hàng hộ kinh doanh và doanh nghiệp siêu nhỏ. Hệ thống kết nối dữ liệu giao dịch SHB với POS, file bán hàng, tiền mặt và hóa đơn điện tử; sau đó tự động đối soát, phát hiện sai lệch và điều phối xử lý các trường hợp chưa rõ.
+TaxLens là hệ thống **multi-agent AI dành cho vận hành ngân hàng**, tập trung vào nhóm khách hàng hộ kinh doanh và doanh nghiệp siêu nhỏ. Hệ thống kết nối dữ liệu giao dịch SHB với POS, file bán hàng, tiền mặt và hóa đơn điện tử; sau đó tự động đối soát, phát hiện sai lệch và điều phối xử lý các trường hợp chưa rõ.
 
-KHỚP không thay thế MISA, KiotViet hoặc phần mềm kế toán. Sản phẩm đóng vai trò là **lớp kết nối và kiểm soát**, giúp SHB và khách hàng trả lời bốn câu hỏi:
+TaxLens không thay thế MISA, KiotViet hoặc phần mềm kế toán. Sản phẩm đóng vai trò là **lớp kết nối và kiểm soát**, giúp SHB và khách hàng trả lời bốn câu hỏi:
 
 1. Đơn hàng nào đã được thanh toán?
 2. Khoản tiền nào thực sự là doanh thu kinh doanh?
@@ -17,7 +17,7 @@ KHỚP không thay thế MISA, KiotViet hoặc phần mềm kế toán. Sản ph
 
 ### Câu pitch 20 giây
 
-> KHỚP là đội AI TaxOps giúp SHB đối soát tự động dòng tiền của hộ kinh doanh với đơn hàng, tiền mặt và hóa đơn. Thay vì nhân viên phải kiểm hàng trăm giao dịch, hệ thống chỉ đưa ra vài ngoại lệ cần con người xác nhận, rồi tạo bộ dữ liệu sạch để chuyển sang MISA hoặc quy trình thuế hiện có.
+> TaxLens là đội AI TaxOps giúp SHB đối soát tự động dòng tiền của hộ kinh doanh với đơn hàng, tiền mặt và hóa đơn. Thay vì nhân viên phải kiểm hàng trăm giao dịch, hệ thống chỉ đưa ra vài ngoại lệ cần con người xác nhận, rồi tạo bộ dữ liệu sạch để chuyển sang MISA hoặc quy trình thuế hiện có.
 
 ---
 
@@ -41,7 +41,7 @@ Không hệ thống nào tự nhiên biết chắc:
 - Doanh thu thuộc địa điểm, ngành nghề hoặc kỳ báo cáo nào.
 - Dữ liệu POS, ngân hàng và hóa đơn có cùng nói về một giao dịch hay không.
 
-Các phần mềm lớn có nhiều module mạnh, nhưng người dùng nhỏ thường phải học một hệ thống phức tạp, nhập lại dữ liệu hoặc chuyển toàn bộ quy trình đang dùng. KHỚP chọn cách khác:
+Các phần mềm lớn có nhiều module mạnh, nhưng người dùng nhỏ thường phải học một hệ thống phức tạp, nhập lại dữ liệu hoặc chuyển toàn bộ quy trình đang dùng. TaxLens chọn cách khác:
 
 > **Không bắt khách hàng đổi POS. Không bắt họ học kế toán. Không bắt họ kiểm từng giao dịch.**
 
@@ -49,7 +49,7 @@ Các phần mềm lớn có nhiều module mạnh, nhưng người dùng nhỏ t
 
 ## 3. Cơ hội cho SHB
 
-KHỚP tạo giá trị trực tiếp cho SHB ở bốn hướng:
+TaxLens tạo giá trị trực tiếp cho SHB ở bốn hướng:
 
 ### 3.1 Tăng mức độ gắn bó của hộ kinh doanh
 
@@ -115,7 +115,7 @@ Vertical đầu tiên nên là **salon hoặc dịch vụ làm đẹp** vì danh
 4. **Human approval:** AI không tự nộp thuế, tự phát hành hóa đơn hoặc tự gắn giao dịch mơ hồ với độ tin cậy thấp.
 5. **Không khóa vào một nền tảng:** SHB, SePay, NAPAS, POS hoặc CSV đều đi qua adapter.
 6. **Audit mọi hành động:** Mỗi quyết định phải biết ai hoặc agent nào làm, dựa trên dữ liệu gì và dùng phiên bản rule nào.
-7. **Không xây lại MISA:** KHỚP chuẩn hóa và xuất dữ liệu sang hệ thống kế toán, hóa đơn hoặc thuế hiện có.
+7. **Không xây lại MISA:** TaxLens chuẩn hóa và xuất dữ liệu sang hệ thống kế toán, hóa đơn hoặc thuế hiện có.
 
 ---
 
@@ -125,7 +125,7 @@ Vertical đầu tiên nên là **salon hoặc dịch vụ làm đẹp** vì danh
 
 Chị Hương có salon với sáu nhân viên. Khách thường chuyển khoản với nội dung như `toc`, `nhuom`, hoặc không ghi gì. Cuối ngày chị nhập tổng doanh thu vào Excel nhưng không biết khoản nào là tiền dịch vụ, tiền cọc hay tiền bán sản phẩm.
 
-Với KHỚP:
+Với TaxLens:
 
 1. Nhân viên chọn dịch vụ bằng Mini POS tối giản.
 2. Hệ thống tạo đơn và QR động riêng.
@@ -138,7 +138,7 @@ Với KHỚP:
 
 Hai bàn cùng thanh toán 85.000 đồng trong vài phút. Loa chỉ báo “đã nhận 85.000 đồng”, nên thu ngân không biết giao dịch thuộc bàn nào.
 
-Với KHỚP:
+Với TaxLens:
 
 1. Thu ngân chốt đơn bàn 3.
 2. Hệ thống tạo `payment_reference` riêng và QR động.
@@ -151,7 +151,7 @@ Với KHỚP:
 
 Chị Mai có ba cửa hàng mỹ phẩm, dùng POS, hai tài khoản ngân hàng, COD và hóa đơn điện tử. Chị không muốn chuyển phần mềm nhưng vẫn phải tải sao kê, kiểm COD và gửi Excel cho kế toán.
 
-Với KHỚP:
+Với TaxLens:
 
 1. Kết nối POS ở chế độ read-only.
 2. Kết nối tài khoản SHB và import COD.
@@ -226,7 +226,7 @@ Khi mọi mục đạt yêu cầu:
 
 ## 8. Kiến trúc multi-agent
 
-KHỚP gồm một Planner Agent và ba specialist agent. Mỗi agent có nhiệm vụ, tool, quyền và output schema riêng.
+TaxLens gồm một Planner Agent và ba specialist agent. Mỗi agent có nhiệm vụ, tool, quyền và output schema riêng.
 
 ### 8.1 Planner Agent
 
@@ -464,7 +464,7 @@ Khách quét QR, số tiền và reference được điền sẵn. Webhook nhậ
 
 ### 11.2 Mini POS tối thiểu
 
-KHỚP không xây POS đầy đủ. Mini POS chỉ cần tạo được một sale event:
+TaxLens không xây POS đầy đủ. Mini POS chỉ cần tạo được một sale event:
 
 ```text
 sale_id
@@ -811,11 +811,11 @@ Merchant Operations Agent:
 ### Cảnh 6 — Kết quả trước và sau
 
 ```text
-Trước KHỚP:
+Trước TaxLens:
 30 bản ghi phải kiểm thủ công
 Thời gian dự kiến: 45 phút
 
-Sau KHỚP:
+Sau TaxLens:
 25 bản ghi tự động đối soát
 5 ngoại lệ được đưa ra
 3 ngoại lệ xử lý trong demo
@@ -953,15 +953,15 @@ Sản phẩm được xem là đạt MVP khi:
 
 ## 24. Định vị cuối cùng
 
-KHỚP không phải chatbot, không phải Mini MISA và không phải công cụ tự khai thuế.
+TaxLens không phải chatbot, không phải Mini MISA và không phải công cụ tự khai thuế.
 
-KHỚP là:
+TaxLens là:
 
 > **Một đội AI chuyên gia vận hành cho SHB, tự động nối đơn hàng, dòng tiền, tiền mặt và hóa đơn; phát hiện ngoại lệ; điều phối người xử lý; và tạo bộ dữ liệu sạch, có nguồn gốc, sẵn sàng chuyển sang quy trình kế toán hoặc thuế.**
 
 ### Tagline
 
-> **KHỚP — Dòng tiền khớp. Sổ sách sạch. Vận hành nhẹ.**
+> **TaxLens — Dòng tiền khớp. Sổ sách sạch. Vận hành nhẹ.**
 
 ---
 

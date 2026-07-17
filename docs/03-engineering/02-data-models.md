@@ -1,4 +1,4 @@
-# Data Models — KHỚP
+# Data Models — TaxLens
 
 > **Status:** Canonical
 > **Authority:** Normative
@@ -6,7 +6,7 @@
 > **Applies to:** Database schema, canonical ledger
 > **Implementation state:** Target
 > **Last verified against code:** N/A (greenfield)
-> **Verification:** See § Verification below
+> **Verification:** Xem § Verification bên dưới
 
 ---
 
@@ -61,7 +61,7 @@ CREATE TABLE merchants (
 );
 ```
 
-**Purpose:** Stores merchant profile information.
+**Purpose:** Lưu thông tin profile merchant.
 
 ### stores
 
@@ -76,7 +76,7 @@ CREATE TABLE stores (
 );
 ```
 
-**Purpose:** Physical store locations for a merchant.
+**Purpose:** Địa điểm store vật lý của merchant.
 
 ### devices
 
@@ -91,7 +91,7 @@ CREATE TABLE devices (
 );
 ```
 
-**Purpose:** Mini POS devices per store.
+**Purpose:** Thiết bị Mini POS mỗi store.
 
 ### users
 
@@ -108,7 +108,7 @@ CREATE TABLE users (
 );
 ```
 
-**Purpose:** SHB staff and their role assignments.
+**Purpose:** Nhân viên SHB và phân quyền role.
 
 ### products
 
@@ -125,7 +125,7 @@ CREATE TABLE products (
 );
 ```
 
-**Purpose:** Product/service catalog for Mini POS.
+**Purpose:** Catalog sản phẩm/dịch vụ cho Mini POS.
 
 ### sales
 
@@ -146,7 +146,7 @@ CREATE TABLE sales (
 );
 ```
 
-**Purpose:** Sales orders from POS or Mini POS.
+**Purpose:** Đơn hàng từ POS hoặc Mini POS.
 
 ### sale_lines
 
@@ -162,7 +162,7 @@ CREATE TABLE sale_lines (
 );
 ```
 
-**Purpose:** Line items for each sale.
+**Purpose:** Line item cho mỗi đơn hàng.
 
 ### payment_intents
 
@@ -178,29 +178,33 @@ CREATE TABLE payment_intents (
 );
 ```
 
-**Purpose:** Payment intents with unique references for dynamic QR. See DEC-003, DEC-009.
+**Purpose:** Payment intent với reference duy nhất cho dynamic QR. Xem DEC-003, DEC-009.
 
 ### bank_transactions
 
 ```sql
 CREATE TABLE bank_transactions (
-    id VARCHAR(30) PRIMARY KEY,           -- e.g., SHB-902194810
+    id VARCHAR(30) PRIMARY KEY,           -- e.g., SEPAY-49682
     merchant_id VARCHAR(20) NOT NULL REFERENCES merchants(id),
-    amount DECIMAL(12,2) NOT NULL,
-    sender_name VARCHAR(255),
-    sender_account VARCHAR(50),
-    raw_note TEXT,                        -- original transfer note
-    normalized_note TEXT,                 -- normalized Vietnamese
+    account_number VARCHAR(20),           -- số tài khoản ngân hàng từ SePay
+    amount DECIMAL(12,2) NOT NULL,        -- amount_in từ SePay API
+    sender_name VARCHAR(255),             -- parse từ transaction_content
+    raw_note TEXT,                        -- transaction_content / webhook content
+    normalized_note TEXT,                 -- Vietnamese đã normalize
     ai_interpretation JSONB,              -- {suggested_type, probable_date, confidence}
-    transaction_type VARCHAR(50),         -- transfer, cash_deposit, etc.
-    source VARCHAR(50) NOT NULL,          -- shb, sepay, csv
-    source_id VARCHAR(100),              -- original ID from source
+    transaction_type VARCHAR(20),         -- in, out (từ SePay transferType)
+    reference_number VARCHAR(100),        -- reference ngân hàng (SePay reference_number / referenceCode)
+    payment_code VARCHAR(100),            -- payment code SePay tự nhận diện (field code)
+    sub_account VARCHAR(50),              -- tài khoản ảo nếu có
+    accumulated DECIMAL(15,2),            -- số dư lũy kế từ SePay
+    source VARCHAR(50) NOT NULL,          -- sepay, csv
+    source_id VARCHAR(100),              -- ID gốc từ SePay (e.g., 49682)
     ingested_at TIMESTAMPTZ DEFAULT NOW(),
-    transaction_date TIMESTAMPTZ NOT NULL
+    transaction_date TIMESTAMPTZ NOT NULL -- từ SePay transaction_date / transactionDate
 );
 ```
 
-**Purpose:** Bank transactions in canonical format. Three-layer note handling: raw_note, normalized_note, ai_interpretation. See FR-RECON-004.
+**Purpose:** Giao dịch ngân hàng trong canonical format. Xử lý note ba lớp: raw_note, normalized_note, ai_interpretation. Xem FR-RECON-004. Field map theo SePay API và webhook payload thật. Xem `03-engineering/05-integration.md` cho field mapping.
 
 ### payment_allocations
 
@@ -218,7 +222,7 @@ CREATE TABLE payment_allocations (
 );
 ```
 
-**Purpose:** Many-to-many allocation between payments and orders. See FR-RECON-005.
+**Purpose:** Phân bổ many-to-many giữa thanh toán và đơn hàng. Xem FR-RECON-005.
 
 ### cash_sessions
 
@@ -239,7 +243,7 @@ CREATE TABLE cash_sessions (
 );
 ```
 
-**Purpose:** Cash session tracking per store per shift. See FR-POS-004.
+**Purpose:** Theo dõi cash session mỗi store mỗi ca. Xem FR-POS-004.
 
 ### invoices
 
@@ -258,7 +262,7 @@ CREATE TABLE invoices (
 );
 ```
 
-**Purpose:** E-invoice records linked to sales.
+**Purpose:** Record hóa đơn điện tử liên kết với đơn hàng.
 
 ### reconciliation_cases
 
@@ -277,7 +281,7 @@ CREATE TABLE reconciliation_cases (
 );
 ```
 
-**Purpose:** Reconciliation cases per merchant per period. See FR-OPS-001.
+**Purpose:** Reconciliation case mỗi merchant mỗi kỳ. Xem FR-OPS-001.
 
 ### exceptions
 
@@ -297,7 +301,7 @@ CREATE TABLE exceptions (
 );
 ```
 
-**Purpose:** Individual exceptions within a case. See FR-RECON-003.
+**Purpose:** Ngoại lệ riêng lẻ trong case. Xem FR-RECON-003.
 
 ### tax_classifications
 
@@ -314,7 +318,7 @@ CREATE TABLE tax_classifications (
 );
 ```
 
-**Purpose:** Revenue classifications for transactions.
+**Purpose:** Phân loại doanh thu cho giao dịch.
 
 ### tax_rule_versions
 
@@ -336,7 +340,7 @@ CREATE TABLE tax_rule_versions (
 );
 ```
 
-**Purpose:** Versioned tax rules. Immutable once approved. See DEC-004, FR-TAX-002.
+**Purpose:** Tax rule có phiên bản. Không thay đổi sau khi phê duyệt. Xem DEC-004, FR-TAX-002.
 
 ### agent_runs
 
@@ -355,7 +359,7 @@ CREATE TABLE agent_runs (
 );
 ```
 
-**Purpose:** Agent run state and plan. See FR-AGENT-001.
+**Purpose:** State và plan của agent run. Xem FR-AGENT-001.
 
 ### tool_calls
 
@@ -374,7 +378,7 @@ CREATE TABLE tool_calls (
 );
 ```
 
-**Purpose:** Individual tool calls by agents. See FR-AGENT-002.
+**Purpose:** Tool call riêng lẻ bởi agent. Xem FR-AGENT-002.
 
 ### audit_events
 
@@ -396,7 +400,7 @@ CREATE TABLE audit_events (
 );
 ```
 
-**Purpose:** Append-only audit log. See DEC-008, FR-AGENT-003. Retention: 7 years.
+**Purpose:** Audit log chỉ thêm. Xem DEC-008, FR-AGENT-003. Retention: 7 năm.
 
 ## Relationships and cascading rules
 
@@ -431,23 +435,23 @@ CREATE INDEX idx_tool_calls_run ON tool_calls(agent_run_id);
 ## Migration strategy
 
 - **Tool:** Alembic
-- **Workflow:** Create migration → run locally → verify → commit
-- **Rollback:** Every migration has a downgrade function
-- **Seed data:** Separate migration for demo dataset (1 salon, 30 orders, etc.)
+- **Workflow:** Tạo migration → chạy local → verify → commit
+- **Rollback:** Mọi migration có downgrade function
+- **Seed data:** Migration riêng cho demo dataset (1 salon, 30 đơn hàng, v.v.)
 
 ## Verification
 
 ### Automated
 
-- `cd backend && alembic upgrade head` — migrations apply cleanly
-- `cd backend && python -m pytest tests/test_models.py -v` — model tests pass
-- `pg_dump --schema-only` — schema matches DDL above
+- `cd backend && alembic upgrade head` — migration chạy sạch
+- `cd backend && python -m pytest tests/test_models.py -v` — test model pass
+- `pg_dump --schema-only` — schema khớp DDL ở trên
 
 ### Manual
 
-- ER diagram matches table definitions
-- Every table has a purpose statement
-- Cascade rules are verified by deletion test
+- ER diagram khớp table definition
+- Mọi table có purpose statement
+- Cascade rule được verify bằng deletion test
 
 ---
 

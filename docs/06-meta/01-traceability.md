@@ -1,16 +1,16 @@
-# Traceability Matrix — KHỚP
+# Traceability Matrix — TaxLens
 
 > **Status:** Canonical
 > **Authority:** Normative
 > **Owner:** Tech Lead
-> **Applies to:** All requirements, APIs, and tests
+> **Applies to:** Tất cả requirements, APIs, và tests
 > **Implementation state:** Target
 > **Last verified against code:** N/A (greenfield)
-> **Verification:** See § Verification below
+> **Verification:** Xem § Verification bên dưới
 
 ---
 
-## BR → FR → API → Test traceability
+## Traceability BR → FR → API → Test
 
 | BR ID | FR ID | API ID | Test ID |
 |---|---|---|---|
@@ -39,7 +39,7 @@
 | BR-015 | FR-AGENT-002 | API-AGENT-GET-001 | TEST-AGENT-002 |
 | BR-001 | FR-AGENT-001 | API-AGENT-POST-001, API-RECON-POST-001 | TEST-AGENT-001 |
 
-## User story → BR → FR traceability
+## Traceability User story → BR → FR
 
 | USR ID | BR ID | FR ID |
 |---|---|---|
@@ -64,22 +64,22 @@
 | USR-AGENT-003 | BR-009 | FR-AGENT-003 |
 | USR-MERCHANT-001 | BR-004, BR-005 | FR-MERCHANT-001 |
 
-## Decision → Affected document traceability
+## Traceability Decision → Tài liệu affected
 
-| DEC ID | Title | Affected docs |
+| DEC ID | Tiêu đề | Tài liệu affected |
 |---|---|---|
-| DEC-001 | Multi-agent architecture | `06-system-architecture.md`, `AI-ADVISOR.md`, `04-functional-requirements.md`, `07-data-models.md` |
-| DEC-002 | Canonical Event Ledger | `06-system-architecture.md`, `07-data-models.md`, `10-integration.md`, `ALGORITHM.md` |
-| DEC-003 | Payment reference as link key | `07-data-models.md`, `ALGORITHM.md`, `04-functional-requirements.md` |
-| DEC-004 | Tax Rules Engine separate from LLM | `COMPLIANCE.md`, `AI-ADVISOR.md`, `07-data-models.md`, `04-functional-requirements.md` |
-| DEC-005 | Exception-first UX | `DESIGN.md`, `04-functional-requirements.md`, `AI-ADVISOR.md` |
-| DEC-006 | Next.js + FastAPI + PostgreSQL | `06-system-architecture.md`, `13-environment-setup.md`, `IMPLEMENTATION-PLAN.md` |
-| DEC-007 | MVP scope | `15-roadmap.md`, `testing-spec.md`, `10-integration.md` |
-| DEC-008 | Audit every agent action | `11-security.md`, `07-data-models.md`, `COMPLIANCE.md` |
-| DEC-009 | Dynamic QR for payment intent | `04-functional-requirements.md`, `07-data-models.md`, `10-integration.md` |
-| DEC-010 | Vietnamese primary, English docs | `00-overview.md`, `GLOSSARY.md`, `DESIGN.md` |
+| DEC-001 | Multi-agent architecture | `03-engineering/01-system-architecture.md`, `05-domain/01-ai-advisor.md`, `02-requirements/04-functional-requirements.md`, `03-engineering/02-data-models.md` |
+| DEC-002 | Canonical Event Ledger | `03-engineering/01-system-architecture.md`, `03-engineering/02-data-models.md`, `03-engineering/05-integration.md`, `05-domain/02-algorithm.md` |
+| DEC-003 | Payment reference as link key | `03-engineering/02-data-models.md`, `05-domain/02-algorithm.md`, `02-requirements/04-functional-requirements.md` |
+| DEC-004 | Tax Rules Engine tách biệt từ LLM | `05-domain/05-compliance.md`, `05-domain/01-ai-advisor.md`, `03-engineering/02-data-models.md`, `02-requirements/04-functional-requirements.md` |
+| DEC-005 | Exception-first UX | `04-delivery/03-design.md`, `02-requirements/04-functional-requirements.md`, `05-domain/01-ai-advisor.md` |
+| DEC-006 | Next.js + FastAPI + PostgreSQL | `03-engineering/01-system-architecture.md`, `04-delivery/01-environment-setup.md`, `04-delivery/04-implementation-plan.md` |
+| DEC-007 | MVP scope | `04-delivery/05-roadmap.md`, `04-delivery/02-testing-spec.md`, `03-engineering/05-integration.md` |
+| DEC-008 | Audit mọi agent action | `03-engineering/06-security.md`, `03-engineering/02-data-models.md`, `05-domain/05-compliance.md` |
+| DEC-009 | Dynamic QR cho payment intent | `02-requirements/04-functional-requirements.md`, `03-engineering/02-data-models.md`, `03-engineering/05-integration.md` |
+| DEC-010 | Tiếng Việt primary, English docs | `01-foundation/01-overview.md`, `05-domain/04-glossary.md`, `04-delivery/03-design.md` |
 
-## Error code → API endpoint traceability
+## Traceability Error code → API endpoint
 
 | Error ID | Used by API endpoints |
 |---|---|
@@ -100,7 +100,7 @@
 | ERR-TOKEN-002 | API-MERCHANT-GET-001, API-MERCHANT-POST-001 |
 | ERR-WEBHOOK-001 | API-WEBHOOK-POST-001 |
 
-## Summary
+## Tóm tắt
 
 | Metric | Count |
 |---|---|
@@ -111,9 +111,9 @@
 | Error codes | 22 |
 | Test cases | 30 |
 | Decisions | 10 |
-| FRs with at least one test | 17/17 (100%) |
-| API endpoints traced to FRs | 20/20 (100%) |
-| Errors in API spec appearing in catalog | 22/22 (100%) |
+| FRs có ít nhất một test | 17/17 (100%) |
+| API endpoints traced đến FRs | 20/20 (100%) |
+| Errors trong API spec appearing trong catalog | 22/22 (100%) |
 
 ## Verification
 
@@ -121,14 +121,14 @@
 
 - `grep -r "FR-" docs/04-functional-requirements.md | wc -l` — count FRs
 - `grep -r "TEST-" docs/testing-spec.md | wc -l` — count test cases
-- Script: verify every FR ID in `04-functional-requirements.md` appears in traceability matrix
+- Script: verify mỗi FR ID trong `02-requirements/04-functional-requirements.md` appears trong traceability matrix
 
 ### Manual
 
-- Cross-check: every FR has a test case ✓
-- Cross-check: every API endpoint traces to at least one FR ✓
-- Cross-check: every error in API spec appears in error catalog ✓
-- Cross-check: every decision lists affected documents ✓
+- Cross-check: mỗi FR có test case ✓
+- Cross-check: mỗi API endpoint traces đến ít nhất một FR ✓
+- Cross-check: mỗi error trong API spec appears trong error catalog ✓
+- Cross-check: mỗi decision lists affected documents ✓
 
 ---
 

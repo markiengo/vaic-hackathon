@@ -1,4 +1,4 @@
-# DESIGN.md — KHỚP UI Specification
+# 04-delivery/03-design.md — TaxLens UI Specification
 
 > **Status:** Canonical
 > **Authority:** Normative
@@ -6,15 +6,15 @@
 > **Applies to:** Frontend UI
 > **Implementation state:** Target
 > **Last verified against code:** N/A (greenfield)
-> **Verification:** See § Verification below
+> **Verification:** Xem § Verification bên dưới
 
 ---
 
 ## Design system
 
-### Colors
+### Màu sắc
 
-| Token | Value | Usage |
+| Token | Value | Cách dùng |
 |---|---|---|
 | `--color-primary` | `#006837` (SHB green) | Primary actions, headers, branding |
 | `--color-primary-light` | `#E6F2EC` | Hover states, subtle backgrounds |
@@ -30,9 +30,9 @@
 
 ### Typography
 
-| Token | Value | Usage |
+| Token | Value | Cách dùng |
 |---|---|---|
-| `--font-family` | `Inter, sans-serif` | All UI text |
+| `--font-family` | `Inter, sans-serif` | Toàn bộ UI text |
 | `--font-size-xs` | 12px | Labels, captions |
 | `--font-size-sm` | 14px | Body text, table cells |
 | `--font-size-base` | 16px | Default body |
@@ -69,7 +69,7 @@
 | `--border-radius-lg` | 12px |
 | `--border-width` | 1px |
 
-## Reusable components
+## Component tái sử dụng
 
 | Component | Variants | States |
 |---|---|---|
@@ -88,7 +88,7 @@
 
 ```text
 ┌─────────────────────────────────────────────┐
-│ Header: KHỚP logo │ Merchant selector │ User │
+│ Header: TaxLens logo │ Merchant selector │ User │
 ├──────────┬──────────────────────────────────┤
 │ Sidebar  │ Main content area                │
 │ - Dashboard│                                 │
@@ -103,102 +103,102 @@
 
 ### Auth layout
 
-Centered card with logo, login form. No sidebar.
+Card căn giữa với logo, login form. Không sidebar.
 
-## Screen-by-screen specification
+## Đặc tả từng screen
 
 ### Screen 1: Merchant Dashboard
 
-**Purpose:** Overview of merchant reconciliation status and active agents.
+**Mục đích:** Tổng quan trạng thái đối soát merchant và active agents.
 
-**Layout:** Full-width content area with summary cards in a grid, followed by active agent list.
+**Layout:** Content area full-width với summary cards dạng grid, theo sau là active agent list.
 
 **Components:**
 - 4 summary cards: Total transactions, Reconciliation rate, Open exceptions, Tax readiness status
 - Active agents panel: agent name, status, run link
-- Quick action: "Start reconciliation" button
+- Quick action: nút "Bắt đầu đối soát"
 
 **States:**
-- Default: Data loaded, cards show values
+- Default: Data loaded, cards hiển thị values
 - Loading: Skeleton cards
-- Empty: "No data for this period" with merchant selector
-- Error: Alert with retry button
+- Empty: "Không có data cho kỳ này" với merchant selector
+- Error: Alert với retry button
 
 ### Screen 2: Exception Inbox
 
-**Purpose:** Show only transactions requiring human decisions.
+**Mục đích:** Hiển thị chỉ những transaction cần quyết định con người.
 
-**Layout:** List of exception cards, each expandable to show AI reasoning.
+**Layout:** Danh sách exception cards, mỗi card expandable để hiển thị AI reasoning.
 
 **Components:**
 - Filter bar: merchant, period, exception type
-- Exception card: amount, sender, note, AI suggestion badge with confidence, reasoning expandable section
-- Action buttons: [Approve] [Reject] [Reclassify]
+- Exception card: amount, sender, note, AI suggestion badge với confidence, reasoning expandable section
+- Action buttons: [Duyệt] [Từ chối] [Phân loại lại]
 - Pagination
 
 **States:**
-- Default: List of exceptions
-- Empty: "All transactions reconciled" with check icon
+- Default: Danh sách exceptions
+- Empty: "Tất cả transaction đã đối soát" với check icon
 - Loading: Skeleton list
-- Resolved: Card animates out
+- Resolved: Card animate out
 
 ### Screen 3: Agent Trace
 
-**Purpose:** Show full trace of agent actions for a run.
+**Mục đích:** Hiển thị full trace của agent actions trong một run.
 
-**Layout:** Timeline view with steps, tool calls, and decision points.
+**Layout:** Timeline view với steps, tool calls, và decision points.
 
 **Components:**
-- Plan steps list with status icons (completed, running, waiting, failed)
+- Plan steps list với status icons (completed, running, waiting, failed)
 - Tool call detail: agent name, tool name, confidence, timestamp, duration
-- Waiting indicator for human approval steps
+- Waiting indicator cho human approval steps
 - Run status badge
 
 **States:**
-- Running: Steps update in real-time via WebSocket
+- Running: Steps update real-time qua WebSocket
 - Completed: Full trace visible, read-only
-- Failed: Error highlighted at failure point
-- Empty: "No agent runs yet"
+- Failed: Error highlight tại failure point
+- Empty: "Chưa có agent run nào"
 
 ### Screen 4: Tax-Readiness View
 
-**Purpose:** Show checklist of tax-readiness items.
+**Mục đích:** Hiển thị checklist các tax-readiness items.
 
-**Layout:** Checklist with pass/fail indicators and rule version banner.
+**Layout:** Checklist với pass/fail indicators và rule version banner.
 
 **Components:**
 - Rule version banner: "Rule version: 2026.07 | Effective: 2021-07-01 | Source: Thông tư 40/2021"
-- Checklist items with ✓/✗ icons and values
+- Checklist items với ✓/✗ icons và values
 - Ready/Not ready status banner
-- Export button (enabled when ready)
+- Export button (enabled khi ready)
 
 **States:**
-- All pass: Green banner "Data ready for draft export"
-- Some fail: Warning banner with list of failing items
-- No data: "No data for this period"
+- All pass: Green banner "Data sẵn sàng cho draft export"
+- Some fail: Warning banner với danh sách failing items
+- No data: "Không có data cho kỳ này"
 
 ### Screen 5: Mini POS
 
-**Purpose:** Minimal POS for creating sales and generating QR codes.
+**Mục đích:** POS tối giản để tạo sales và generate QR codes.
 
-**Layout:** Two-panel: product selection on left, cart and payment on right.
+**Layout:** Hai panel: product selection bên trái, cart và payment bên phải.
 
 **Components:**
-- Product grid: service/product cards with name and price
-- Cart: line items with quantity controls, total
+- Product grid: service/product cards với name và price
+- Cart: line items với quantity controls, total
 - Payment buttons: [Tiền mặt] [Tạo QR]
-- QR display: modal with QR image and reference
+- QR display: modal với QR image và reference
 - Cash session summary: opening cash, current expected, close button
 
 **States:**
 - Default: Product grid + empty cart
-- QR generated: Modal with QR, timer countdown
-- Cash session open: Summary bar at bottom
-- Cash session closing: Modal with counted cash input
+- QR generated: Modal với QR, timer countdown
+- Cash session open: Summary bar ở bottom
+- Cash session closing: Modal với counted cash input
 
 ### Screen 6: Audit Log Export
 
-**Purpose:** Export audit log as JSON or CSV.
+**Mục đích:** Export audit log dạng JSON hoặc CSV.
 
 **Layout:** Filter form + export button + preview table.
 
@@ -206,22 +206,22 @@ Centered card with logo, login form. No sidebar.
 - Filter: merchant, period
 - Format selector: JSON / CSV
 - Export button
-- Preview table (first 10 events)
+- Preview table (10 events đầu)
 
 **States:**
 - Default: Filter form
 - Exported: Download triggered
-- No events: "No audit events for selected period"
+- No events: "Không có audit events cho kỳ đã chọn"
 
 ### Screen 7: Merchant Confirmation Page
 
-**Purpose:** Allow merchant to confirm transaction classification without login.
+**Mục đích:** Cho phép merchant xác nhận phân loại transaction mà không cần login.
 
-**Layout:** Centered card with transaction details and classification options.
+**Layout:** Card căn giữa với transaction details và classification options.
 
 **Components:**
 - Transaction details: amount, sender, date
-- AI suggestion with confidence
+- AI suggestion với confidence
 - Option buttons: [Chuyển nội bộ] [Doanh thu] [Tiền vay] [Khác]
 - Submit button
 
@@ -231,7 +231,7 @@ Centered card with logo, login form. No sidebar.
 - Expired: "Liên kết đã hết hạn. Vui lòng liên hệ RM."
 - Already confirmed: "Giao dịch này đã được xác nhận."
 
-## Navigation structure
+## Cấu trúc navigation
 
 ```text
 Dashboard (/dashboard)
@@ -249,14 +249,14 @@ Mini POS (/pos)
 |---|---|---|
 | Desktop | ≥1280px | Full sidebar + content |
 | Tablet | 768–1279px | Collapsible sidebar (post-MVP) |
-| Mobile | <768px | Not supported in MVP |
+| Mobile | <768px | Không hỗ trợ trong MVP |
 
-## Icon usage
+## Sử dụng icon
 
 - Library: Lucide React
 - Key icons: `CheckCircle`, `AlertTriangle`, `XCircle`, `ArrowRight`, `QrCode`, `Banknote`, `FileText`, `Shield`
 
-## Animation specifications
+## Đặc tả animation
 
 | Element | Animation | Duration |
 |---|---|---|
@@ -270,19 +270,19 @@ Mini POS (/pos)
 
 ### Automated
 
-- `cd frontend && npm run build` — verifies all pages build
-- `cd frontend && npm run lint` — verifies code quality
+- `cd frontend && npm run build` — verify tất cả pages build
+- `cd frontend && npm run lint` — verify code quality
 
 ### Manual
 
-- Navigate to each screen → verify layout matches spec
-- Test each state (default, loading, empty, error)
-- Verify Vietnamese text renders correctly
-- Verify responsive behavior at 1280px
+- Navigate từng screen → verify layout khớp spec
+- Test từng state (default, loading, empty, error)
+- Kiểm tra Vietnamese text render đúng
+- Kiểm tra responsive behavior tại 1280px
 
 ### Evidence
 
-- Screenshots of each screen in default state (to be captured during implementation)
+- Screenshots từng screen ở default state (capture trong quá trình implementation)
 
 ---
 

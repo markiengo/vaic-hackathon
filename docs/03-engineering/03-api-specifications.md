@@ -1,12 +1,12 @@
-# API Specifications — KHỚP
+# API Specifications — TaxLens
 
 > **Status:** Canonical
 > **Authority:** Normative
 > **Owner:** Tech Lead
-> **Applies to:** All HTTP API endpoints
+> **Applies to:** Tất cả HTTP API endpoint
 > **Implementation state:** Target
 > **Last verified against code:** N/A (greenfield)
-> **Verification:** See § Verification below
+> **Verification:** Xem § Verification bên dưới
 
 ---
 
@@ -17,13 +17,13 @@
 - **Content-Type:** `application/json`
 - **WebSocket:** `ws://localhost:8000/ws/agent-trace/{run_id}`
 
-See `11-security.md` for authentication details.
+Xem `03-engineering/06-security.md` cho chi tiết authentication.
 
 ## Endpoint groups
 
 ### Merchants
 
-#### API-MERCHANT-GET-001: Get merchant profile
+#### API-MERCHANT-GET-001: Lấy merchant profile
 
 - **Method:** `GET`
 - **Path:** `/merchants/{merchant_id}`
@@ -43,7 +43,7 @@ See `11-security.md` for authentication details.
 
 ---
 
-#### API-MERCHANT-GET-002: Get merchant dashboard
+#### API-MERCHANT-GET-002: Lấy merchant dashboard
 
 - **Method:** `GET`
 - **Path:** `/merchants/{merchant_id}/dashboard?period={YYYY-MM}`
@@ -78,7 +78,7 @@ See `11-security.md` for authentication details.
 
 ### Transactions
 
-#### API-TX-GET-001: List bank transactions
+#### API-TX-GET-001: Danh sách giao dịch ngân hàng
 
 - **Method:** `GET`
 - **Path:** `/merchants/{merchant_id}/transactions?period={YYYY-MM}&status={matched|unmatched|all}`
@@ -108,7 +108,7 @@ See `11-security.md` for authentication details.
 
 ### Reconciliation
 
-#### API-RECON-POST-001: Start reconciliation
+#### API-RECON-POST-001: Bắt đầu đối soát
 
 - **Method:** `POST`
 - **Path:** `/merchants/{merchant_id}/reconcile`
@@ -136,11 +136,11 @@ See `11-security.md` for authentication details.
   }
 }
 ```
-- **Errors:** `ERR-MERCHANT-001` (404), `ERR-AUTH-003` (403), `ERR-RECON-001` (409 — already running)
+- **Errors:** `ERR-MERCHANT-001` (404), `ERR-AUTH-003` (403), `ERR-RECON-001` (409 — đang chạy)
 
 ---
 
-#### API-RECON-GET-001: Get reconciliation result
+#### API-RECON-GET-001: Lấy kết quả đối soát
 
 - **Method:** `GET`
 - **Path:** `/reconciliation/{run_id}`
@@ -183,7 +183,7 @@ See `11-security.md` for authentication details.
 
 ---
 
-#### API-RECON-POST-002: Resolve exception
+#### API-RECON-POST-002: Giải quyết ngoại lệ
 
 - **Method:** `POST`
 - **Path:** `/exceptions/{exception_id}/resolve`
@@ -212,7 +212,7 @@ See `11-security.md` for authentication details.
 
 ### Tax
 
-#### API-TAX-GET-001: Get tax-readiness report
+#### API-TAX-GET-001: Lấy tax-readiness report
 
 - **Method:** `GET`
 - **Path:** `/merchants/{merchant_id}/tax-readiness?period={YYYY-MM}`
@@ -236,11 +236,11 @@ See `11-security.md` for authentication details.
   "ready": false
 }
 ```
-- **Errors:** `ERR-MERCHANT-001` (404), `ERR-TAX-001` (404 — rule version not found)
+- **Errors:** `ERR-MERCHANT-001` (404), `ERR-TAX-001` (404 — không tìm thấy rule version)
 
 ---
 
-#### API-TAX-POST-001: Export draft data
+#### API-TAX-POST-001: Export dữ liệu nháp
 
 - **Method:** `POST`
 - **Path:** `/merchants/{merchant_id}/export`
@@ -252,15 +252,15 @@ See `11-security.md` for authentication details.
   "format": "json"
 }
 ```
-- **Response 200:** (JSON export content)
-- **Response 400:** `ERR-TAX-002` (data not ready — unresolved exceptions)
+- **Response 200:** (nội dung export JSON)
+- **Response 400:** `ERR-TAX-002` (dữ liệu chưa sẵn sàng — ngoại lệ chưa giải quyết)
 - **Errors:** `ERR-MERCHANT-001` (404), `ERR-AUTH-003` (403)
 
 ---
 
 ### Cases
 
-#### API-CASE-GET-001: List cases
+#### API-CASE-GET-001: Danh sách case
 
 - **Method:** `GET`
 - **Path:** `/cases?merchant_id={id}&status={status}`
@@ -284,7 +284,7 @@ See `11-security.md` for authentication details.
 
 ---
 
-#### API-CASE-POST-001: Assign RM
+#### API-CASE-POST-001: Giao RM
 
 - **Method:** `POST`
 - **Path:** `/cases/{case_id}/assign`
@@ -307,7 +307,7 @@ See `11-security.md` for authentication details.
 
 ---
 
-#### API-CASE-POST-002: Draft merchant message
+#### API-CASE-POST-002: Draft tin nhắn merchant
 
 - **Method:** `POST`
 - **Path:** `/cases/{case_id}/draft-message`
@@ -332,7 +332,7 @@ See `11-security.md` for authentication details.
 
 ### Mini POS
 
-#### API-POS-POST-001: Create sale
+#### API-POS-POST-001: Tạo sale
 
 - **Method:** `POST`
 - **Path:** `/pos/sales`
@@ -361,11 +361,11 @@ See `11-security.md` for authentication details.
   "invoice_status": "PENDING"
 }
 ```
-- **Errors:** `ERR-POS-001` (400 — invalid data), `ERR-AUTH-003` (403)
+- **Errors:** `ERR-POS-001` (400 — dữ liệu không hợp lệ), `ERR-AUTH-003` (403)
 
 ---
 
-#### API-POS-POST-002: Create payment intent (Dynamic QR)
+#### API-POS-POST-002: Tạo payment intent (Dynamic QR)
 
 - **Method:** `POST`
 - **Path:** `/pos/payment-intents`
@@ -387,11 +387,11 @@ See `11-security.md` for authentication details.
   "status": "PENDING"
 }
 ```
-- **Errors:** `ERR-POS-002` (400 — sale already paid), `ERR-POS-003` (404 — sale not found)
+- **Errors:** `ERR-POS-002` (400 — sale đã thanh toán), `ERR-POS-003` (404 — không tìm thấy sale)
 
 ---
 
-#### API-POS-POST-003: Record cash payment
+#### API-POS-POST-003: Ghi thanh toán tiền mặt
 
 - **Method:** `POST`
 - **Path:** `/pos/cash-payments`
@@ -417,7 +417,7 @@ See `11-security.md` for authentication details.
 
 ---
 
-#### API-POS-POST-004: Close cash session
+#### API-POS-POST-004: Đóng cash session
 
 - **Method:** `POST`
 - **Path:** `/pos/cash-sessions/{session_id}/close`
@@ -440,13 +440,13 @@ See `11-security.md` for authentication details.
   "status": "RECONCILED"
 }
 ```
-- **Errors:** `ERR-POS-004` (404 — session not found)
+- **Errors:** `ERR-POS-004` (404 — không tìm thấy session)
 
 ---
 
 ### Agents
 
-#### API-AGENT-POST-001: Start agent run
+#### API-AGENT-POST-001: Bắt đầu agent run
 
 - **Method:** `POST`
 - **Path:** `/agents/run`
@@ -468,7 +468,7 @@ See `11-security.md` for authentication details.
 
 ---
 
-#### API-AGENT-GET-001: Get agent trace
+#### API-AGENT-GET-001: Lấy agent trace
 
 - **Method:** `GET`
 - **Path:** `/agents/runs/{run_id}/trace`
@@ -535,19 +535,19 @@ See `11-security.md` for authentication details.
   ]
 }
 ```
-- **Response 200 (CSV):** CSV file download
-- **Errors:** `ERR-AUTH-003` (403 — requires compliance/admin role)
+- **Response 200 (CSV):** Tải file CSV
+- **Errors:** `ERR-AUTH-003` (403 — yêu cầu role compliance/admin)
 
 ---
 
 ### Merchant Confirmation
 
-#### API-MERCHANT-GET-001: Get confirmation request
+#### API-MERCHANT-GET-001: Lấy yêu cầu xác nhận
 
 - **Method:** `GET`
 - **Path:** `/confirm/{token}`
 - **Traces to:** FR-MERCHANT-001
-- **Auth:** None (token-based)
+- **Auth:** Không (dựa trên token)
 - **Response 200:**
 ```json
 {
@@ -559,16 +559,16 @@ See `11-security.md` for authentication details.
   "options": ["internal_transfer", "revenue", "loan", "other"]
 }
 ```
-- **Errors:** `ERR-TOKEN-001` (404 — token not found), `ERR-TOKEN-002` (410 — token expired)
+- **Errors:** `ERR-TOKEN-001` (404 — không tìm thấy token), `ERR-TOKEN-002` (410 — token hết hạn)
 
 ---
 
-#### API-MERCHANT-POST-001: Submit confirmation
+#### API-MERCHANT-POST-001: Gửi xác nhận
 
 - **Method:** `POST`
 - **Path:** `/confirm/{token}`
 - **Traces to:** FR-MERCHANT-001
-- **Auth:** None (token-based)
+- **Auth:** Không (dựa trên token)
 - **Request body:**
 ```json
 {
@@ -588,41 +588,57 @@ See `11-security.md` for authentication details.
 
 ### Webhooks
 
-#### API-WEBHOOK-POST-001: SePay/SHB transaction webhook
+#### API-WEBHOOK-POST-001: SePay webhook (thông báo giao dịch SHB)
 
 - **Method:** `POST`
 - **Path:** `/webhooks/sepay`
 - **Traces to:** FR-POS-002, FR-DATA-001
-- **Auth:** Webhook signature verification
-- **Request body:** (SePay format — varies by provider)
-- **Response 200:**
+- **Auth:** `Authorization: Apikey API_KEY` header (verify với `SEPAY_WEBHOOK_API_KEY`)
+- **Request body (SePay webhook format):**
 ```json
 {
-  "received": true,
-  "matched": true,
-  "sale_id": "ORDER-1843"
+  "id": 92704,
+  "gateway": "SHB",
+  "transactionDate": "2023-03-25 14:02:37",
+  "accountNumber": "0123499999",
+  "code": null,
+  "content": "chuyen tien mua iphone",
+  "transferType": "in",
+  "transferAmount": 2277000,
+  "accumulated": 19077000,
+  "subAccount": null,
+  "referenceCode": "208V009252001511",
+  "description": ""
 }
 ```
-- **Idempotency:** Webhook deduplicated by transaction ID
-- **Errors:** `ERR-WEBHOOK-001` (400 — invalid signature)
+- **Response 200/201 (SePay yêu cầu):**
+```json
+{
+  "success": true
+}
+```
+- **Idempotency:** Deduplicate theo SePay `id` — check nếu `source_id = SEPAY-{id}` đã tồn tại
+- **Processing:** Return 200 ngay trong 8s (SePay read timeout); xử lý matching async qua Redis queue
+- **Retry:** SePay retry tối đa 7 lần (Fibonacci intervals, 5 giờ max) nếu response không 200/201
+- **Errors:** `ERR-WEBHOOK-001` (401 — invalid API key)
 
 ---
 
 ## Rate limiting
 
-See `05-non-functional-requirements.md` NFR-LIMIT-003. Default: 100 requests/minute per user.
+Xem `02-requirements/05-non-functional-requirements.md` NFR-LIMIT-003. Mặc định: 100 request/phút mỗi user.
 
 ## Verification
 
 ### Automated
 
-- `cd backend && python -m pytest tests/test_api/ -v` — API endpoint tests
-- OpenAPI spec validation against route definitions
+- `cd backend && python -m pytest tests/test_api/ -v` — test API endpoint
+- OpenAPI spec validation với route definition
 
 ### Manual
 
-- Start backend → call each endpoint with valid and invalid inputs
-- Verify error responses match error IDs from `12-error-codes.md`
+- Start backend → gọi mỗi endpoint với input hợp lệ và không hợp lệ
+- Verify error response khớp error ID từ `03-engineering/07-error-codes.md`
 
 ---
 
