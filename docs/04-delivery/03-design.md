@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Design Lead
 > **Applies to:** Frontend UI
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Partial — Next.js frontend with dashboard, exceptions, POS, agent trace, tax-readiness, audit screens
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -47,34 +47,34 @@
 
 ### Typography
 
-| Token | Value | Cách dùng |
-|---|---|---|
-| `--font-family` | `Inter, sans-serif` | Toàn bộ UI text |
-| `--font-family-mono` | `JetBrains Mono, monospace` | Transaction IDs, payment references, code snippets |
-| `--font-size-xs` | 12px | Labels, captions |
-| `--font-size-sm` | 14px | Body text, table cells |
-| `--font-size-base` | 16px | Default body |
-| `--font-size-lg` | 18px | Section headers |
-| `--font-size-xl` | 24px | Page titles |
-| `--font-size-2xl` | 32px | Hero numbers (dashboard) |
-| `--font-weight-normal` | 400 | Body text |
-| `--font-weight-medium` | 500 | Labels, table headers |
-| `--font-weight-semibold` | 600 | Card titles, button text |
-| `--font-weight-bold` | 700 | Hero numbers, page titles, logo |
-| `--letter-spacing-tight` | -0.02em | Hero numbers, page titles |
-| `--letter-spacing-wide` | 0.05em | Uppercase labels, badges |
+| Token                    | Value                       | Cách dùng                                          |
+| --------------------------| -----------------------------| ----------------------------------------------------|
+| `--font-family`          | `Inter, sans-serif`         | Toàn bộ UI text                                    |
+| `--font-family-mono`     | `JetBrains Mono, monospace` | Transaction IDs, payment references, code snippets |
+| `--font-size-xs`         | 12px                        | Labels, captions                                   |
+| `--font-size-sm`         | 14px                        | Body text, table cells                             |
+| `--font-size-base`       | 16px                        | Default body                                       |
+| `--font-size-lg`         | 18px                        | Section headers                                    |
+| `--font-size-xl`         | 24px                        | Page titles                                        |
+| `--font-size-2xl`        | 32px                        | Hero numbers (dashboard)                           |
+| `--font-weight-normal`   | 400                         | Body text                                          |
+| `--font-weight-medium`   | 500                         | Labels, table headers                              |
+| `--font-weight-semibold` | 600                         | Card titles, button text                           |
+| `--font-weight-bold`     | 700                         | Hero numbers, page titles, logo                    |
+| `--letter-spacing-tight` | -0.02em                     | Hero numbers, page titles                          |
+| `--letter-spacing-wide`  | 0.05em                      | Uppercase labels, badges                           |
 
 ### Spacing
 
-| Token | Value |
-|---|---|
-| `--space-1` | 4px |
-| `--space-2` | 8px |
-| `--space-3` | 12px |
-| `--space-4` | 16px |
-| `--space-6` | 24px |
-| `--space-8` | 32px |
-| `--space-12` | 48px |
+| Token        | Value |
+| --------------| -------|
+| `--space-1`  | 4px   |
+| `--space-2`  | 8px   |
+| `--space-3`  | 12px  |
+| `--space-4`  | 16px  |
+| `--space-6`  | 24px  |
+| `--space-8`  | 32px  |
+| `--space-12` | 48px  |
 
 ### Shadows
 
@@ -133,56 +133,86 @@
 
 ## Layout patterns
 
-### App shell
+### Merchant Workspace app shell
 
 ```text
 ┌─────────────────────────────────────────────┐
-│ Header: TaxLens logo │ Merchant selector │ User │
+│ Header: TaxLens logo │ Store name │ User     │
 ├──────────┬──────────────────────────────────┤
 │ Sidebar  │ Main content area                │
-│ - Dashboard│                                 │
-│ - Exceptions│                                │
-│ - Tax     │                                  │
-│ - Cases   │                                  │
-│ - Trace   │                                  │
-│ - Audit   │                                  │
+│ - Tổng quan│                                 │
+│ - Giao dịch│                                │
+│ - Đơn hàng│                                 │
+│ - Ngoại lệ │                                 │
+│ - Hóa đơn │                                  │
+│ - Tiền mặt│                                  │
+│ - Sẵn sàng thuế│                            │
+│ - Hỗ trợ  │                                  │
 │ - Mini POS│                                  │
+└──────────┴──────────────────────────────────┘
+```
+
+Ngôn ngữ đơn giản, không thuật ngữ kế toán. Header hiển thị tên cửa hàng thay vì merchant selector.
+
+### SHB Operations Console app shell
+
+```text
+┌─────────────────────────────────────────────┐
+│ Header: TaxLens │ SHB Operations │ User      │
+├──────────┬──────────────────────────────────┤
+│ Sidebar  │ Main content area                │
+│ - Portfolio│                                 │
+│ - Cases   │                                  │
+│ - Agent Activity│                            │
+│ - Audit   │                                  │
+│ - Compliance│                                │
+│ - Support │                                  │
 └──────────┴──────────────────────────────────┘
 ```
 
 ### Auth layout
 
-Card căn giữa với logo, login form. Không sidebar.
+Card căn giữa với logo, login form. Không sidebar. Login xác định role (merchant hoặc SHB staff) và redirect workspace tương ứng.
 
-## Đặc tả từng screen
+## Đặc tả từng screen — Merchant Workspace
 
-### Screen 1: Merchant Dashboard
+### MW-Screen 1: Merchant Dashboard
 
-**Mục đích:** Tổng quan trạng thái đối soát merchant và active agents.
+**Mục đích:** Tổng quan trạng thái cửa hàng cho business owner.
 
-**Layout:** Content area full-width với summary cards dạng grid, theo sau là active agent list.
+**Layout:** Content area full-width với summary cards dạng grid, theo sau là exception preview và active agent list.
 
 **Components:**
-- 4 summary cards: Total transactions, Reconciliation rate, Open exceptions, Tax readiness status
+- 4 summary cards: Tổng giao dịch, Tỷ lệ đối soát, Ngoại lệ cần xác nhận, Sẵn sàng thuế
+- Exception preview table: 5 ngoại lệ gần nhất cần xử lý
 - Active agents panel: agent name, status, run link
 - Quick action: nút "Bắt đầu đối soát"
+
+**Copy (merchant-facing):**
+- Greeting: "Xin chào, Hương"
+- Subtitle: "Hôm nay cửa hàng của bạn có {N} mục cần xác nhận"
+- Card 1: "Tổng giao dịch" — icon receipt_long
+- Card 2: "Tỷ lệ đối soát" — icon pending_actions
+- Card 3: "Ngoại lệ cần xác nhận" — icon error_outline
+- Card 4: "Sẵn sàng thuế" — icon task_alt
+- Empty: "Không có dữ liệu cho kỳ này"
 
 **States:**
 - Default: Data loaded, cards hiển thị values
 - Loading: Skeleton cards
-- Empty: "Không có data cho kỳ này" với merchant selector
+- Empty: "Không có data cho kỳ này" với period selector
 - Error: Alert với retry button
 
-### Screen 2: Exception Inbox
+### MW-Screen 2: Exception Inbox
 
-**Mục đích:** Hiển thị chỉ những transaction cần quyết định con người.
+**Mục đích:** Hiển thị chỉ những transaction cần quyết định của merchant.
 
 **Layout:** Danh sách exception cards, mỗi card expandable để hiển thị AI reasoning.
 
 **Components:**
-- Filter bar: merchant, period, exception type
+- Filter bar: period, exception type
 - Exception card: amount, sender, note, AI suggestion badge với confidence, reasoning expandable section
-- Action buttons: [Duyệt] [Từ chối] [Phân loại lại]
+- Action buttons: [Duyệt] [Từ chối] [Phân loại lại] [Yêu cầu SHB hỗ trợ]
 - Pagination
 
 **States:**
@@ -191,9 +221,9 @@ Card căn giữa với logo, login form. Không sidebar.
 - Loading: Skeleton list
 - Resolved: Card animate out
 
-### Screen 3: Agent Trace
+### MW-Screen 3: Agent Trace
 
-**Mục đích:** Hiển thị full trace của agent actions trong một run.
+**Mục đích:** Hiển thị trace cho merchant để hiểu AI đã quyết định thế nào.
 
 **Layout:** Timeline view với steps, tool calls, và decision points.
 
@@ -209,24 +239,28 @@ Card căn giữa với logo, login form. Không sidebar.
 - Failed: Error highlight tại failure point
 - Empty: "Chưa có agent run nào"
 
-### Screen 4: Tax-Readiness View
+### MW-Screen 4: Tax-Readiness View
 
-**Mục đích:** Hiển thị checklist các tax-readiness items.
+**Mục đích:** Hiển thị checklist tax-readiness cho merchant bằng ngôn ngữ đơn giản.
 
 **Layout:** Checklist với pass/fail indicators và rule version banner.
 
 **Components:**
-- Rule version banner: "Rule version: 2026.07 | Effective: 2021-07-01 | Source: Thông tư 40/2021"
+- Rule version banner: "Bộ quy tắc: 2026.07 | Hiệu lực: 2021-07-01"
 - Checklist items với ✓/✗ icons và values
 - Ready/Not ready status banner
 - Export button (enabled khi ready)
+
+**Copy (merchant-facing):**
+- "Dữ liệu thuế của bạn đã sẵn sàng" / "Cần xử lý thêm"
+- "Xuất dữ liệu cho kế toán"
 
 **States:**
 - All pass: Green banner "Data sẵn sàng cho draft export"
 - Some fail: Warning banner với danh sách failing items
 - No data: "Không có data cho kỳ này"
 
-### Screen 5: Mini POS
+### MW-Screen 5: Mini POS
 
 **Mục đích:** POS tối giản để tạo sales và generate QR codes.
 
@@ -245,26 +279,9 @@ Card căn giữa với logo, login form. Không sidebar.
 - Cash session open: Summary bar ở bottom
 - Cash session closing: Modal với counted cash input
 
-### Screen 6: Audit Log Export
+### MW-Screen 6: Merchant Confirmation Page
 
-**Mục đích:** Export audit log dạng JSON hoặc CSV.
-
-**Layout:** Filter form + export button + preview table.
-
-**Components:**
-- Filter: merchant, period
-- Format selector: JSON / CSV
-- Export button
-- Preview table (10 events đầu)
-
-**States:**
-- Default: Filter form
-- Exported: Download triggered
-- No events: "Không có audit events cho kỳ đã chọn"
-
-### Screen 7: Merchant Confirmation Page
-
-**Mục đích:** Cho phép merchant xác nhận phân loại transaction mà không cần login.
+**Mục đích:** Cho phép merchant xác nhận phân loại transaction qua link (SMS/Zalo) mà không cần login.
 
 **Layout:** Card căn giữa với transaction details và classification options.
 
@@ -277,19 +294,130 @@ Card căn giữa với logo, login form. Không sidebar.
 **States:**
 - Default: Transaction details + options
 - Submitted: "Cảm ơn! Xác nhận đã được ghi nhận."
-- Expired: "Liên kết đã hết hạn. Vui lòng liên hệ RM."
+- Expired: "Liên kết đã hết hạn. Vui lòng liên hệ SHB."
 - Already confirmed: "Giao dịch này đã được xác nhận."
+
+## Đặc tả từng screen — SHB Operations Console
+
+### OPS-Screen 1: Portfolio Dashboard
+
+**Mục đích:** Giám sát trạng thái tất cả merchant trong portfolio.
+
+**Layout:** Content area full-width với portfolio summary cards, merchant table, và alert panel.
+
+**Components:**
+- 4 summary cards: Tổng merchant, Merchants cần chú ý, Cases chưa giải quyết, Tax-readiness rate
+- Merchant table: merchant name, status, reconciliation rate, open exceptions, tax-ready, last activity
+- Alert panel: merchants requiring attention, unresolved escalations, low-confidence decisions
+
+**States:**
+- Default: Portfolio data loaded
+- Loading: Skeleton cards + table
+- Empty: "Chưa có merchant nào trong portfolio"
+- Error: Alert với retry button
+
+### OPS-Screen 2: Case Queue
+
+**Mục đích:** Danh sách case escalated từ Merchant Workspace, ưu tiên theo aging.
+
+**Layout:** Table với filter bar và case detail panel.
+
+**Components:**
+- Filter bar: merchant, case type, status, priority
+- Case table: case ID, merchant, type, priority, status, created date, aging
+- Case detail panel: agent trace, evidence, AI suggestion, action buttons
+- Action buttons: [Phê duyệt] [Từ chối] [Giao cho RM] [Draft tin nhắn]
+
+**States:**
+- Default: Case list
+- Empty: "Không có case nào"
+- Case selected: Detail panel mở
+- Case resolved: Row animate out
+
+### OPS-Screen 3: Agent Activity
+
+**Mục đích:** Xem agent trace đầy đủ cho bất kỳ run nào.
+
+**Layout:** Timeline view giống MW-Screen 3 nhưng với thêm chi tiết operational.
+
+**Components:**
+- Run selector: dropdown hoặc search
+- Plan steps list với status icons
+- Tool call detail: agent name, tool name, confidence, timestamp, duration, input/output hash
+- Waiting indicator cho human approval steps
+- Run status badge
+- Low-confidence highlight cho decisions cần review
+
+**States:**
+- Running: Steps update real-time qua WebSocket
+- Completed: Full trace visible, read-only
+- Failed: Error highlight tại failure point
+- Empty: "Chưa có agent run nào"
+
+### OPS-Screen 4: Audit Log Export
+
+**Mục đích:** Export audit log dạng JSON hoặc CSV cho compliance.
+
+**Layout:** Filter form + export button + preview table.
+
+**Components:**
+- Filter: merchant, period, actor type (agent/human)
+- Format selector: JSON / CSV
+- Export button
+- Preview table (10 events đầu)
+
+**States:**
+- Default: Filter form
+- Exported: Download triggered
+- No events: "Không có audit events cho kỳ đã chọn"
+
+### OPS-Screen 5: Compliance Review
+
+**Mục đích:** Review tax-rule versions và compliance status.
+
+**Layout:** Rule version list + detail panel.
+
+**Components:**
+- Rule version list: version, effective date, approval status, approved by
+- Detail panel: rules in version, legal source, affected merchants
+- Approve/Reject buttons cho pending versions
+
+**States:**
+- Default: Rule version list
+- Version selected: Detail panel mở
+- No pending: "Không có rule version nào chờ phê duyệt"
 
 ## Cấu trúc navigation
 
+### Merchant Workspace
+
 ```text
-Dashboard (/dashboard)
-Exceptions (/exceptions)
-Tax-Readiness (/tax)
-Cases (/cases)
-Agent Trace (/trace)
-Audit Export (/audit)
+Tổng quan (/dashboard)
+Giao dịch (/transactions)
+Đơn hàng (/orders)
+Ngoại lệ (/exceptions)
+Hóa đơn (/invoices)
+Tiền mặt (/cash)
+Sẵn sàng thuế (/tax)
+Hỗ trợ (/support)
 Mini POS (/pos)
+```
+
+### SHB Operations Console
+
+```text
+Portfolio (/portfolio)
+Cases (/cases)
+Agent Activity (/trace)
+Audit Export (/audit)
+Compliance (/compliance)
+Support (/support)
+```
+
+### Merchant Confirmation (no login)
+
+```text
+Xác nhận (/confirm/[token])
 ```
 
 ## Responsive behavior

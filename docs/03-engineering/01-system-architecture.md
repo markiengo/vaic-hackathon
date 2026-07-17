@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Tech Lead
 > **Applies to:** Tất cả module của TaxLens
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Partial — backend infrastructure, adapters, matching, tax rules implemented; agent specialist nodes are stubs
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -172,17 +172,19 @@ taxlens/
 │   └── alembic.ini
 ├── docker-compose.yml
 ├── docs/                     # This documentation set
-└── product.md                # Original product spec
+├── AGENTS.md                # Team roles and workflow
+└── log.md                   # Implementation status and session history
 ```
 
 *Figure 4: Bản đồ thư mục dự án. Tài liệu này sở hữu directory map; tài liệu khác tham chiếu nó.*
 
 ## Authentication architecture overview
 
-Authentication được xử lý tại FastAPI backend bằng JWT token. Xem `03-engineering/06-security.md` cho chi tiết.
+Authentication được xử lý tại FastAPI backend bằng JWT token. Xem `03-engineering/04-security-and-permissions.md` cho chi tiết.
 
-- Nhân viên SHB: username/password → JWT
-- Xác nhận merchant: link dựa trên token (không cần login)
+- Nhân viên SHB: username/password → JWT (role: shb_staff → SHB Operations Console)
+- Merchant: username/password → JWT (role: merchant → Merchant Workspace)
+- Xác nhận merchant: link dựa trên token (không cần login, dùng cho trường hợp đơn giản)
 - API endpoint: JWT trong Authorization header
 - WebSocket: JWT trong connection param
 
@@ -198,7 +200,7 @@ Xem `04-delivery/01-environment-setup.md` cho hướng dẫn setup đầy đủ.
 
 ## Key technical decisions
 
-Xem `01-foundation/03-decisions.md` cho rationale:
+Xem `01-foundation/02-decisions.md` cho rationale:
 
 - DEC-001: Multi-agent architecture
 - DEC-002: Canonical Event Ledger

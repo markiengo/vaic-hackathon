@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Tech Lead
 > **Applies to:** Database schema, canonical ledger
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Implemented — SQLAlchemy models for all entities; migrations applied
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -204,7 +204,7 @@ CREATE TABLE bank_transactions (
 );
 ```
 
-**Purpose:** Giao dịch ngân hàng trong canonical format. Xử lý note ba lớp: raw_note, normalized_note, ai_interpretation. Xem FR-RECON-004. Field map theo SePay API và webhook payload thật. Xem `03-engineering/05-integration.md` cho field mapping.
+**Purpose:** Giao dịch ngân hàng trong canonical format. Xử lý note ba lớp: raw_note, normalized_note, ai_interpretation. Xem FR-RECON-004. Field map theo SePay API và webhook payload thật. Xem `03-engineering/03-integration.md` cho field mapping.
 
 ### payment_allocations
 

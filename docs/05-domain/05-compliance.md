@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Compliance Lead
 > **Applies to:** Tax Rules Engine, tax-readiness reporting, audit logging
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Implemented — `backend/app/services/tax_rules.py` and `backend/app/routers/tax.py`
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---

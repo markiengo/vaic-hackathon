@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Tech Lead
 > **Applies to:** Tất cả module AI agent
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Partial — agent scaffolding and prompts implemented; specialist agent nodes are placeholders; tool stubs raise NotImplementedError
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -14,31 +14,31 @@
 
 ### AI được phép làm
 
-| Năng lực | Agent | Mô tả |
-|---|---|---|
-| Interpret Vietnamese transfer notes | Reconciliation | Normalize diacritics, expand abbreviations, suggest transaction type |
-| Score candidate matches | Reconciliation | Weight factors và produce confidence score |
-| Explain match reasoning | Reconciliation | Generate human-readable reasoning cho match suggestions |
-| Plan task decomposition | Planner | Break complex requests thành steps và assign cho agents |
-| Explain tax rules bằng ngôn ngữ đơn giản | Tax & Compliance | Retrieve và paraphrase rule content |
-| Classify revenue category | Tax & Compliance | Suggest classification dựa trên transaction patterns |
-| Draft merchant messages | Merchant Ops | Compose Vietnamese confirmation requests |
-| Retrieve business guidance | All | Inline context injection trong agent prompts (business rules ~200 lines) |
+| Năng lực                                 | Agent            | Mô tả                                                                    |
+| ------------------------------------------| ------------------| --------------------------------------------------------------------------|
+| Interpret Vietnamese transfer notes      | Reconciliation   | Normalize diacritics, expand abbreviations, suggest transaction type     |
+| Score candidate matches                  | Reconciliation   | Weight factors và produce confidence score                               |
+| Explain match reasoning                  | Reconciliation   | Generate human-readable reasoning cho match suggestions                  |
+| Plan task decomposition                  | Planner          | Break complex requests thành steps và assign cho agents                  |
+| Explain tax rules bằng ngôn ngữ đơn giản | Tax & Compliance | Retrieve và paraphrase rule content                                      |
+| Classify revenue category                | Tax & Compliance | Suggest classification dựa trên transaction patterns                     |
+| Draft merchant messages                  | Merchant Ops     | Compose Vietnamese confirmation requests                                 |
+| Retrieve business guidance               | All              | Inline context injection trong agent prompts (business rules ~200 lines) |
 
 ### AI KHÔNG được phép làm
 
-| Cấm | Lý do |
-|---|---|
-| Compute tax formulas | Phải deterministic và auditable (DEC-004) |
-| Perform exact matching | Phải deterministic (reference-based) |
-| Detect duplicate transaction IDs | Phải deterministic (database check) |
-| Modify tax rules | Rules immutable một khi approved |
-| Auto-resolve transactions với confidence <95% | Cần human approval (DEC-005) |
-| Submit tax filings | MVP chỉ produce draft export |
-| Issue production invoices | Chỉ mock provider |
-| Access tools ngoài allowlist | Security boundary (SEC-RBAC-003) |
-| Make final decisions trên high-risk transactions | Cần human approval |
-| Send messages mà không có RM review | Draft only; RM phải approve |
+| Cấm                                              | Lý do                                     |
+| --------------------------------------------------| -------------------------------------------|
+| Compute tax formulas                             | Phải deterministic và auditable (DEC-004) |
+| Perform exact matching                           | Phải deterministic (reference-based)      |
+| Detect duplicate transaction IDs                 | Phải deterministic (database check)       |
+| Modify tax rules                                 | Rules immutable một khi approved          |
+| Auto-resolve transactions với confidence <95%    | Cần human approval (DEC-005)              |
+| Submit tax filings                               | MVP chỉ produce draft export              |
+| Issue production invoices                        | Chỉ mock provider                         |
+| Access tools ngoài allowlist                     | Security boundary (SEC-RBAC-003)          |
+| Make final decisions trên high-risk transactions | Cần human approval                        |
+| Send messages mà không có RM review              | Draft only; RM phải approve               |
 
 ## Đặc tả agent
 
@@ -47,7 +47,7 @@
 | Aspect | Chi tiết |
 |---|---|
 | Role | Phân tách complex requests thành tasks; delegate cho specialists |
-| LLM model | `LLM_MODEL_PLANNER` (e.g., `deepseek-chat`) |
+| LLM model | `DEEPSEEK_MODEL` env var (default: `deepseek-v4-flash`); `LLM_MODEL_PLANNER` in config.py |
 | Tools allowed | Không trực tiếp — delegate cho specialist agents |
 | Output schema | `{"plan": [{"step": N, "action": "...", "agent": "..."}]}` |
 | State machine | PENDING → PLANNING → EXECUTING → WAITING_FOR_HUMAN → COMPLETED/FAILED |
@@ -132,12 +132,13 @@ Agents read và write specific fields. Planner điều phối agent nào write k
 
 | Aspect | Detail |
 |---|---|
-| Provider | DeepSeek V4 Flash |
-| Model | `deepseek-chat` (tất cả agent) |
+| Provider | DeepSeek V4 Flash (OpenAI-compatible endpoint) |
+| Model | `deepseek-v4-flash` (default; overridable via `DEEPSEEK_MODEL` env var) |
+| Fallback provider | OpenRouter (`deepseek/deepseek-v4-flash` via `OPENROUTER_API_KEY`) |
 | Thinking mode | Bật cho Planner Agent (task decomposition cần reasoning) |
 | Tool protocol | Typed function calling (Python functions với type hints passed to LLM) |
-| API auth | `Authorization: Bearer DEEPSEEK_API_KEY` |
-| Endpoint | `https://api.deepseek.com/v1/chat/completions` |
+| API auth | `Authorization: Bearer DEEPSEEK_API_KEY` (or `OPENROUTER_API_KEY` for OpenRouter) |
+| Endpoint | `https://api.deepseek.com/v1` (default) or `https://openrouter.ai/api/v1` (fallback) |
 | Temperature | 0.1 cho task deterministic (matching, tax); 0.3 cho message drafting |
 
 ## Xử lý error và hallucination

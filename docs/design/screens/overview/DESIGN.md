@@ -119,7 +119,7 @@ spacing:
 # TaxLens Design System (Vietnam Merchant TaxOps)
 
 ## Brand Identity
-TaxLens is a Merchant TaxOps platform for SHB bank staff in Vietnam. It focuses on reconciliation, exception management, and tax-ready data preparation.
+TaxLens is a Merchant TaxOps platform provided by SHB for business owners in Vietnam, with a two-sided model: Merchant Workspace (daily user: business owner) and SHB Operations Console (operational user: SHB staff). It focuses on reconciliation, exception management, and tax-ready data preparation.
 
 ## Colors
 - **Primary:** `#006837` (SHB green) — primary actions, headers, branding

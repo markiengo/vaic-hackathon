@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Tech Lead
 > **Applies to:** Reconciliation matching engine
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Implemented — `backend/app/services/matching.py` with 12 tests
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -191,12 +191,12 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
 
 ## Performance characteristics
 
-| Operation | Complexity | Expected time (100 transactions) |
-|---|---|---|
-| Exact matching | O(n) per transaction | <100ms total |
-| Candidate generation | O(n × m) với m = unpaid sales | <500ms per transaction |
-| AI note interpretation | O(1) per unique note (cached) | <2s per unique note |
-| Full reconciliation run | O(n × (1 + m + ai)) | <30s cho 100 transactions |
+| Operation               | Complexity                    | Expected time (100 transactions) |
+| -------------------------| -------------------------------| ----------------------------------|
+| Exact matching          | O(n) per transaction          | <100ms total                     |
+| Candidate generation    | O(n × m) với m = unpaid sales | <500ms per transaction           |
+| AI note interpretation  | O(1) per unique note (cached) | <2s per unique note              |
+| Full reconciliation run | O(n × (1 + m + ai))           | <30s cho 100 transactions        |
 
 ## Test fixtures và truth sets
 

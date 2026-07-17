@@ -18,13 +18,13 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 
 ## Role map
 
-| Role | Name | Responsibility |
-|------|------|----------------|
+| Role   | Name                       | Responsibility                                                                |
+| --------| ----------------------------| -------------------------------------------------------------------------------|
 | **P1** | Matching & Financial Logic | Match scoring, payment allocation, cash reconciliation, confidence thresholds |
-| **P2** | AI Agent Layer | LangGraph, 4 agents, system prompts, note interpretation, inline context |
-| **P3** | Product + Frontend | UI screens, API client, WebSocket, demo script, pitch |
-| **P4** | Backend Infra | FastAPI, REST endpoints, WebSocket server, Redis, DB migrations, models |
-| **P5** | Data Pipeline + Tax | Adapters, tool implementations, seed data, Tax Rules Engine, tax seed |
+| **P2** | AI Agent Layer             | LangGraph, 4 agents, system prompts, note interpretation, inline context      |
+| **P3** | Product + Frontend         | UI screens, API client, WebSocket, demo script, pitch                         |
+| **P4** | Backend Infra              | FastAPI, REST endpoints, WebSocket server, Redis, DB migrations, models       |
+| **P5** | Data Pipeline + Tax        | Adapters, tool implementations, seed data, Tax Rules Engine, tax seed         |
 
 ---
 
@@ -34,7 +34,9 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 
 - `docs/04-delivery/00-work-split.md` — **always read your sprint section first**
 - `log.md` — check current implementation status and session history
-- `product.md` — product overview and acceptance criteria
+- `docs/01-foundation/03-product-spec.md` — product overview and acceptance criteria
+- `docs/02-requirements/03-srs.md` — consolidated software requirements specification (business, functional, non-functional, personas, user stories, compliance, evaluation)
+- `docs/03-engineering/05-api-reference.md` — consolidated API reference (all endpoints, error codes, webhook contracts)
 
 ### P1 — Matching & Financial Logic
 
@@ -53,7 +55,7 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 
 **Docs:**
 - `docs/05-domain/01-ai-advisor.md` — agent design, error handling, prompt strategy
-- `docs/01-foundation/02-agents.md` — agent overview
+- `docs/01-foundation/01-agents.md` — AI agents overview (what each agent does)
 - `docs/03-engineering/01-system-architecture.md` — system architecture
 
 **Code:**
@@ -66,7 +68,7 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 
 **Docs:**
 - `docs/04-delivery/03-design.md` — design tokens, screen specs
-- `docs/02-requirements/03-user-stories.md` — user stories
+- `docs/02-requirements/02-user-stories.md` — user stories
 - `docs/design/screens/` — design reference mockups
 
 **Code:**
@@ -78,8 +80,7 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 **Docs:**
 - `docs/03-engineering/01-system-architecture.md` — architecture
 - `docs/03-engineering/02-data-models.md` — data models
-- `docs/03-engineering/03-api-specifications.md` — API specs
-- `docs/03-engineering/07-error-codes.md` — error codes
+- `docs/03-engineering/05-api-reference.md` — consolidated API specs and error codes
 
 **Code:**
 - `backend/app/main.py` — FastAPI app
@@ -92,9 +93,9 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 ### P5 — Data Pipeline + Tax
 
 **Docs:**
-- `docs/03-engineering/05-integration.md` — integration points
+- `docs/03-engineering/03-integration.md` — integration points
 - `docs/05-domain/05-compliance.md` — tax compliance rules
-- `product.md` §17 — seed data spec
+- `docs/01-foundation/03-product-spec.md` §17 — seed data spec
 
 **Code:**
 - `backend/app/adapters/` — SHB, SePay, CSV, invoice adapters
@@ -119,3 +120,58 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 - Do not read the entire docs tree — only what your role needs.
 - If the work-split doc seems wrong or outdated, ask the user before changing it.
 - Always check `log.md` before starting work to avoid duplicating completed tasks.
+- All docs are Vietnamese-first, English-technical only. 
+---
+
+## Team workflow & git discipline
+
+We are a **team of 5** working in parallel with **git PRs and continuous push**. To stay coordinated:
+
+### Branch & PR rules
+
+- Each member works on their own branch unless specified otherwise (e.g., `p1-matching`, `p4-backend`, etc.).
+- Commit frequently — at least once per logical unit of work (not once per sprint).
+- Merge only after your exit criteria pass and `log.md` is updated.
+- If two members touch the same file, coordinate via `log.md` first.
+
+### Pre-commit: `log.md` is mandatory
+
+**Before every commit**, update `log.md` with an entry that includes:
+
+1. **What changed** — files added/modified, features implemented, bugs fixed.
+2. **Why** — the reasoning behind decisions, alternatives considered, and why this approach was chosen.
+3. **Verification** — how you verified the change (tests run, commands executed, manual checks).
+4. **Status** — what's done, what's in progress, what's blocked.
+
+The log entry should be as **elaborative as possible**. Future you (and your teammates) need to understand not just *what* was done, but *why* — so they don't undo or contradict your reasoning.
+
+A good log entry:
+```markdown
+### 2026-07-17 — P1 — Sprint 2
+
+**Changed:**
+- `backend/app/services/matching.py`: Implemented candidate matching with weighted scoring (amount +50, time +20, ref +20, sender +10, multi-order -30).
+- `backend/tests/test_matching.py`: Added 12 test cases covering exact, fuzzy, no-match, split, refund.
+
+**Reasoning:**
+- Chose to normalize scores to 0-100 range rather than raw weighted sum because it makes threshold logic cleaner (95/75/0) and easier to reason about.
+- Considered using a logistic sigmoid for normalization but rejected — adds complexity without clear benefit for 0-100 bounded inputs.
+- Multi-order penalty of -30 chosen empirically: -20 wasn't enough to prevent false auto-matches in same-amount scenarios, -40 was too aggressive and pushed legitimate candidates below HUMAN_CONFIRM threshold.
+
+**Verification:**
+- `pytest tests/test_matching.py -v` — 12/12 pass
+- Manually verified seed data: 25 exact matches, 5 exceptions, 0 false matches
+
+**Status:** Sprint 2 matching logic complete. Cash reconciliation next.
+```
+
+A bad log entry:
+```markdown
+updated matching.py
+```
+
+### Coordination via log.md
+
+- Before starting work, read `log.md` to see what others have done and what's in progress.
+- If you're about to make a decision that affects another role's scope, note it in `log.md` and ping the relevant person.
+- `log.md` is the **shared memory** of the team. Treat it as such.

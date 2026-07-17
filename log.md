@@ -644,3 +644,145 @@ sender_name="Ngo Nhat Tan".
 - Not committed — left for the user to review and commit, since committing
   wasn't requested.
 
+### 2026-07-17 — Doc sync — LLM model name and env var reconciliation
+
+**Changed:**
+- `backend/.env.example`: Updated `LLM_MODEL_PLANNER` and `LLM_MODEL_SPECIALIST` from `deepseek-chat` to `deepseek-v4-flash`; added comments clarifying which config layer uses which env vars (config.py uses `LLM_*`, deepseek.py uses `DEEPSEEK_*`/`OPENROUTER_*`).
+- `docs/05-domain/01-ai-advisor.md`: Fixed model name from `deepseek-chat` to `deepseek-v4-flash`; added OpenRouter fallback row; fixed endpoint URL from `/v1/chat/completions` to `/v1`; updated implementation state from Target to Partial; updated last-verified date.
+- `docs/04-delivery/01-environment-setup.md`: Updated env var table with correct model names (`deepseek-v4-flash`); added `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, `DEEPSEEK_TEMPERATURE`, `DEEPSEEK_MESSAGE_TEMPERATURE`, `DEEPSEEK_PLANNER_THINKING_ENABLED` rows; updated implementation state.
+- `docs/03-engineering/05-integration.md`: Fixed LLM provider section model name; added OpenRouter fallback; added `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_MODEL` to configuration env var table.
+- `docs/04-delivery/00-work-split.md`: Fixed P2 work description model name from `deepseek-chat` to `deepseek-v4-flash`; added OpenRouter fallback mention.
+- `SRS.md`: Fixed Planner Agent LLM model row; fixed LLM provider table (model name, endpoint, auth, added fallback provider row).
+- `docs/01-foundation/01-overview.md`: Updated LLM tech stack row from generic "Provider abstraction (no lock-in)" to "DeepSeek V4 Flash (OpenAI-compatible; OpenRouter fallback)".
+- `docs/01-foundation/01-overview-and-conventions.md`: Same LLM tech stack row update.
+
+**Reasoning:**
+- The agent layer code (`backend/app/agents/deepseek.py`) uses `DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash"` and `DEFAULT_OPENROUTER_DEEPSEEK_MODEL = "deepseek/deepseek-v4-flash"`, not `deepseek-chat`. All docs were stale, referencing the old model name.
+- The code has two separate config layers: `config.py` (P4 infrastructure) reads `LLM_PROVIDER`/`LLM_API_KEY`/`LLM_MODEL_PLANNER`/`LLM_MODEL_SPECIALIST`, while `deepseek.py` (P2 agent layer) reads `DEEPSEEK_API_KEY`/`OPENROUTER_API_KEY`/`DEEPSEEK_MODEL`/etc. Docs only listed the `LLM_*` vars and were missing the `DEEPSEEK_*`/`OPENROUTER_*` vars entirely.
+- OpenRouter fallback was implemented in code but never documented. Added it to all relevant docs.
+- Implementation states were all marked "Target" / "N/A (greenfield)" despite code being implemented. Updated to "Partial" with accurate descriptions and verification dates.
+- No frontend docs were touched (user is handling frontend work).
+
+**Verification:**
+- `grep -r "deepseek-chat" docs/ SRS.md backend/.env.example` — 0 matches remaining (all replaced with `deepseek-v4-flash`)
+- Cross-checked env var names in docs against `backend/app/agents/deepseek.py` and `backend/app/core/config.py` — all match
+- Confirmed no frontend docs were modified
+
+**Status:** Documentation sync complete. All non-frontend docs now accurately reflect the actual LLM model name (`deepseek-v4-flash`), env var structure (dual-layer `LLM_*` / `DEEPSEEK_*`), and OpenRouter fallback support.
+
+
+### 2026-07-17 — Full documentation audit and reorganization
+
+**Changed:**
+
+**File moves (Phase 3):**
+- `product.md` → `docs/01-foundation/05-product-spec.md` (git mv)
+- `SRS.md` → `docs/02-requirements/06-srs.md` (move)
+- `API.md` → `docs/03-engineering/09-api-reference.md` (move)
+- `docs/sepay.md` → `docs/03-engineering/10-sepay-integration.md` (git mv)
+- `docs/01-foundation/02-agents.md` → `docs/01-foundation/03-agents.md` (git mv, renumbered)
+- `docs/01-foundation/03-decisions.md` → `docs/01-foundation/04-decisions.md` (git mv, renumbered)
+- `docs/01-foundation/01-overview-and-conventions.md` → `docs/01-foundation/02-overview-and-conventions.md` (move, renumbered)
+- `docs/03-engineering/03-security-and-permissions.md` → `docs/03-engineering/08-security-and-permissions.md` (move, renumbered to avoid conflict with 03-api-specifications.md)
+
+**Cross-reference updates (Phase 4) — 15 files:**
+- `AGENTS.md`: Updated all doc references (product.md → 05-product-spec.md, SRS.md → 06-srs.md, API.md → 09-api-reference.md, 02-agents.md → 03-agents.md)
+- `docs/01-foundation/01-overview.md`: Fixed references to renumbered files (02-agents → 03-agents, 03-decisions → 04-decisions)
+- `docs/01-foundation/02-overview-and-conventions.md`: Complete rewrite of document map, source-of-truth hierarchy, task-to-doc map, and required reading order with new file paths
+- `docs/01-foundation/03-agents.md`: Fixed internal title and reading order references
+- `docs/01-foundation/04-decisions.md`: Fixed product.md reference
+- `docs/02-requirements/01-business-requirements.md`: Fixed product.md reference
+- `docs/02-requirements/02-stakeholders-and-personas.md`: Fixed 3 product.md references
+- `docs/02-requirements/06-srs.md`: Fixed 3 product.md references
+- `docs/03-engineering/01-system-architecture.md`: Fixed 03-decisions.md → 04-decisions.md, updated directory map (removed product.md, added AGENTS.md and log.md)
+- `docs/03-engineering/08-security-and-permissions.md`: Fixed 2 SRS.md references
+- `docs/03-engineering/09-api-reference.md`: Fixed SRS.md reference
+- `docs/04-delivery/00-work-split.md`: Fixed 5 product.md references
+- `docs/04-delivery/02-testing-spec.md`: Fixed 2 product.md references
+- `docs/04-delivery/04-implementation-plan.md`: Fixed product.md reference
+- `docs/04-delivery/05-roadmap.md`: Fixed 2 product.md references
+- `docs/06-meta/02-handoff-report.md`: Fixed product.md reference, updated LLM provider risk, updated capability matrix, updated completeness checklist
+
+**Content inconsistency fixes (Phase 5) — 20 files:**
+- Updated implementation state headers from "Target / N/A (greenfield)" to actual states (Implemented/Partial/Target/Current) with specific code references and verification dates in all 20 docs:
+  - `01-foundation/01-overview.md`, `02-overview-and-conventions.md`, `03-agents.md`, `04-decisions.md`
+  - `02-requirements/01-business-requirements.md` through `05-non-functional-requirements.md`
+  - `03-engineering/01-system-architecture.md`, `02-data-models.md`, `03-api-specifications.md`, `04-permissions-matrix.md`, `05-integration.md`, `06-security.md`, `07-error-codes.md`
+  - `04-delivery/02-testing-spec.md`, `03-design.md`, `04-implementation-plan.md`, `05-roadmap.md`
+  - `05-domain/02-algorithm.md`, `03-evaluation.md`, `05-compliance.md`
+  - `06-meta/01-traceability.md`
+- Updated capability matrices in `01-overview.md`, `02-overview-and-conventions.md`, and `06-meta/02-handoff-report.md` from all-Proposed to actual implementation states (Implemented/Partial/Target) with specific code file references
+- Fixed "greenfield" claims in context/anti-drift maps in `01-overview.md` and `02-overview-and-conventions.md` to describe actual implementation
+- Fixed WebSocket endpoint reference in `03-api-specifications.md` from `/ws/agent-trace/{run_id}` (target) to `/ws/transactions` (implemented)
+- Fixed WebSocket section in `09-api-reference.md`: marked agent-trace WS as "Target — not yet implemented", added note about REST alternative
+- Updated handoff report risk items: "Chưa có implementation" → "Implementation đã bắt đầu", "LLM provider chưa chọn" → "LLM provider đã chọn"
+- Updated handoff report completeness checklist 16.4 from "all Proposed" to "actual state"
+
+**Reasoning:**
+- Root files (product.md, SRS.md, API.md) were outside the docs/ tree, making the documentation structure incomplete and cross-references inconsistent. Moving them into docs/ with proper numbering creates a single canonical documentation tree.
+- Numbering conflicts existed: two `01-` files in foundation (01-overview.md and 01-overview-and-conventions.md) and two `03-` files in engineering (03-api-specifications.md and 03-security-and-permissions.md). Renumbering eliminates ambiguity.
+- All capability matrices claimed "Proposed" and "Chưa implement" despite substantial code existing. This is misleading for any team member reading docs. Updated to reflect actual code state with specific file references.
+- All implementation state headers said "Target / N/A (greenfield)" which is factually wrong. Updated each to accurate state with last-verified date.
+- The WebSocket docs referenced `/ws/agent-trace/{run_id}` which doesn't exist in code. The actual implemented endpoint is `/ws/transactions`. Marked the agent-trace WS as target spec and documented the REST alternative.
+- The handoff report's risk section said "Chưa có implementation" and "LLM provider chưa chọn" — both factually incorrect. Updated to reflect reality.
+- The architecture doc's directory map still listed `product.md` as a root file. Updated to show `AGENTS.md` and `log.md` instead.
+- Cross-references to old file names (02-agents.md, 03-decisions.md, product.md, SRS.md, API.md) would break after the moves. Updated all references across 15+ files to point to new locations.
+
+**Verification:**
+- `grep -r "product\.md" docs/ AGENTS.md` — 0 matches (all replaced with `01-foundation/05-product-spec.md`)
+- `grep -r "`SRS\.md`" docs/ AGENTS.md` — 0 old-style matches (all replaced with `02-requirements/06-srs.md`)
+- `grep -r "`API\.md`" docs/ AGENTS.md` — 0 old-style matches (all replaced with `03-engineering/09-api-reference.md`)
+- `grep -r "N/A (greenfield)" docs/` — 0 matches (all updated to 2026-07-17)
+- `grep -r "02-agents\.md" docs/` — 0 matches (all updated to 03-agents.md)
+- `grep -r "03-decisions\.md" docs/` — 0 matches (all updated to 04-decisions.md)
+- `grep -r "03-security-and-permissions" docs/` — 0 matches (all updated to 08-security-and-permissions.md)
+- `git status --short` — shows all moves and modifications
+- Cross-checked capability matrix entries against actual code files (matching.py, tax_rules.py, sepay.py, etc.)
+
+**Status:** Full documentation audit complete. All docs are now in the docs/ tree with correct numbering, all cross-references point to correct locations, all implementation states reflect actual code, and all capability matrices show accurate implementation status. Root directory contains only `AGENTS.md` and `log.md` as intended.
+
+
+### 2026-07-17 — Doc cleanup — delete 13 duplicate/process files
+
+**Changed:**
+- Deleted 13 markdown files that were either pure duplicates (content exists in consolidated files) or process docs with no build value:
+  - `docs/01-foundation/01-overview.md` — content in `05-product-spec.md`
+  - `docs/01-foundation/02-overview-and-conventions.md` — content in `AGENTS.md` + `03-agents.md`
+  - `docs/02-requirements/01-business-requirements.md` — content in `06-srs.md` §1, §3
+  - `docs/02-requirements/04-functional-requirements.md` — content in `06-srs.md` §5
+  - `docs/02-requirements/05-non-functional-requirements.md` — content in `06-srs.md` §6
+  - `docs/03-engineering/03-api-specifications.md` — content in `09-api-reference.md`
+  - `docs/03-engineering/04-permissions-matrix.md` — content in `08-security-and-permissions.md`
+  - `docs/03-engineering/06-security.md` — content in `08-security-and-permissions.md`
+  - `docs/03-engineering/07-error-codes.md` — content in `09-api-reference.md`
+  - `docs/04-delivery/04-implementation-plan.md` — Draft; `00-work-split.md` covers sprints
+  - `docs/04-delivery/05-roadmap.md` — Draft; `05-product-spec.md` §16 has pilot phases
+  - `docs/06-meta/01-traceability.md` — Stale (old user story IDs); `06-srs.md` §12 has traceability
+  - `docs/06-meta/02-handoff-report.md` — One-time historical report
+- Updated references in 8 kept files to point to consolidated versions instead of deleted files:
+  - `docs/01-foundation/04-decisions.md` — 8 reference updates
+  - `docs/02-requirements/06-srs.md` — 6 reference updates
+  - `docs/03-engineering/01-system-architecture.md` — 1 reference update
+  - `docs/03-engineering/05-integration.md` — 1 reference update
+  - `docs/03-engineering/08-security-and-permissions.md` — header update
+  - `docs/03-engineering/09-api-reference.md` — header update
+  - `docs/04-delivery/02-testing-spec.md` — 1 reference update
+  - `docs/01-foundation/03-agents.md` — 3 reference updates
+
+**Reasoning:**
+- 37 markdown files for a 48-hour hackathon is excessive overhead. Many files were created by an automated documentation init tool that generated both individual specs AND consolidated versions, creating a maintenance burden where every update had to be applied twice.
+- The consolidated files (`06-srs.md`, `08-security-and-permissions.md`, `09-api-reference.md`) are more useful for the team since they contain all related info in one place. The individual files were never the ones referenced by AGENTS.md or the work-split doc.
+- `04-decisions.md` is KEPT — it has unique content (10 architectural decisions with rationale, rejected alternatives, and verification steps) that doesn't exist anywhere else. It is the initial decision register for the project.
+- Process docs (`04-implementation-plan.md`, `05-roadmap.md`) were Draft status and duplicated sprint info already in `00-work-split.md` and pilot phases in `05-product-spec.md`.
+- `01-traceability.md` referenced old user story IDs (USR-RECON-001 etc.) that were renamed in the two-sided product reframing. `06-srs.md` §12 has the current traceability matrix.
+- `02-handoff-report.md` was a one-time generated report from the init-documenter skill with no ongoing value.
+
+**Verification:**
+- `grep -r "01-overview\.md" docs/ AGENTS.md` — 0 matches in kept files (only in log.md historical entries)
+- `grep -r "04-functional-requirements" docs/ AGENTS.md` — 0 matches in kept files
+- `grep -r "06-security\.md" docs/ AGENTS.md` — 0 matches in kept files
+- AGENTS.md references only kept files — no broken links
+- Doc count reduced from 37 to 24 project markdown files
+
+**Status:** Doc cleanup complete. 37 → 24 files. All cross-references in kept files point to valid locations. `04-decisions.md` preserved as unique initial decision register.
+

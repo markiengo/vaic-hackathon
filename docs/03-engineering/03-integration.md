@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Tech Lead
 > **Applies to:** Tất cả integration service ngoài
-> **Implementation state:** Target
-> **Last verified against code:** N/A (greenfield)
+> **Implementation state:** Partial — SePay webhook and invoice adapters implemented; SHB adapter is stub
+> **Last verified against code:** 2026-07-17
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -243,10 +243,11 @@ TaxLens phải response trong 8 giây (read timeout). Nếu xử lý lâu hơn, 
 
 | Aspect | Detail |
 |---|---|
-| Provider | DeepSeek (V4 Flash, thinking mode) |
-| Models | `deepseek-chat` cho tất cả agent; Planner dùng thinking mode |
+| Provider | DeepSeek V4 Flash (OpenAI-compatible endpoint) |
+| Models | `deepseek-v4-flash` (default; overridable via `DEEPSEEK_MODEL` env var) cho tất cả agent; Planner dùng thinking mode |
+| Fallback provider | OpenRouter (`deepseek/deepseek-v4-flash` via `OPENROUTER_API_KEY`) |
 | Rate limits | Xử lý tại provider abstraction layer với retry và fallback |
-| Data masking | Dữ liệu nhạy cảm được mask trước khi gửi (xem `03-engineering/06-security.md` SEC-MASK-001) |
+| Data masking | Dữ liệu nhạy cảm được mask trước khi gửi (xem `03-engineering/04-security-and-permissions.md` SEC-MASK-001) |
 | No training | Provider API cấu hình không train trên dữ liệu TaxLens |
 | Error handling | Timeout: 30s, retry: 1, fallback: rule-based default |
 
@@ -261,10 +262,13 @@ Tất cả cấu hình integration qua environment variable (xem `04-delivery/01
 | `SEPAY_WEBHOOK_API_KEY` | SePay webhook API key cho auth verification | Yes |
 | `INVOICE_API_URL` | Mock invoice provider URL | Yes |
 | `CASE_API_URL` | Mock case management API URL | Yes |
-| `LLM_PROVIDER` | LLM provider name | Yes |
-| `LLM_API_KEY` | DeepSeek API key | Yes |
-| `LLM_MODEL_PLANNER` | Model cho Planner Agent (with thinking) | Yes |
-| `LLM_MODEL_SPECIALIST` | Model cho specialist agent | Yes |
+| `LLM_PROVIDER` | LLM provider name (config.py) | Yes |
+| `LLM_API_KEY` | DeepSeek API key (config.py) | Yes |
+| `LLM_MODEL_PLANNER` | Model cho Planner Agent (config.py) | Yes |
+| `LLM_MODEL_SPECIALIST` | Model cho specialist agent (config.py) | Yes |
+| `DEEPSEEK_API_KEY` | DeepSeek API key (agent layer deepseek.py) | Yes |
+| `OPENROUTER_API_KEY` | OpenRouter API key (fallback provider) | No |
+| `DEEPSEEK_MODEL` | Override model name (default: `deepseek-v4-flash`) | No |
 
 ## Error handling summary
 

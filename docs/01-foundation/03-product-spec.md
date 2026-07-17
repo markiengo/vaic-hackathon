@@ -6,7 +6,7 @@
 
 ## 1. Tóm tắt sản phẩm
 
-TaxLens là hệ thống **multi-agent AI dành cho vận hành ngân hàng**, tập trung vào nhóm khách hàng hộ kinh doanh và doanh nghiệp siêu nhỏ. Hệ thống kết nối dữ liệu giao dịch SHB với POS, file bán hàng, tiền mặt và hóa đơn điện tử; sau đó tự động đối soát, phát hiện sai lệch và điều phối xử lý các trường hợp chưa rõ.
+TaxLens là hệ thống **multi-agent AI do SHB cung cấp cho khách hàng merchant**, tập trung vào nhóm khách hàng hộ kinh doanh và doanh nghiệp siêu nhỏ. Hệ thống kết nối dữ liệu giao dịch SHB với POS, file bán hàng, tiền mặt và hóa đơn điện tử; sau đó tự động đối soát, phát hiện sai lệch và điều phối xử lý các trường hợp chưa rõ. Business owner là người dùng hằng ngày chính; nhân viên SHB vận hành lớp giám sát, hỗ trợ và audit.
 
 TaxLens không thay thế MISA, KiotViet hoặc phần mềm kế toán. Sản phẩm đóng vai trò là **lớp kết nối và kiểm soát**, giúp SHB và khách hàng trả lời bốn câu hỏi:
 
@@ -17,7 +17,7 @@ TaxLens không thay thế MISA, KiotViet hoặc phần mềm kế toán. Sản p
 
 ### Câu pitch 20 giây
 
-> TaxLens là đội AI TaxOps giúp SHB đối soát tự động dòng tiền của hộ kinh doanh với đơn hàng, tiền mặt và hóa đơn. Thay vì nhân viên phải kiểm hàng trăm giao dịch, hệ thống chỉ đưa ra vài ngoại lệ cần con người xác nhận, rồi tạo bộ dữ liệu sạch để chuyển sang MISA hoặc quy trình thuế hiện có.
+> TaxLens là dịch vụ AI TaxOps do SHB cung cấp cho merchant, giúp đối soát tự động dòng tiền với đơn hàng, tiền mặt và hóa đơn. Thay vì merchant phải kiểm hàng trăm giao dịch, hệ thống chỉ đưa ra vài ngoại lệ cần xác nhận, rồi tạo bộ dữ liệu sạch để chuyển sang MISA hoặc quy trình thuế hiện có. SHB staff giám sát, hỗ trợ và audit.
 
 ---
 
@@ -77,21 +77,41 @@ Một sổ doanh thu sạch có thể hỗ trợ các bước sau này như:
 
 ## 4. Người dùng mục tiêu
 
-### Người dùng chính: Nhân viên vận hành merchant của SHB
+TaxLens có **hai workspace riêng biệt** phục vụ hai nhóm người dùng chính:
 
-**Nhu cầu:** Kiểm tra một hộ kinh doanh có dữ liệu doanh thu đầy đủ, nhất quán và sẵn sàng chuyển sang quy trình thuế hay chưa.
+```text
+Merchant Workspace (người dùng hằng ngày)
+- Giao dịch, đơn hàng, tiền mặt, hóa đơn
+- Ngoại lệ cần xác nhận
+- Sẵn sàng thuế
+- Yêu cầu hỗ trợ
 
-### Người dùng thứ hai: Relationship Manager
+            ↓ escalation
 
-**Nhu cầu:** Hỗ trợ khách hàng nhanh, biết chính xác còn thiếu gì và tạo yêu cầu xử lý mà không phải đọc toàn bộ sao kê.
+SHB Operations Console (người dùng vận hành)
+- Danh mục merchant
+- Cases escalated
+- Agent trace
+- Audit logs
+- Compliance review
+- Support actions
+```
 
-### Người dùng thứ ba: Chuyên viên compliance hoặc vận hành thuế
+### Người dùng hằng ngày chính: Chủ hộ kinh doanh (Merchant)
+
+**Nhu cầu:** Nắm rõ doanh thu thực tế, xử lý ngoại lệ nhanh, đảm bảo dữ liệu sẵn sàng cho thuế mà không phải tự so Excel. Merchant đăng nhập và sử dụng Merchant Workspace trực tiếp.
+
+### Người dùng vận hành chính: Nhân viên hỗ trợ merchant của SHB
+
+**Nhu cầu:** Giám sát nhiều merchant, xử lý case escalated, review agent trace và audit log. SHB staff sử dụng SHB Operations Console.
+
+### Người dùng hỗ trợ: Relationship Manager
+
+**Nhu cầu:** Hỗ trợ merchant nhanh, biết chính xác còn thiếu gì và tạo yêu cầu xử lý mà không phải đọc toàn bộ sao kê.
+
+### Người dùng governance: Chuyên viên compliance hoặc vận hành thuế
 
 **Nhu cầu:** Kiểm tra hệ thống đang áp dụng đúng phiên bản quy tắc, có nguồn và có audit log.
-
-### Người dùng phụ: Chủ hộ kinh doanh
-
-**Nhu cầu:** Chỉ trả lời các câu hỏi đơn giản về giao dịch chưa rõ, thay vì phải dùng toàn bộ dashboard ngân hàng nội bộ.
 
 ### Persona pilot đề xuất
 
@@ -165,9 +185,9 @@ Với TaxLens:
 
 ## 7. Trải nghiệm người dùng chính
 
-### 7.1 Màn hình Tổng quan merchant
+### 7.1 Merchant Workspace — Tổng quan merchant
 
-Hiển thị:
+Đây là màn hình chính mà business owner thấy khi đăng nhập. Hiển thị:
 
 - Tổng số giao dịch trong kỳ.
 - Tỷ lệ đã đối soát.
@@ -176,6 +196,8 @@ Hiển thị:
 - Khoản tiền chưa xác định.
 - Trạng thái sẵn sàng của hồ sơ.
 - Agent nào đang xử lý việc gì.
+
+Ngôn ngữ đơn giản, không thuật ngữ kế toán. Ví dụ: "Hôm nay cửa hàng của bạn có 3 mục cần xác nhận".
 
 ### 7.2 Exception Inbox
 
@@ -778,36 +800,31 @@ Chứng minh một đội AI agent có thể nhận một yêu cầu vận hành
 
 ## 18. Demo flow đề xuất
 
-### Cảnh 1 — Yêu cầu vận hành
+### Cảnh 1 — Merchant đăng nhập
 
-Nhân viên SHB nhập:
+Hương đăng nhập Merchant Workspace, thấy dashboard cửa hàng: 5 ngoại lệ cần xác nhận, dữ liệu thuế tháng này đã hoàn thiện 92%.
 
-> “Kiểm tra Salon Hoa đã sẵn sàng cho kỳ báo cáo tháng 7 chưa.”
+### Cảnh 2 — Hương xử lý ngoại lệ
 
-Planner hiển thị plan và giao việc cho ba agent.
+Hương xem 5 ngoại lệ. 4 ngoại lệ đơn giản cô tự xác nhận: doanh thu, chuyển nội bộ, tiền cọc, hoàn tiền. Mỗi cái mất dưới 30 giây.
 
-### Cảnh 2 — Auto-match giao dịch chuẩn
+### Cảnh 3 — Escalation lên SHB
 
-Mini POS tạo đơn 350.000 đồng và QR động. Giao dịch sandbox đi vào qua webhook, Reconciliation Agent ghép đúng đơn bằng reference.
+Một giao dịch 5.000.000 đồng có confidence thấp (62%). Hương không chắc, bấm "Yêu cầu SHB hỗ trợ". Case được escalate lên SHB Operations Console.
 
-### Cảnh 3 — Xử lý dữ liệu mơ hồ
+### Cảnh 4 — Linh nhận case
 
-Hệ thống phát hiện giao dịch 5.000.000 đồng không có đơn tương ứng. AI gợi ý “chuyển nội bộ” với confidence 82% nhưng không tự quyết định. Người dùng xác nhận trong Exception Inbox.
+Linh thấy case mới trong SHB Operations Console. Agent trace cho thấy Reconciliation Agent đã thu thập evidence: tên người gửi trùng chủ hộ, không có đơn hàng cùng số tiền, mẫu giao dịch giống ba lần trước. AI đề xuất "chuyển nội bộ" 82%.
 
-### Cảnh 4 — Compliance và hóa đơn
+### Cảnh 5 — Linh phê duyệt
 
-Tax & Compliance Agent phát hiện hai đơn đã thu tiền nhưng thiếu hóa đơn, đồng thời xác nhận rule version đang dùng.
+Linh review agent trace, đồng ý với đề xuất, phê duyệt. Case đóng.
 
-### Cảnh 5 — Agent thực hiện hành động
+### Cảnh 6 — Hương thấy kết quả
 
-Merchant Operations Agent:
+Hương mở Merchant Workspace, thấy ledger sạch. Tax-readiness score tăng từ 92% lên 100%.
 
-- Tạo case.
-- Giao nhiệm vụ cho RM.
-- Soạn tin nhắn yêu cầu merchant xác nhận một khoản còn lại.
-- Tạo draft export sang hệ thống kế toán.
-
-### Cảnh 6 — Kết quả trước và sau
+### Cảnh 7 — Kết quả trước và sau
 
 ```text
 Trước TaxLens:
@@ -817,13 +834,14 @@ Thời gian dự kiến: 45 phút
 Sau TaxLens:
 25 bản ghi tự động đối soát
 5 ngoại lệ được đưa ra
-3 ngoại lệ xử lý trong demo
+4 ngoại lệ merchant tự xử lý
+1 case escalated cho SHB
 Thời gian thao tác: dưới 5 phút
 ```
 
 Kết thúc bằng thông điệp:
 
-> “Thay vì đọc toàn bộ sao kê, nhân viên SHB chỉ xử lý những gì thật sự cần con người.”
+> “Merchant tự xử lý ngoại lệ đơn giản. SHB chỉ can thiệp khi cần. Dữ liệu thuế sẵn sàng đúng hạn.”
 
 ---
 
@@ -919,7 +937,7 @@ Sản phẩm được xem là đạt MVP khi:
 ### Giai đoạn 3 — 4 tuần: Human-in-the-loop pilot
 
 - Bật tạo case và draft message.
-- Merchant nhận link xác nhận ngoại lệ.
+- Merchant tự xử lý ngoại lệ qua Merchant Workspace hoặc xác nhận qua link.
 - Xuất file sang hệ thống kế toán sandbox.
 - Đo mức giảm khối lượng công việc của RM.
 
@@ -956,7 +974,7 @@ TaxLens không phải chatbot, không phải Mini MISA và không phải công c
 
 TaxLens là:
 
-> **Một đội AI chuyên gia vận hành cho SHB, tự động nối đơn hàng, dòng tiền, tiền mặt và hóa đơn; phát hiện ngoại lệ; điều phối người xử lý; và tạo bộ dữ liệu sạch, có nguồn gốc, sẵn sàng chuyển sang quy trình kế toán hoặc thuế.**
+> **Một dịch vụ AI TaxOps do SHB cung cấp cho merchant, tự động nối đơn hàng, dòng tiền, tiền mặt và hóa đơn; phát hiện ngoại lệ; điều phối merchant và SHB xử lý; và tạo bộ dữ liệu sạch, có nguồn gốc, sẵn sàng chuyển sang quy trình kế toán hoặc thuế.**
 
 ### Tagline
 
