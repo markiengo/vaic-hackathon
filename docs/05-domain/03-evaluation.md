@@ -31,7 +31,7 @@ AI output được đánh giá so với human-verified truth sets. Đánh giá a
 |---|---|---|---|
 | EVAL-MATCH-001 | TX có PAY-REF, exact amount | Auto-match đúng order | Pass/fail |
 | EVAL-MATCH-002 | TX có PAY-REF, sai amount | No match; chuyển sang candidate | Pass/fail |
-| EVAL-MATCH-003 | TX không ref, amount duy nhất, trong 1 min | Auto-match (score ≥95) | Pass/fail |
+| EVAL-MATCH-003 | TX không ref, amount duy nhất, trong 1 min | Human confirmation (score 70; amount + time không đủ để auto-match) | Pass/fail |
 | EVAL-MATCH-004 | TX không ref, cùng amount với 2 orders | Exception (AMBIGUOUS_MATCH) | Pass/fail |
 | EVAL-MATCH-005 | TX 5M từ owner name, không order | Exception (NO_MATCH), suggestion: internal_transfer, confidence 0.82 | Pass/fail ±0.05 |
 | EVAL-MATCH-006 | Refund TX | Match với original sale với negative allocation | Pass/fail |

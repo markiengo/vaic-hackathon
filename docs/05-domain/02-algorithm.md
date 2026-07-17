@@ -78,13 +78,19 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
    - Filter: cùng merchant_id, cùng store_id (nếu determinable)
    - Filter: payment_status IN (UNPAID, PARTIAL)
    - Filter: chưa fully allocated
+   - Filter: time window mặc định 60 phút
+   - Compare transaction amount với outstanding amount của sale
+   - Amount tolerance = min(10.000đ, max(1.000đ, 0,5% × sale.net_amount))
 
 2. Cho mỗi candidate, compute score:
    score = 0
    
    a. Amount match
-      if candidate.net_amount == transaction.amount:
+      if candidate.outstanding_amount == transaction.amount:
          score += 50
+      elif amount difference nằm trong tolerance:
+         score += 35
+         candidate không được AUTO_MATCH
    
    b. Time proximity
       time_diff = abs(transaction.transaction_date - candidate.created_at)
@@ -95,8 +101,8 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
       elif time_diff < 30 minutes:
          score += 5
    
-   c. Reference hoặc table number match
-      if transaction.raw_note contains candidate.table_number hoặc reference:
+   c. Candidate-owned identifier match
+      if raw_note chứa exact token của table number, sale identifier, hoặc legacy reference:
          score += 20
    
    d. Sender name familiarity
@@ -106,29 +112,43 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
    e. Note content signal
       if AI interpretation của note relates đến candidate product/service:
          score += 5
+      Note signal chỉ dùng cho ranking/reasoning và HUMAN_CONFIRM;
+      không được cộng vào deterministic score để mở khóa AUTO_MATCH.
    
    f. Multiple same-amount penalty
       count_same_amount = count unpaid sales cùng amount
-      if count_same_amount > 1:
+      if count_same_amount > 1 AND candidate không có unique differentiating identifier:
          score -= 30
    
    g. Already-used transaction
       if transaction đã allocated:
          exclude khỏi candidates (không chỉ penalty)
 
-3. Normalize score về 0-100
-   normalized_score = max(0, min(100, score))
+3. Normalize scores về 0-100
+   deterministic_score = max(0, min(100, deterministic factors))
+   display_score = max(0, min(100, deterministic_score + note_signal))
+   display_score là heuristic match score, không phải xác suất thống kê.
 
-4. Apply thresholds
-   if normalized_score >= 95:
+4. Apply thresholds và safety gates
+   if exact amount
+      AND deterministic_score >= 95
+      AND không có ambiguity
+      AND mọi competing candidate có display_score < 75:
       action = AUTO_MATCH
-   elif normalized_score >= 75:
+   elif display_score >= 75:
       action = HUMAN_CONFIRM
+   elif unique exact-amount candidate AND time_diff < 1 minute:
+      action = HUMAN_CONFIRM  # amount + time không đủ để auto-match
    else:
       action = UNMATCHED
 
+   Tie, nhiều candidate >=75, unresolved duplicate amount, hoặc amount mismatch
+   luôn chặn AUTO_MATCH. Amount mismatch chỉ HUMAN_CONFIRM khi đủ evidence;
+   nếu display_score <75 thì vẫn UNMATCHED.
+
 5. If AUTO_MATCH:
-      Create payment_allocation(match_method=FUZZY, confidence=normalized_score/100)
+      Create payment_allocation(match_method=FUZZY, confidence=display_score/100,
+                                confidence_method="heuristic_v1")
       Update sale.payment_status = PAID
    
    If HUMAN_CONFIRM:
@@ -141,6 +161,9 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
    if count_same_amount > 1 AND no differentiating signal:
       MANDATORY EXCEPTION (no guess)
       Even if one candidate scores ≥95, force HUMAN_CONFIRM
+
+   Nếu đúng một candidate có strict differentiating identifier, không áp dụng
+   duplicate penalty cho candidate đó; các candidate còn lại vẫn bị trừ 30.
 ```
 
 ## Đảm bảo determinism
