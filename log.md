@@ -14,14 +14,19 @@ added, removed, or behaviorally modified.
 
 ## Current implementation
 
+Both P1 (matching & allocation logic) and P4 (backend infrastructure) have been
+merged into `main` as of 2026-07-17. The codebase now has the functional core,
+the SQLAlchemy models, the FastAPI application shell, and Docker Compose for
+local development.
+
 ### P1 Sprint 1 — Matching and financial logic
 
-Status: Implemented and unit-tested on 2026-07-17.
+Status: Implemented, unit-tested, and merged into `main` on 2026-07-17.
 
 The implementation is a deterministic functional core with no SQLAlchemy,
-FastAPI, or external-service dependency. P4 can map database models into the
-typed snapshots and persist returned allocation plans through the provided
-port.
+FastAPI, or external-service dependency. P4's persistence layer can map
+database models into the typed snapshots and persist returned allocation plans
+through the provided port.
 
 #### Matching decisions
 
@@ -76,18 +81,70 @@ port.
 - Refund auto-matching requires a negative outgoing transaction containing the
   original payment reference and enough previously collected funds. Other
   refunds require human selection.
-- `AllocationPlanWriter` is the persistence boundary for P4. P4 remains
-  responsible for SQLAlchemy models, migrations, row locking, revalidation, and
+- `AllocationPlanWriter` is the persistence boundary. P4's SQLAlchemy layer is
+  responsible for models, migrations, row locking, revalidation, and
   transactional writes.
+
+### P4 — Backend infrastructure
+
+Status: Implemented and merged into `main` on 2026-07-17.
+
+#### Application shell
+
+- FastAPI app (`app/main.py`) with CORS middleware, global exception handler,
+  `/health` endpoint, and 11 router stubs mounted under `/api/v1`: auth,
+  merchants, transactions, sales, reconciliation, tax, cases, agents, audit,
+  pos, confirm. Each router currently exposes only a `/health` placeholder.
+- Pydantic settings (`app/core/config.py`) loading from `.env` with all
+  required env vars: `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, SePay API,
+  mock service URLs, and LLM provider config.
+- Shared response schemas (`app/schemas/base.py`): `ErrorDetail`,
+  `ErrorResponse`, `SuccessResponse[T]`, `PaginatedResponse[T]`.
+
+#### Database layer
+
+- Async SQLAlchemy engine (`app/core/database.py`) using
+  `postgresql+asyncpg://`, `async_sessionmaker`, and a `get_db()` dependency.
+- `DeclarativeBase` subclass `Base` shared across all models.
+- 19 SQLAlchemy ORM models across 10 modules covering merchants, stores,
+  devices, users, products, sales, sale lines, bank transactions, payment
+  intents, payment allocations, cash sessions, invoices, tax classifications,
+  tax rule versions, reconciliation cases, exceptions, agent runs, tool calls,
+  and audit events.
+- Alembic migration `001_initial_schema` creates all 19 tables with FK
+  constraints and `ondelete` cascade rules. No pgvector extension.
+
+#### Caching and infrastructure
+
+- Redis async client (`app/core/redis.py`) with connection pool, `get_redis()`
+  dependency, and `close_pool()` shutdown hook.
+- Docker Compose with PostgreSQL 16, Redis 7, backend (uvicorn), and frontend
+  services. Health checks on postgres and redis. Mock services commented out
+  pending P5.
+- `backend/Dockerfile` using `python:3.11-slim`, `requirements.txt` with
+  FastAPI, SQLAlchemy, asyncpg, Alembic, Pydantic, Redis, LangGraph, OpenAI,
+  and supporting libraries.
+- `.env.example` documenting all required environment variables.
+
+#### Tests
+
+- `tests/test_models.py` verifies all 19 tables are registered on
+  `Base.metadata`, table names match the expected set, and `Base` is a
+  `DeclarativeBase` subclass. Requires SQLAlchemy to be installed.
 
 #### Scope boundaries
 
-- Included: pure matching/allocation services, typed records and results, unit
-  tests, persistence protocol, and aligned algorithm/evaluation documentation.
-- Excluded: database models, migrations, API routes, persisted exceptions,
+- P1 included: pure matching/allocation services, typed records and results,
+  unit tests, persistence protocol, and aligned algorithm/evaluation
+  documentation.
+- P4 included: FastAPI shell, SQLAlchemy models, Alembic migration, Docker
+  Compose, Redis client, config, response schemas, and model tests.
+- Still excluded: router endpoint implementations, persisted exceptions,
   audit-table writes, NLP implementation, and external integrations.
 
 ## Created and updated files
+
+### P1 — Matching and allocation
 
 - `backend/app/services/matching.py` — matching types, exact matching, candidate
   generation/scoring, decision gates, sender/reference normalization, and refund
@@ -102,25 +159,59 @@ port.
 - `docs/05-domain/03-evaluation.md` — corrected the unique amount plus time case
   from auto-match to human confirmation.
 
+### P4 — Backend infrastructure
+
+- `backend/app/main.py` — FastAPI application with CORS, exception handler,
+  health endpoint, and 11 router mounts.
+- `backend/app/core/config.py` — Pydantic settings loading from `.env`.
+- `backend/app/core/database.py` — async SQLAlchemy engine, session factory,
+  `get_db()` dependency.
+- `backend/app/core/redis.py` — Redis async connection pool and shutdown hook.
+- `backend/app/models/` — 10 model modules registering 19 ORM tables on
+  `Base.metadata`.
+- `backend/app/routers/` — 11 router stubs (auth, merchants, transactions,
+  sales, reconciliation, tax, cases, agents, audit, pos, confirm).
+- `backend/app/schemas/base.py` — shared `ErrorResponse`, `SuccessResponse`,
+  `PaginatedResponse` Pydantic schemas.
+- `backend/alembic/` — Alembic config, env.py, and migration
+  `001_initial_schema.py` creating all 19 tables.
+- `backend/tests/test_models.py` — verifies 19 tables registered, table names
+  match expected set, and `Base` is `DeclarativeBase`.
+- `backend/requirements.txt` — all Python dependencies pinned.
+- `backend/Dockerfile` — `python:3.11-slim` with uvicorn CMD.
+- `backend/.env.example` — documented environment variable template.
+- `backend/expected_vars.txt` — list of expected env var keys.
+- `docker-compose.yml` — PostgreSQL 16, Redis 7, backend, frontend services
+  with health checks.
+- `frontend/Dockerfile` — placeholder frontend container.
+
 ## Verification
+
+### P1 tests (no external dependencies)
 
 Run from `backend/`:
 
 ```powershell
-$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
-$env:PYTHONDONTWRITEBYTECODE='1'
-python -X faulthandler -m pytest tests -q -p no:cacheprovider
+python -m pytest tests/test_matching.py tests/test_allocation.py -v
 ```
 
-Latest result:
+Latest result (2026-07-17):
 
 ```text
-29 passed in 0.06s
-syntax_ok: 4 files
+29 passed in 0.42s
 ```
 
-The cache-disabling flags were used because the sandboxed checkout could not
-create Python cache directories. They are not application requirements.
+### P4 model tests (requires SQLAlchemy installed)
+
+Run from `backend/`:
+
+```powershell
+python -m pytest tests/test_models.py -v
+```
+
+Requires `sqlalchemy[asyncio]` from `requirements.txt` to be installed.
+Collection fails with `ModuleNotFoundError: No module named 'sqlalchemy'`
+if dependencies are not installed.
 
 ## Session history
 
@@ -138,3 +229,24 @@ create Python cache directories. They are not application requirements.
   all four backend Python modules.
 - Updated the normative algorithm and evaluation documentation to match the
   executable behavior.
+
+### 2026-07-17 — P4 backend infrastructure
+
+- Built FastAPI application shell with 11 router stubs, CORS, global exception
+  handler, and `/health` endpoint.
+- Defined 19 SQLAlchemy ORM models across 10 modules with async engine and
+  session factory.
+- Created Alembic migration `001_initial_schema` for all 19 tables with FK
+  constraints and cascade rules.
+- Added Redis async client, Pydantic settings config, shared response schemas,
+  Docker Compose, Dockerfile, requirements.txt, and `.env.example`.
+- Added `test_models.py` verifying table registration and naming.
+- Note: `test_models.py` requires SQLAlchemy to be installed; it cannot run in
+  environments without `requirements.txt` dependencies.
+
+### 2026-07-17 — Merge to main
+
+- Merged `p1-sprint1-matching-allocation` into `main` (no conflicts).
+- Merged `P4` into `main` with `--no-ff` (no conflicts).
+- Both branches are now fully integrated on `main`. Not yet pushed to
+  `origin/main`.

@@ -24,6 +24,14 @@ build/
 dist/
 *.egg-info/
 
+# Frontend build artifacts and dependencies
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+
+# Unrelated tooling
+code-to-clipboard.html
+
 # Local editor / OS noise
 .DS_Store
 Thumbs.db

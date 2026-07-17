@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mini POS (F&amp;B) - TaxLens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary": "#762730",
+                      "error-container": "#ffdad6",
+                      "on-background": "#181d19",
+                      "warning-light": "#FEF3C7",
+                      "secondary-light": "#EEF2FA",
+                      "border-default": "#E5E7EB",
+                      "text-primary": "#111827",
+                      "text-secondary": "#6B7280",
+                      "on-primary-fixed-variant": "#00522a",
+                      "surface": "#f6fbf3",
+                      "primary-dark": "#004D27",
+                      "on-primary-container": "#8ee4a6",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed-variant": "#7b2b34",
+                      "on-secondary-container": "#043b8a",
+                      "inverse-primary": "#83d99c",
+                      "surface-container-highest": "#dfe4dd",
+                      "primary-fixed": "#9ef6b6",
+                      "danger": "#DC2626",
+                      "surface-container-high": "#e5e9e2",
+                      "tertiary-container": "#943e46",
+                      "on-tertiary": "#ffffff",
+                      "surface-tint": "#0b6d3b",
+                      "on-surface-variant": "#3f4940",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary": "#ffffff",
+                      "surface-dim": "#d7dbd4",
+                      "on-tertiary-fixed": "#40000c",
+                      "primary-fixed-dim": "#83d99c",
+                      "secondary": "#1A4796", /* Updated to match secondary blue #1A4796 */
+                      "secondary-fixed": "#d9e2ff",
+                      "text-tertiary": "#9CA3AF",
+                      "inverse-surface": "#2d322d",
+                      "secondary-fixed-dim": "#b0c6ff",
+                      "outline-variant": "#bec9be",
+                      "on-surface": "#181d19",
+                      "inverse-on-surface": "#eef2eb",
+                      "outline": "#6f7a70",
+                      "surface-bright": "#f6fbf3",
+                      "success-light": "#DCFCE7",
+                      "on-tertiary-container": "#ffc3c5",
+                      "primary": "#006837", /* Updated to match primary green #006837 */
+                      "surface-container": "#ebefe8",
+                      "on-secondary-fixed-variant": "#144392",
+                      "on-primary-fixed": "#00210e",
+                      "surface-variant": "#dfe4dd",
+                      "secondary-container": "#85aaff",
+                      "tertiary-fixed-dim": "#ffb3b6",
+                      "on-error-container": "#93000a",
+                      "surface-container-low": "#f1f5ee",
+                      "on-secondary-fixed": "#001944",
+                      "warning": "#F59E0B",
+                      "tertiary-fixed": "#ffdada",
+                      "danger-light": "#FEE2E2",
+                      "on-error": "#ffffff",
+                      "background": "#f6fbf3",
+                      "border-strong": "#D1D5DB",
+                      "primary-light": "#E6F2EC",
+                      "success": "#16A34A",
+                      "on-primary": "#ffffff",
+                      "primary-container": "#006837"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "1rem",
+                      "container-margin": "2rem",
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "stack-lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "label-caps": [
+                              "inter"
+                      ],
+                      "default": [
+                              "inter"
+                      ],
+                      "section-header": [
+                              "inter"
+                      ],
+                      "page-title": [
+                              "inter"
+                      ],
+                      "hero-numbers": [
+                              "inter"
+                      ],
+                      "data-mono": [
+                              "jetbrainsMono"
+                      ],
+                      "body": [
+                              "inter"
+                      ]
+              },
+              "fontSize": {
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "default": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "section-header": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "page-title": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "hero-numbers": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "data-mono": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+          .bg-surface-gradient { background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%); }
+          .bg-primary-gradient { background: linear-gradient(135deg, #006837 0%, #004D27 100%); }
+          .card-hover:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); transform: translateY(-2px); transition: all 0.2s ease; }
+      </style>
+</head>
+<body class="bg-[#F9FAFB] text-text-primary font-body antialiased selection:bg-primary-container selection:text-white">
+<!-- Top Navigation -->
+<header class="fixed top-0 right-0 left-64 h-16 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-md border-b border-border-default dark:border-outline-variant flex justify-between items-center px-gutter w-full z-40">
+<div class="flex items-center space-x-6">
+<span class="font-page-title text-page-title font-bold text-primary">Merchant TaxOps</span>
+<nav class="hidden md:flex space-x-6">
+<a class="text-text-secondary hover:text-primary transition-colors pb-1" href="#">Reconciliation</a>
+<a class="text-text-secondary hover:text-primary transition-colors pb-1" href="#">Exceptions</a>
+<a class="text-text-secondary hover:text-primary transition-colors pb-1" href="#">Compliance</a>
+</nav>
+</div>
+<div class="flex items-center space-x-4">
+<div class="relative group">
+<input class="w-64 pl-10 pr-4 py-2 border border-border-default rounded-md text-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-surface-container-lowest" placeholder="Search..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-text-tertiary" style="font-variation-settings: 'FILL' 0;">search</span>
+</div>
+<button class="px-4 py-2 text-default font-default text-text-primary border border-border-default rounded-md hover:bg-surface-container-low transition-colors">Merchant Select</button>
+<button class="px-4 py-2 text-default font-default text-text-primary border border-border-default rounded-md hover:bg-surface-container-low transition-colors">Period Select</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-border-default shrink-0">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A highly detailed close-up portrait of a professional corporate user profile picture. The subject is well-lit with soft, natural studio lighting against a clean, light minimalist background. The aesthetic is modern, bright, and polished, aligning with a premium financial software application's visual style. The image exudes trust and competence." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALCV1_CyVINRDK5CO0ZYsxlrq5NHY9bLzZWKcuAPiZriZz-T4Kjx0-O5nnDIDuIqmfbOYX1LMkpzLoRdVmeMubVP-dWM-yMxEM6HJ-raNyGvG0U_xS3b0AwVQYTMuaKXfjMVh2sujp6w8al8CTUnZa6c-qDtgWL6QXdABqhsga-NkBfo9d4yG8wpTd7EhPM1GjiONrqcc9wN23170fK8312jCzfoo2kpnq4rWh7oI9raojzc5SRU6j"/>
+</div>
+</div>
+</header>
+<!-- Side Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-primary-dark shadow-lg flex flex-col py-4 z-50">
+<div class="px-6 mb-8 flex items-center space-x-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<div>
+<h1 class="font-page-title text-page-title text-on-primary font-bold leading-tight text-[20px]">F&amp;B Ops Pro</h1>
+<p class="text-label-caps font-label-caps text-on-primary-fixed-variant mt-0.5 opacity-80">Merchant Portal</p>
+</div>
+</div>
+<button class="mx-4 mb-6 py-2.5 px-4 bg-primary-container text-white rounded-md font-default text-default font-medium hover:bg-primary transition-colors flex items-center justify-center space-x-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">add</span>
+<span>New Transaction</span>
+</button>
+<nav class="flex-1 space-y-1">
+<a class="text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary/50 mx-2 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out flex items-center space-x-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-default text-default">Dashboard</span>
+</a>
+<a class="text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary/50 mx-2 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out flex items-center space-x-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">payments</span>
+<span class="font-default text-default">Transactions</span>
+</a>
+<a class="bg-primary-container text-on-primary-container rounded-lg mx-2 px-4 py-2.5 transition-all duration-200 ease-in-out flex items-center space-x-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">point_of_sale</span>
+<span class="font-default text-default font-medium">Mini POS</span>
+</a>
+<a class="text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary/50 mx-2 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out flex items-center space-x-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">auto_awesome</span>
+<span class="font-default text-default">TaxOps AI</span>
+</a>
+<a class="text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary/50 mx-2 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out flex items-center space-x-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">account_balance</span>
+<span class="font-default text-default">Settlements</span>
+</a>
+<a class="text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary/50 mx-2 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out flex items-center space-x-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="font-default text-default">Settings</span>
+</a>
+</nav>
+<div class="mt-auto space-y-1">
+<a class="text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary/50 mx-2 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out flex items-center space-x-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help</span>
+<span class="font-default text-default">Support</span>
+</a>
+<a class="text-on-primary-fixed-variant hover:text-on-primary hover:bg-primary/50 mx-2 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out flex items-center space-x-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">logout</span>
+<span class="font-default text-default">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 pt-16 min-h-screen pb-24">
+<div class="max-w-7xl mx-auto p-container-margin">
+<!-- Header -->
+<div class="mb-8">
+<h1 class="text-page-title font-page-title font-bold text-text-primary">Mini POS (F&amp;B)</h1>
+<div class="flex items-center gap-4 mt-4">
+<div class="relative inline-block">
+<select class="appearance-none bg-surface-container-lowest border border-border-default rounded-md py-2 pl-4 pr-10 text-body font-body text-text-primary focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm hover:border-outline cursor-pointer">
+<option>Nhà hàng Hoa — Chi nhánh 1</option>
+<option>Nhà hàng Hoa — Chi nhánh 2</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-text-tertiary pointer-events-none" style="font-variation-settings: 'FILL' 0;">expand_more</span>
+</div>
+<div class="relative inline-block">
+<select class="appearance-none bg-surface-container-lowest border border-border-default rounded-md py-2 pl-4 pr-10 text-body font-body text-secondary focus:ring-2 focus:ring-secondary/20 focus:border-secondary shadow-sm hover:border-outline cursor-pointer font-medium">
+<option>Table 01</option>
+<option>Table 02</option>
+<option>Table 03</option>
+<option>Takeaway</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-text-tertiary pointer-events-none" style="font-variation-settings: 'FILL' 0;">table_restaurant</span>
+</div>
+</div>
+</div>
+<!-- Main Two-Panel Layout -->
+<div class="flex flex-col lg:flex-row gap-6">
+<!-- Left Panel: Products/Services (60%) -->
+<div class="lg:w-[60%] flex flex-col gap-4">
+<div class="bg-surface-container-lowest rounded-[10px] shadow-sm p-6 border border-border-default/50">
+<h2 class="text-section-header font-section-header font-semibold text-text-primary mb-6">Thực đơn</h2>
+<!-- Featured Promotion -->
+<div class="mb-6 rounded-lg overflow-hidden border border-border-default h-48 relative group cursor-pointer">
+<img alt="Phở Bò &amp; Bánh Mì" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5-tHuN2I9ppeHHiCBclcrHFjRDtX90xZBbkVAPqKoLpjbjeFEfouVURiltQNrKb1z6uHudqCNAU1-qHMa_9UxQ5IxloYZyYu-nwg4GcymEsVmztsstP7oSMA0RlLX6i9-3PZzE7uZlGOi18l8ck3KKylsQEKKx8__cSjrzC6gl4cxMinYdGXTDV0Qf8j4Z2yDBVPKkF41n43C3xV9j4UkG1GRkQRkq1k_oQJC_g0mlHgFM4r66GPN"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-4">
+<span class="bg-warning text-white text-xs font-bold px-2 py-1 rounded w-fit mb-2 uppercase">Combo Đặc Biệt</span>
+<h3 class="text-white font-section-header text-xl font-bold">Phở Bò &amp; Bánh Mì Truyền Thống</h3>
+<p class="text-white/80 text-body mt-1">Hương vị nguyên bản, chuẩn vị Hà Nội</p>
+</div>
+</div>
+<div class="flex flex-col gap-4 mb-6"><div class="relative"><input class="w-full pl-10 pr-4 py-2 border border-border-default rounded-lg text-body focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface-container-lowest" placeholder="Tìm kiếm món ăn..." type="text"/><span class="material-symbols-outlined absolute left-3 top-2 text-text-tertiary">search</span></div><div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"><button class="px-4 py-1.5 rounded-full bg-primary text-white text-body font-medium whitespace-nowrap">Tất cả</button><button class="px-4 py-1.5 rounded-full bg-surface-container-low text-text-secondary hover:bg-primary-light hover:text-primary transition-colors text-body whitespace-nowrap">Món chính</button><button class="px-4 py-1.5 rounded-full bg-surface-container-low text-text-secondary hover:bg-primary-light hover:text-primary transition-colors text-body whitespace-nowrap">Nước uống</button><button class="px-4 py-1.5 rounded-full bg-surface-container-low text-text-secondary hover:bg-primary-light hover:text-primary transition-colors text-body whitespace-nowrap">Tráng miệng</button><button class="px-4 py-1.5 rounded-full bg-surface-container-low text-text-secondary hover:bg-primary-light hover:text-primary transition-colors text-body whitespace-nowrap">Combo</button></div></div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<!-- Product Cards -->
+<button class="bg-surface-container-lowest border border-border-default rounded-[10px] p-4 text-left hover:border-primary hover:ring-1 hover:ring-primary/50 transition-all card-hover flex flex-col justify-between h-full group"><div class="relative"><div class="flex justify-between items-start"><h3 class="text-default font-default font-medium text-text-primary group-hover:text-primary transition-colors">Phở Bò</h3><span class="bg-warning-light text-warning text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Best Seller</span></div><p class="text-[12px] text-text-tertiary mt-1 leading-tight">Phở tái nạm, nước dùng thanh ngọt</p></div><div class="mt-3 text-data-mono font-data-mono text-primary font-medium">65.000₫</div></button>
+<button class="bg-surface-container-lowest border border-border-default rounded-[10px] p-4 text-left hover:border-primary hover:ring-1 hover:ring-primary/50 transition-all card-hover flex flex-col justify-between h-full group"><div class="relative"><div class="flex justify-between items-start"><h3 class="text-default font-default font-medium text-text-primary group-hover:text-primary transition-colors">Bánh Mì</h3><span class="bg-danger-light text-danger text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Hot</span></div><p class="text-[12px] text-text-tertiary mt-1 leading-tight">Bánh mì thịt nướng chả lụa</p></div><div class="mt-3 text-data-mono font-data-mono text-primary font-medium">35.000₫</div></button>
+<button class="bg-surface-container-lowest border border-border-default rounded-[10px] p-4 text-left hover:border-primary hover:ring-1 hover:ring-primary/50 transition-all card-hover flex flex-col justify-between h-full group ring-1 ring-primary/50 border-primary bg-primary-light/10">
+<div>
+<h3 class="text-default font-default font-medium text-text-primary text-primary transition-colors">Cà phê sữa đá</h3>
+<p class="text-[12px] text-text-tertiary mt-1 leading-tight">Cà phê pha phin truyền thống</p>
+</div>
+<div class="mt-3 text-data-mono font-data-mono text-primary font-medium">25.000₫</div>
+</button>
+<button class="bg-surface-container-lowest border border-border-default rounded-[10px] p-4 text-left hover:border-primary hover:ring-1 hover:ring-primary/50 transition-all card-hover flex flex-col justify-between h-full group">
+<div>
+<h3 class="text-default font-default font-medium text-text-primary group-hover:text-primary transition-colors">Bún chả</h3>
+<p class="text-[12px] text-text-tertiary mt-1 leading-tight">Thịt nướng than hoa, nước mắm pha</p>
+</div>
+<div class="mt-3 text-data-mono font-data-mono text-primary font-medium">75.000₫</div>
+</button>
+<button class="bg-surface-container-lowest border border-border-default rounded-[10px] p-4 text-left hover:border-primary hover:ring-1 hover:ring-primary/50 transition-all card-hover flex flex-col justify-between h-full group">
+<div>
+<h3 class="text-default font-default font-medium text-text-primary group-hover:text-primary transition-colors">Cơm tấm</h3>
+<p class="text-[12px] text-text-tertiary mt-1 leading-tight">Sườn bì chả ốp la</p>
+</div>
+<div class="mt-3 text-data-mono font-data-mono text-primary font-medium">85.000₫</div>
+</button>
+<button class="bg-surface-container-lowest border border-border-default rounded-[10px] p-4 text-left hover:border-primary hover:ring-1 hover:ring-primary/50 transition-all card-hover flex flex-col justify-between h-full group">
+<div>
+<h3 class="text-default font-default font-medium text-text-primary group-hover:text-primary transition-colors">Chè khúc bạch</h3>
+<p class="text-[12px] text-text-tertiary mt-1 leading-tight">Tráng miệng thanh mát</p>
+</div>
+<div class="mt-3 text-data-mono font-data-mono text-primary font-medium">40.000₫</div>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Panel: Cart (40%) -->
+<div class="lg:w-[40%] flex flex-col">
+<div class="bg-surface-container-lowest rounded-[10px] shadow-sm p-6 border border-border-default/50 flex flex-col h-full sticky top-24"><div class="mb-6 pb-6 border-b border-border-default border-dashed"><label class="block text-label-caps font-label-caps text-text-secondary mb-2">KHÁCH HÀNG (TÙY CHỌN)</label><div class="relative group"><input class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-border-default rounded-lg text-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer" placeholder="Tìm hoặc chọn khách hàng..." type="text"/><span class="material-symbols-outlined absolute left-3 top-2.5 text-text-tertiary" style="font-variation-settings: 'FILL' 0;">person_search</span></div></div>
+<h2 class="text-section-header font-section-header font-semibold text-text-primary mb-6 flex justify-between items-center">
+<span>Order - Table 01</span>
+<span class="bg-primary-light text-primary text-label-caps font-label-caps px-2 py-1 rounded-full">2 items</span>
+</h2>
+<!-- Cart Items -->
+<div class="flex-1 overflow-y-auto min-h-[200px] pr-2 space-y-4">
+<!-- Item 1 -->
+<div class="flex items-center justify-between py-3 border-b border-border-default/50 last:border-0 group">
+<div class="flex-1">
+<div class="text-default font-default font-medium text-text-primary">Phở Bò</div>
+<div class="text-data-mono font-data-mono text-text-secondary mt-1">65.000₫</div>
+<div class="mt-1 flex items-start gap-1 text-[12px] text-text-secondary italic">
+<span class="material-symbols-outlined text-[14px] mt-0.5">sticky_note_2</span>
+<span>No cilantro, extra noodles</span>
+</div>
+<button class="text-[12px] text-primary hover:underline mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> Edit note</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center border border-border-default rounded-md bg-surface-container-lowest overflow-hidden">
+<button class="px-2 py-1 text-text-secondary hover:bg-surface-container-low hover:text-text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">remove</span>
+</button>
+<span class="w-8 text-center text-body font-body font-medium">1</span>
+<button class="px-2 py-1 text-text-secondary hover:bg-surface-container-low hover:text-text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">add</span>
+</button>
+</div>
+<button class="text-text-tertiary hover:text-danger transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">delete</span>
+</button>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center justify-between py-3 border-b border-border-default/50 last:border-0 group">
+<div class="flex-1">
+<div class="text-default font-default font-medium text-text-primary">Cà phê sữa đá</div>
+<div class="text-data-mono font-data-mono text-text-secondary mt-1">25.000₫</div><button class="text-[12px] text-primary hover:underline mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> Add note</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center border border-border-default rounded-md bg-surface-container-lowest overflow-hidden">
+<button class="px-2 py-1 text-text-secondary hover:bg-surface-container-low hover:text-text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">remove</span>
+</button>
+<span class="w-8 text-center text-body font-body font-medium">1</span>
+<button class="px-2 py-1 text-text-secondary hover:bg-surface-container-low hover:text-text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">add</span>
+</button>
+</div>
+<button class="text-text-tertiary hover:text-danger transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Summary Section -->
+<div class="mt-6 pt-4 border-t border-border-default border-dashed">
+<div class="space-y-3 mb-6">
+<div class="flex justify-between items-center text-body font-body text-text-secondary">
+<span>Tạm tính</span>
+<span class="text-data-mono font-data-mono">90.000₫</span>
+</div>
+<div class="flex justify-between items-center text-body font-body text-text-secondary">
+<span>Giảm giá</span>
+<span class="text-data-mono font-data-mono">0₫</span>
+</div><div class="flex justify-between items-center text-body font-body text-text-secondary"><span>Thuế GTGT (8%)</span><span class="text-data-mono font-data-mono">7.200₫</span></div>
+<div class="flex justify-between items-center pt-2 border-t border-border-default">
+<span class="text-default font-default font-semibold text-text-primary">Tổng cộng</span>
+<span class="text-section-header font-section-header font-bold text-[#006837] text-data-mono">97.200₫</span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="grid grid-cols-2 gap-3">
+<button class="flex items-center justify-center gap-2 py-3 px-4 bg-surface-container-lowest border border-border-strong text-text-primary font-default text-default font-medium rounded-md hover:bg-surface-container-low hover:border-outline-variant transition-all focus:ring-2 focus:ring-primary/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">send</span>
+                                    Gửi bếp
+                                </button>
+<button class="flex items-center justify-center gap-2 py-3 px-4 bg-primary-gradient text-white font-default text-default font-medium rounded-md hover:shadow-md hover:opacity-95 transition-all focus:ring-2 focus:ring-primary/30">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">payments</span>
+                                    Thanh toán
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Sticky Cash Session Bar -->
+<div class="fixed bottom-0 left-64 right-0 bg-[#F9FAFB] border-t border-border-default p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30">
+<div class="max-w-7xl mx-auto flex items-center justify-between px-2">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-text-primary">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">access_time</span>
+<span class="font-default text-default font-semibold">Ca hiện tại</span>
+</div>
+<div class="h-6 w-px bg-border-default hidden sm:block"></div>
+<div class="hidden sm:flex items-center gap-6 text-body font-body text-text-secondary">
+<div>
+                        Tiền đầu ca: <span class="font-data-mono text-text-primary ml-1">1.000.000₫</span>
+</div>
+<div>
+                        Dự kiến: <span class="font-data-mono text-text-primary ml-1">12.500.000₫</span>
+</div>
+</div>
+</div>
+<button class="flex items-center gap-2 text-primary hover:bg-primary-light/50 px-4 py-2 rounded-md transition-colors text-default font-default font-medium focus:ring-2 focus:ring-primary/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">check_circle</span>
+                 Đóng ca
+            </button>
+</div>
+</div>
+</body></html>
