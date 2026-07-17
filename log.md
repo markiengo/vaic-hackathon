@@ -137,6 +137,189 @@ add the two ambiguous and two no-match transactions; and add 8 cash allocation
 rows totaling 3,200,000 VND for the 5,200,000/5,080,000 cash case. Until then,
 the shared seed is not the normative P1 acceptance set.
 
+#### Phase 2 team integration guide
+
+This section is the handoff contract between P1 and the rest of the team. If a
+later implementation conflicts with this guide, preserve the safety gates in
+P1's deterministic services and discuss the contract change before modifying
+matching or allocation behavior.
+
+##### Ownership and change boundaries
+
+| Owner | Integrates with P1 by | Must not duplicate or bypass |
+|---|---|---|
+| P1 | Maintaining matching, allocation, DB bridge, cash reconciliation, and their tests | Agent orchestration, routes, migrations, shared production seed, or audit transport |
+| P2 | Calling typed reconciliation tools from the agent and treating structured results as truth | Recomputing scores in prompts or converting a confidence number into an automatic write |
+| P3 | Displaying summary, exception reasoning, and human-review actions from real APIs | Treating heuristic confidence as a probability or showing a review candidate as already paid |
+| P4 | Providing request-scoped `AsyncSession`, endpoint transaction boundaries, models, migrations, and case creation | Writing allocations directly without P1 revalidation or committing inside P1 services |
+| P5 | Wrapping tools with DB session/audit handling and aligning the shared seed with the truth set | Accepting caller-supplied amount/sender/note for scoring or using NLP note signals to unlock auto-match |
+
+Expected runtime flow:
+
+```text
+P4 endpoint creates/loads case and starts one DB transaction
+  -> P2 Reconciliation Agent chooses a typed tool
+    -> P5 wrapper injects AsyncSession and writes ToolCall/AuditEvent
+      -> P1 deterministic service reads canonical rows and flushes a plan
+        -> P4 transaction commits all domain and audit writes together
+          -> P3 reads summary/exceptions through the API
+```
+
+##### Canonical service and tool calls
+
+Use the P1 orchestration service when reconciling a complete period:
+
+```python
+async with session.begin():
+    summary = await reconcile_period(
+        session,
+        case_id=case_id,
+        merchant_id=merchant_id,
+        period="2026-07",
+    )
+```
+
+`reconcile_period()` and all P1 persistence functions call `flush()` but never
+`commit()`. The P4 endpoint or P5 tool wrapper owns commit/rollback. A failed
+allocation must roll back its complete transaction; do not catch a validation
+error and commit partially written allocations.
+
+The P1-backed tool contracts are asynchronous and receive `AsyncSession`
+through application dependency injection:
+
+- `score_match_candidates(session, transaction_id, time_window_minutes=60, ...)`
+- `find_payment_reference(session, reference_number)`
+- `create_reconciliation_exception(session, case_id, merchant_id, period, ...)`
+
+The LLM-visible schema should omit `session`; the P5 wrapper injects it. The
+LLM-visible scoring input is only `transaction_id` plus an optional time
+window. Amount, sender, direction, note, merchant, and existing allocations
+must be loaded from the canonical transaction row.
+
+Candidate output contains `action`, `deterministic_score`, `display_score`,
+`match_method`, `confidence`, `confidence_method`, `reason_codes`, and factor
+details. `action` is the authorization result. In particular:
+
+- P2/P5 must never replace `action` with a rule such as
+  `confidence >= 0.95 -> AUTO_MATCH`.
+- `confidence` with `confidence_method="heuristic_v1"` is a display/ranking
+  value, not a calibrated probability.
+- External `note_signals` are integers from 0 to 5 keyed by `sale_id`. They may
+  rank or escalate a candidate to review but cannot contribute to the
+  deterministic auto-match threshold.
+- `HUMAN_CONFIRM`, `UNMATCHED`, and `INVALID` results cannot produce a payment
+  allocation until a human or a separate valid deterministic decision exists.
+
+##### Case, exception, and audit coordination
+
+P1 does not create `ReconciliationCase`. P4/P5 must create or load the case
+first, then pass its `case_id`, `merchant_id`, and `period`. P1 rejects missing
+cases and merchant/period mismatches. Reusing the same case and scope makes
+period processing idempotent: consumed bank transactions are not allocated
+again, and matching/cash exceptions reuse stable dedupe keys.
+
+P2 owns agent behavior and P5 owns tool-call/audit wrappers. A wrapper should
+write `ToolCall` and `AuditEvent` in the same transaction as any exception or
+allocation it causes. Audit the canonical `transaction_id`, returned `action`,
+scores, reason codes, match method, and human approval where applicable; do
+not audit raw LLM prose as the financial decision.
+
+Exception types currently emitted by period reconciliation are:
+
+- `AMBIGUOUS_MATCH` for unresolved duplicate/high competing candidates.
+- `NO_MATCH` when no eligible candidate exists.
+- `MATCH_REVIEW` for a non-refund decision requiring human review.
+- `REFUND_REVIEW` for refunds that cannot be safely linked automatically.
+- `CASH_DISCREPANCY` when counted cash differs from expected cash.
+
+The human-readable reason and candidate/cash evidence live inside
+`ExceptionRecord.ai_suggestion`; the current model has no separate `reason`
+column.
+
+##### P4 model and migration coordination
+
+Payment and sale balances are derived from signed `PaymentAllocation.amount`
+rows. `Sale.payment_status` and `PaymentIntent.status` are resulting state, not
+the source of financial balance. Any endpoint that accepts a manual split,
+deposit, multi-sale payment, or refund should build an allocation plan and call
+P1 persistence instead of inserting `PaymentAllocation` directly.
+
+Conventions used by the adapter:
+
+- Bank source amounts are stored as positive values; `transaction_type="out"`
+  maps them to a negative domain refund. An incoming row with a negative amount
+  is rejected as inconsistent canonical data.
+- `PAY-[A-Z0-9]{6}` is the only system payment-reference pattern.
+- Historical intent expiry is checked at `BankTransaction.transaction_date`.
+- Positive allocations use `PAYMENT` or `DEPOSIT`; refund legs use a negative
+  amount and `allocation_type="REFUND"`.
+- A transaction's capacity includes every existing allocation row, including
+  a legacy row whose `sale_id` is null.
+- Row timestamps must remain timezone-aware in PostgreSQL.
+
+The current P4 `payment_allocations` table has `confidence` but no
+`confidence_method`. P1 therefore persists fuzzy `confidence` as null rather
+than storing an unlabeled heuristic. If P4 adds support, add and deploy the
+`confidence_method` migration and adapter update together; do not start storing
+heuristic confidence before the label can be persisted.
+
+##### P5 shared-seed contract
+
+The shared seed should encode financial truth with allocation rows, not only
+pre-set status strings. To reproduce P1's acceptance case, P5 should provide:
+
+- 25 incoming bank transactions with valid unique `PAY-*` intents, same
+  merchant, exact intent amount, eligible sale, and intent valid at transfer
+  time; document the expected `transaction_id -> sale_id` map.
+- 2 incoming transactions that each see unresolved same-amount candidates and
+  therefore produce `AMBIGUOUS_MATCH`, with no allocation.
+- 2 incoming transactions outside candidate eligibility that produce
+  `NO_MATCH`, with no allocation.
+- 8 cash `PaymentAllocation` rows totaling 3,200,000 VND, each with
+  `bank_transaction_id=None`, a valid sale/store, and `created_at` inside the
+  cash-session window.
+- A cash session with opening 2,000,000, expenses 0, counted 5,080,000, and a
+  discrepancy reason. P1 derives expected 5,200,000 and discrepancy -120,000.
+- Refund examples with an original linked allocation; a referenced refund is a
+  negative `REFUND` allocation, while an unreferenced refund is review-only.
+
+Do not count pre-existing `PAID` strings as successful reconciliation when no
+supporting allocations exist. The acceptance assertion compares every
+persisted bank-transaction/sale pair with the documented truth map so a correct
+count with a wrong match still fails.
+
+##### P3/P4 API and UI expectations
+
+The reconciliation start endpoint should create/load the case first and then
+invoke the agent or `reconcile_period()` with that case. API responses should
+expose separate counts for matched, ambiguous, no-match, review-required, and
+cash discrepancies instead of merging every non-match into one confidence
+bucket.
+
+Exception UI should display `reason_codes`, factor details, and
+`confidence_method`; only `AUTO_MATCH` may appear as automatically paid.
+`HUMAN_CONFIRM` must remain actionable in the exception inbox. POS cash
+payments must create allocation-ledger rows with `bank_transaction_id=None`,
+and cash refunds must be signed negative so cash reconciliation nets them.
+
+##### Integration verification checklist
+
+Before merging a P2/P3/P4/P5 integration with P1:
+
+1. Run `pytest tests/test_matching.py tests/test_allocation.py` to protect the
+   deterministic core.
+2. Run `pytest tests/test_reconciliation_integration.py
+   tests/test_cash_reconciliation.py` without an external database.
+3. Run the shared-seed suite with an explicit `DATABASE_URL`; these tests are
+   intentionally not autouse for P1's isolated suite.
+4. Confirm 25 expected pairs, exactly 5 expected exceptions, and zero false
+   transaction/sale pairs.
+5. Run reconciliation twice and confirm allocation and exception counts do not
+   increase on the second run.
+6. Confirm P5 writes one `ToolCall` and `AuditEvent` for every P1-backed tool
+   invocation and that a failed transaction leaves neither partial financial
+   writes nor misleading success audit records.
+
 ### P4 — Backend infrastructure
 
 Status: Implemented and merged into `main` on 2026-07-17.
@@ -376,6 +559,10 @@ End-to-end webhook verification (2026-07-17):
 - Verified 17 Phase 2 tests and the 68-test combined P1/model regression suite.
   The full local suite reports 68 passed and 26 external-DB tests skipped. The
   only warnings are Python 3.14 deprecations emitted by pytest-asyncio.
+- Expanded `log.md` with the cross-team Phase 2 handoff contract covering
+  ownership, canonical tool calls, transaction/audit boundaries, case and
+  exception rules, P4 model constraints, P5 seed requirements, P3 API/UI
+  expectations, and the integration verification checklist.
 
 ### 2026-07-17 — P1 Sprint 1 implementation
 
