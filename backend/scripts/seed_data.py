@@ -114,16 +114,23 @@ async def seed():
         session.add(device)
         await session.flush()
 
-        # --- User ---
-        user = User(
-            id="U001",
-            name="Nguyen Van A",
-            email="nguyenvana@salonhoa.com",
-            role="rm",
-            merchant_id="M001",
-            is_active=True,
-        )
-        session.add(user)
+        # --- Users (5) ---
+        users_data = [
+            ("U001", "Nguyen Van A", "nguyenvana@salonhoa.com", "rm"),
+            ("U002", "Tran Thi B", "tranthib@salonhoa.com", "staff"),
+            ("U003", "Le Van C", "levanc@salonhoa.com", "staff"),
+            ("U004", "Pham Thi D", "phamthid@salonhoa.com", "compliance"),
+            ("U005", "Hoang Van E", "hoangvane@shb.com", "shb_staff"),
+        ]
+        for uid, uname, uemail, urole in users_data:
+            session.add(User(
+                id=uid,
+                name=uname,
+                email=uemail,
+                role=urole,
+                merchant_id="M001",
+                is_active=True,
+            ))
         await session.flush()
 
         # --- Products (5 services) ---
@@ -395,7 +402,7 @@ async def seed():
             print(f"  {label}: {count}")
 
         expected = {
-            "merchants": 1, "stores": 1, "devices": 1, "users": 1,
+            "merchants": 1, "stores": 1, "devices": 1, "users": 5,
             "products": 5, "sales": 30, "sale_lines": 30,
             "payment_intents": 5, "bank_transactions": 23,
             "cash_sessions": 1, "invoices": 28, "tax_rule_versions": 1,

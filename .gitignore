@@ -28,9 +28,9 @@ dist/
 frontend/node_modules/
 frontend/.next/
 frontend/next-env.d.ts
+frontend/tsconfig.tsbuildinfo
 
 # Unrelated tooling
-code-to-clipboard.html
 
 # Local editor / OS noise
 .DS_Store

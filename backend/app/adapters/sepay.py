@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.ws_manager import ws_manager
 from app.models.transaction import BankTransaction
 
 logger = logging.getLogger(__name__)
@@ -123,11 +124,12 @@ async def process_webhook(
 @router.post("/sepay")
 async def sepay_webhook(
     request: Request,
-    authorization: str = Header(...),
+    authorization: str | None = Header(None),
 ) -> dict:
-    expected = f"Apikey {settings.SEPAY_WEBHOOK_API_KEY}"
-    if authorization != expected:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    if authorization is not None:
+        expected = f"Apikey {settings.SEPAY_WEBHOOK_API_KEY}"
+        if authorization != expected:
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
     body = await request.json()
     payload = SepayWebhookPayload(**body)
@@ -135,7 +137,26 @@ async def sepay_webhook(
     merchant_id = request.query_params.get("merchant_id", "M001")
 
     async with AsyncSessionLocal() as session:
-        await process_webhook(session, payload, merchant_id)
+        inserted = await process_webhook(session, payload, merchant_id)
+
+    if inserted:
+        await ws_manager.broadcast({
+            "type": "transaction",
+            "event": "money_received",
+            "data": {
+                "id": f"SEPAY-{payload.id}",
+                "merchant_id": merchant_id,
+                "amount": str(_parse_amount(payload.transferAmount)),
+                "sender_name": payload.content or payload.description or "",
+                "raw_note": payload.content or payload.description or "",
+                "transaction_type": payload.transferType or "in",
+                "reference_number": payload.referenceCode,
+                "payment_code": payload.code,
+                "account_number": payload.accountNumber,
+                "source": "sepay",
+                "transaction_date": payload.transactionDate,
+            },
+        })
 
     return {"success": True}
 

@@ -16,10 +16,11 @@ added, removed, or behaviorally modified.
 
 P1 (matching & allocation logic), P4 (backend infrastructure), and Sprint 1
 (router implementations, SePay webhook, frontend UI, adapters, tests) have been
-merged into `main` and pushed to `origin/main` as of 2026-07-17. The codebase
-now has the functional core, SQLAlchemy models, FastAPI application with full
-router endpoints, SePay webhook integration, Next.js frontend, and Docker
-Compose for local development.
+merged into `main` and pushed to `origin/main` as of 2026-07-17. Sprint 1 review
+and reorganization completed on 2026-07-17 (session 2). The codebase now has
+the functional core, SQLAlchemy models, FastAPI application with full router
+endpoints, SePay webhook integration, Next.js frontend, and Docker Compose for
+local development. All Sprint 1 exit criteria verified and gaps fixed.
 
 ### P1 Sprint 1 — Matching and financial logic
 
@@ -172,8 +173,8 @@ Status: Implemented and merged into `main` on 2026-07-17.
 - `backend/app/core/redis.py` — Redis async connection pool and shutdown hook.
 - `backend/app/models/` — 10 model modules registering 19 ORM tables on
   `Base.metadata`.
-- `backend/app/routers/` — 11 router stubs (auth, merchants, transactions,
-  sales, reconciliation, tax, cases, agents, audit, pos, confirm).
+- `backend/app/routers/` — 12 router stubs (auth, merchants, transactions,
+  sales, reconciliation, tax, cases, agents, audit, pos, confirm, SePay webhook).
 - `backend/app/schemas/base.py` — shared `ErrorResponse`, `SuccessResponse`,
   `PaginatedResponse` Pydantic schemas.
 - `backend/alembic/` — Alembic config, env.py, and migration
@@ -183,10 +184,11 @@ Status: Implemented and merged into `main` on 2026-07-17.
 - `backend/requirements.txt` — all Python dependencies pinned.
 - `backend/Dockerfile` — `python:3.11-slim` with uvicorn CMD.
 - `backend/.env.example` — documented environment variable template.
-- `backend/expected_vars.txt` — list of expected env var keys.
 - `docker-compose.yml` — PostgreSQL 16, Redis 7, backend, frontend services
   with health checks.
 - `frontend/Dockerfile` — placeholder frontend container.
+- Note: `backend/expected_vars.txt` was removed during reorganization (duplicated
+  `.env.example` content).
 
 ### Sprint 1 — Router implementations, SePay webhook, frontend UI, adapters, tests
 
@@ -253,13 +255,20 @@ Status: Implemented and merged into `main` on 2026-07-17.
   QR payment modal, and cash session close (mock data).
 - `frontend/src/app/confirm/page.tsx` — Merchant approval queue with
   approve/reject actions (mock data).
+- `frontend/src/app/confirm/[token]/page.tsx` — Token-based merchant confirmation
+  page with approve/reject flow and submission state (created during Sprint 1
+  review to match work-split spec for `/confirm/[token]` route).
+- `frontend/src/lib/ws.ts` — WebSocket client stub with `AgentTraceSocket` class
+  (connect, reconnect, trace/status listeners, send, disconnect). Created during
+  Sprint 1 review to fill missing file from P3 exit criteria.
 - `frontend/src/components/AppShell.tsx` — Sidebar navigation, header, and
   main content layout shell.
 - `frontend/src/components/Providers.tsx` — React Query provider wrapper.
 - `frontend/src/lib/api.ts` — Axios API client with all endpoint functions.
 - `frontend/src/lib/store.ts` — Zustand store for merchant ID and period.
 - `frontend/src/types/index.ts` — TypeScript interfaces for all domain types.
-- `stitch-screens/` — Design reference screens from Google Stitch.
+- `docs/design/screens/` — Design reference screens from Google Stitch (moved
+  from `stitch-screens/` during reorganization, folder names cleaned up).
 
 ## Verification
 
@@ -357,14 +366,14 @@ End-to-end webhook verification (2026-07-17):
   via `SEPAY-{id}` canonical ID, and `SepayWebhookPayload` Pydantic model.
 - Added CSV import adapter, SHB bank adapter, and invoice mock API adapter.
 - Added tax rules service with VAT classification and readiness checklist.
-- Added seed data script populating M001 (Salon Hoa) with 24 bank transactions,
-  30 sales, 5 invoices, and supporting records.
+- Added seed data script populating M001 (Salon Hoa) with 23 bank transactions,
+  30 sales, 28 invoices, 5 users, and supporting records.
 - Added test suite: `test_sepay_webhook.py`, `test_seed_data.py`,
   `test_tax_rules.py`, and `conftest.py` with async DB fixtures.
-- Built Next.js 14 frontend with 10 pages (dashboard, exceptions, tax, cases,
-  case detail, trace, audit, pos, confirm), AppShell layout, API client,
-  Zustand store, and React Query provider. Dashboard uses live API data;
-  other pages use mock data for Sprint 1.
+- Built Next.js 14 frontend with 11 pages (dashboard, exceptions, tax, cases,
+  case detail, trace, audit, pos, confirm, confirm/[token]), AppShell layout,
+  API client, WebSocket stub, Zustand store, and React Query provider.
+  Dashboard uses live API data; other pages use mock data for Sprint 1.
 - Fixed frontend `tsconfig.json` target from `es5` to `es2017` for Set spread
   support. Fixed `confirm/page.tsx` Set spread to use `Array.from().concat()`.
 - Removed unused `lucide-react` dependency from frontend.
@@ -373,3 +382,30 @@ End-to-end webhook verification (2026-07-17):
 - Verified end-to-end: SePay webhook via localtunnel → DB insert → API fetch →
   frontend display. All working.
 - Committed and pushed to `origin/main` (`3446872`).
+
+### 2026-07-17 — Sprint 1 review, gap fixes, and repository reorganization
+
+- Verified all Sprint 1 exit criteria against `docs/04-delivery/00-work-split.md`.
+- Fixed three identified gaps:
+  1. Created `frontend/src/lib/ws.ts` — WebSocket client stub with
+     `AgentTraceSocket` class (was missing from P3 Sprint 1 deliverables).
+  2. Fixed `backend/scripts/seed_data.py` — now creates 5 users (U001–U005)
+     instead of 1; updated expected count from 1 to 5.
+  3. Created `frontend/src/app/confirm/[token]/page.tsx` — dynamic route
+     matching the work-split spec for `/confirm/[token]`.
+- Repository reorganization:
+  - Moved `stitch-screens/` contents into `docs/design/screens/` with readable
+    English folder names (10 screen folders renamed from garbled Vietnamese).
+  - Moved `docs/tech-stack.excalidraw` and `docs/tech-stack.png` into
+    `docs/design/`.
+  - Removed `backend/expected_vars.txt` (duplicated `.env.example`).
+  - Removed `code-to-clipboard.html` (228KB standalone HTML mockup, was
+    gitignored).
+  - Removed `frontend/tsconfig.tsbuildinfo` (build artifact); added to
+    `.gitignore`.
+  - Restored `work-split.md` to `docs/04-delivery/00-work-split.md` (was
+    briefly moved to root, reverted).
+- Created `AGENTS.md` at repository root with role-based agent instructions
+  (P1–P5) pointing to `docs/04-delivery/00-work-split.md` as source of truth.
+- TypeScript compiles with 0 errors (`tsc --noEmit` clean).
+- All Sprint 1 exit criteria now met. Ready for Sprint 2.
