@@ -21,7 +21,6 @@
 | Docker | 24+ | Container runtime |
 | Docker Compose | 2.20+ | Multi-container orchestration |
 | Git | 2.40+ | Version control |
-| pgvector extension | latest | Vector search cho RAG |
 
 ## Clone và install
 
@@ -82,7 +81,7 @@ openssl rand -hex 32
 version: '3.8'
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: postgres:16
     environment:
       POSTGRES_USER: taxlens
       POSTGRES_PASSWORD: taxlens
@@ -118,9 +117,6 @@ docker-compose ps
 ## Database setup
 
 ```bash
-# Install pgvector extension
-docker-compose exec postgres psql -U taxlens -d taxlens -c "CREATE EXTENSION IF NOT EXISTS vector;"
-
 # Run migrations
 cd backend
 alembic upgrade head
@@ -171,7 +167,6 @@ Xem `03-engineering/01-system-architecture.md` § Module structure and directory
 
 | Vấn đề | Cách xử lý |
 |---|---|
-| `pgvector extension not found` | Dùng Docker image `pgvector/pgvector:pg16` thay vì `postgres:16` |
 | `alembic upgrade head` fails | Kiểm tra PostgreSQL đang chạy: `docker-compose ps` |
 | `LLM_API_KEY invalid` | Kiểm tra key trong `.env`; check provider dashboard |
 | `CORS error in browser` | Kiểm tra `CORS_ORIGINS` bao gồm frontend URL |

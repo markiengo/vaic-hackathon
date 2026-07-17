@@ -23,7 +23,7 @@
 | Explain tax rules bằng ngôn ngữ đơn giản | Tax & Compliance | Retrieve và paraphrase rule content |
 | Classify revenue category | Tax & Compliance | Suggest classification dựa trên transaction patterns |
 | Draft merchant messages | Merchant Ops | Compose Vietnamese confirmation requests |
-| Retrieve business guidance (RAG) | All | Query pgvector cho relevant procedural documents |
+| Retrieve business guidance | All | Inline context injection trong agent prompts (business rules ~200 lines) |
 
 ### AI KHÔNG được phép làm
 
@@ -157,13 +157,13 @@ Agents read và write specific fields. Planner điều phối agent nào write k
 | LLM calls per agent run | 50 | Counter trong agent_runs; run fails nếu vượt |
 | LLM tokens per call | 10,000 input, 2,000 output | Truncate input nếu vượt |
 | Concurrent agent runs | 5 | Queue qua Redis |
-| RAG queries per run | 20 | Counter trong tool_calls |
+| Context injection lookups per run | 20 | Counter trong tool_calls |
 
 ## Privacy và data retention cho AI interactions
 
 - Sensitive data (account numbers, tax IDs, full names) masked trước LLM call (SEC-MASK-001)
 - LLM prompts và responses KHÔNG store full; chỉ input_hash và output_hash trong tool_calls
-- RAG embeddings stored trong pgvector; source documents trong database
+- Business guidance documents injected trực tiếp vào agent prompts (~200 lines, không cần vector search)
 - Không LLM provider training trên TaxLens data (provider API configured)
 
 ## Evaluation criteria

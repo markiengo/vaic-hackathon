@@ -578,7 +578,7 @@ audit_events
 - Chọn specialist agent và tool phù hợp.
 - Giải thích lý do match hoặc lý do tạo exception.
 - Soạn tin nhắn dễ hiểu cho merchant.
-- Truy xuất hướng dẫn nghiệp vụ bằng RAG.
+- Truy xuất hướng dẫn nghiệp vụ qua inline context trong agent prompts.
 
 ### Không dùng AI cho
 
@@ -650,7 +650,7 @@ Trong MVP, sản phẩm chỉ tạo **tax-readiness report và draft export**. K
         │           │                          │
 ┌───────▼───────────▼──────────────────────────▼───────────┐
 │ MCP / Tool Layer                                        │
-│ Transactions | POS | Invoice | CRM | Case | Rules | RAG │
+│ Transactions | POS | Invoice | CRM | Case | Rules          │
 └───────────────────────────┬──────────────────────────────┘
                             │
 ┌───────────────────────────▼──────────────────────────────┐
@@ -665,7 +665,6 @@ Trong MVP, sản phẩm chỉ tạo **tax-readiness report và draft export**. K
 - **Agent orchestration:** LangGraph hoặc state machine tự xây.
 - **Tool protocol:** MCP hoặc typed function calling.
 - **Database:** PostgreSQL.
-- **Vector search:** pgvector cho RAG nghiệp vụ.
 - **Queue:** Redis + background worker nếu cần.
 - **LLM:** Provider abstraction, không khóa vào một model.
 - **Deployment:** Docker; cloud hoặc kiến trúc có thể chuyển sang VPC.
@@ -875,7 +874,7 @@ Sản phẩm được xem là đạt MVP khi:
 
 ### Rủi ro 2: Multi-agent chỉ là diễn kịch
 
-**Giảm thiểu:** Mỗi agent có tool, quyền, RAG source và output schema riêng. Nếu một agent không có hành động riêng, không gọi nó là specialist agent.
+**Giảm thiểu:** Mỗi agent có tool, quyền, inline context source và output schema riêng. Nếu một agent không có hành động riêng, không gọi nó là specialist agent.
 
 ### Rủi ro 3: AI phân loại sai giao dịch
 

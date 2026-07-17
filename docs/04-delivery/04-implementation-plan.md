@@ -24,7 +24,6 @@
 | LangGraph | latest | Agent orchestration |
 | Redis | 5.0+ (Python client) | Queue/cache |
 | psycopg2-binary | latest | PostgreSQL driver |
-| pgvector | latest | Vector search cho RAG |
 | python-jose | latest | JWT |
 | bcrypt | latest | Password hashing |
 | httpx | latest | HTTP client cho adapters |
@@ -83,7 +82,7 @@ Xem `03-engineering/01-system-architecture.md` § Module structure and directory
 
 ### Phase 2: Agent layer
 
-8. Tool implementations (bank, pos, invoice, case, rules, rag)
+8. Tool implementations (bank, pos, invoice, case, rules)
 9. Reconciliation Agent (exact match + candidate match)
 10. Tax & Compliance Agent (rule validation + readiness report)
 11. Merchant Operations Agent (case creation + message drafting)

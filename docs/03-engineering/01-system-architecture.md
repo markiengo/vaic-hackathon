@@ -37,11 +37,11 @@
         │           │                          │
 ┌───────▼───────────▼──────────────────────────▼───────────┐
 │ MCP / Tool Layer                                        │
-│ Transactions | POS | Invoice | CRM | Case | Rules | RAG │
+│ Transactions | POS | Invoice | CRM | Case | Rules          │
 └───────────────────────────┬──────────────────────────────┘
                             │
 ┌───────────────────────────▼──────────────────────────────┐
-│ PostgreSQL + pgvector + Canonical Ledger + Audit Log     │
+│ PostgreSQL + Canonical Ledger + Audit Log                │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -57,8 +57,8 @@
 | Reconciliation Agent | LangGraph + tool | Match giao dịch với đơn hàng, tạo ngoại lệ |
 | Tax & Compliance Agent | LangGraph + deterministic engine | Kiểm tra tax rule, tạo readiness report |
 | Merchant Operations Agent | LangGraph + tool | Tạo case, draft tin nhắn, giao RM, xuất dữ liệu |
-| Tool Layer | Typed function calling (Python) | Adapter interface cho bank, POS, invoice, case, rule, RAG |
-| Database | PostgreSQL + pgvector | Canonical ledger, audit log, tax rule, RAG embedding |
+| Tool Layer | Typed function calling (Python) | Adapter interface cho bank, POS, invoice, case, rule |
+| Database | PostgreSQL | Canonical ledger, audit log, tax rule |
 | Queue | Redis + background worker | Webhook processing, async agent task |
 
 ## Request flow: Reconciliation workflow
@@ -155,8 +155,7 @@ taxlens/
 │   │   │   ├── pos.py
 │   │   │   ├── invoice.py
 │   │   │   ├── case.py
-│   │   │   ├── rules.py
-│   │   │   └── rag.py
+│   │   │   └── rules.py
 │   │   ├── adapters/         # Source adapters
 │   │   │   ├── shb.py
 │   │   │   ├── sepay.py

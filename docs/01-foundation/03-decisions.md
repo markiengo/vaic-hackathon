@@ -18,7 +18,7 @@
 
 ### Decision
 
-TaxLens dùng Planner Agent phân tách yêu cầu operational phức tạp thành task, rồi delegate cho ba specialist agent: Reconciliation Agent, Tax & Compliance Agent, và Merchant Operations Agent. Mỗi agent có tool allowlist riêng, output schema riêng, và RAG source riêng.
+TaxLens dùng Planner Agent phân tách yêu cầu operational phức tạp thành task, rồi delegate cho ba specialist agent: Reconciliation Agent, Tax & Compliance Agent, và Merchant Operations Agent. Mỗi agent có tool allowlist riêng, output schema riêng, và inline context source riêng.
 
 ### Rationale
 
@@ -183,11 +183,11 @@ Nhân viên bank không thể review hàng trăm giao dịch thủ công. Chỉ 
 
 ### Decision
 
-Frontend: Next.js với TypeScript. Backend: FastAPI với Python. Database: PostgreSQL với pgvector. Agent orchestration: LangGraph. Tool protocol: typed function calling (Python functions passed to LLM, không dùng MCP). LLM provider: DeepSeek V4 Flash với thinking mode. Tích hợp ngân hàng: SePay API (real) cho giao dịch SHB.
+Frontend: Next.js với TypeScript. Backend: FastAPI với Python. Database: PostgreSQL. Agent orchestration: LangGraph. Tool protocol: typed function calling (Python functions passed to LLM, không dùng MCP). LLM provider: DeepSeek V4 Flash với thinking mode. Tích hợp ngân hàng: SePay API (real) cho giao dịch SHB. Business guidance injected trực tiếp vào agent prompts (~200 lines, không cần vector search).
 
 ### Rationale
 
-Next.js cung cấp SSR và DX tốt cho dashboard. FastAPI nhanh, typed, và Python ecosystem hỗ trợ AI library. PostgreSQL với pgvector cho phép RAG mà không cần vector DB riêng. LangGraph cung cấp stateful agent orchestration.
+Next.js cung cấp SSR và DX tốt cho dashboard. FastAPI nhanh, typed, và Python ecosystem hỗ trợ AI library. PostgreSQL đủ cho MVP. Business guidance documents (~200 lines) được inject trực tiếp vào agent prompts, không cần pgvector hay vector DB. LangGraph cung cấp stateful agent orchestration.
 
 ### Affected areas
 
@@ -198,7 +198,6 @@ Next.js cung cấp SSR và DX tốt cho dashboard. FastAPI nhanh, typed, và Pyt
 ### Rejected alternatives
 
 - **Django:** Nặng hơn; ít thân thiện async cho agent workload.
-- **Vector DB riêng (Pinecone):** Thêm infrastructure; pgvector đủ cho MVP.
 - **Node.js backend:** Python hỗ trợ AI ecosystem tốt hơn.
 - **MCP (Model Context Protocol):** Thêm protocol overhead không cần thiết cho 4 agent; typed function calling đơn giản hơn cho hackathon.
 - **Custom state machine:** LangGraph đã cung cấp state management; không cần tự xây.
@@ -207,7 +206,6 @@ Next.js cung cấp SSR và DX tốt cho dashboard. FastAPI nhanh, typed, và Pyt
 
 - Frontend build với `npm run build`
 - Backend start với `uvicorn main:app`
-- pgvector extension enabled trong PostgreSQL
 
 ---
 

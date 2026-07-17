@@ -12,7 +12,7 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 | Người | Kỹ năng | Vai trò | Phụ trách |
 |--------|---------|---------|-----------|
 | **P1** | Toán, quantitative analysis, problem solving | Matching & Financial Logic | Match scoring, payment allocation, cash reconciliation, confidence thresholds |
-| **P2** | LLM agents + Vietnamese NLP | AI Agent Layer | LangGraph, 4 agents, system prompts, note interpretation, RAG |
+| **P2** | LLM agents + Vietnamese NLP | AI Agent Layer | LangGraph, 4 agents, system prompts, note interpretation, inline context |
 | **P3** | Backend + product taste, vibecodes frontend | Product + Frontend | Toàn bộ UI screens, API client, WebSocket, demo script, pitch |
 | **P4** | Backend, Redis, APIs | Backend Infra | FastAPI, REST endpoints, WebSocket server, Redis, DB migrations, models |
 | **P5** | MCP, AI, data + tax domain | Data Pipeline + Tax | Adapters, tool implementations, seed data, Tax Rules Engine, tax seed |
@@ -94,7 +94,7 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 - Tạo FastAPI project structure theo architecture doc
 - Tạo đủ 16 SQLAlchemy models từ `03-engineering/02-data-models.md`
 - Viết Alembic migration cho toàn bộ tables, FKs, cascade rules, indexes
-- Chạy PostgreSQL + pgvector trong Docker, thêm Redis container
+- Chạy PostgreSQL trong Docker, thêm Redis container
 - Tạo `docker-compose.yml` gồm postgres, redis, backend, frontend
 - Thiết lập DB session management và dependency injection
 - Cấu hình core config: env vars, DB URL, Redis URL, JWT secret, DeepSeek key
@@ -105,7 +105,6 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 - `alembic downgrade base` rollback sạch
 - `docker-compose up` khởi động toàn bộ services
 - `from app.main import app` import được
-- pgvector được bật: `SELECT * FROM pg_extension WHERE extname = 'vector'`
 - Toàn bộ indexes được tạo, cascade rules được verify
 - `.env.example` được document đầy đủ
 
@@ -135,7 +134,7 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 - `validate_rule_version("2026.07")` trả về valid+APPROVED+effective
 - `check_required_fields("M001", "2026-07")` phát hiện 2 missing invoices
 
-**Files:** `backend/app/adapters/{shb,sepay,csv,invoice}.py`, `backend/app/tools/{bank,pos,invoice,case,rules,rag}.py`, `backend/app/services/tax_rules.py`, `backend/scripts/seed_data.py`
+**Files:** `backend/app/adapters/{shb,sepay,csv,invoice}.py`, `backend/app/tools/{bank,pos,invoice,case,rules}.py`, `backend/app/services/tax_rules.py`, `backend/scripts/seed_data.py`
 
 ---
 
@@ -257,7 +256,6 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 - `create_draft_export`: generate JSON/CSV export chứa toàn bộ reconciled data, rule version, timestamp
 - `draft_merchant_message`: LLM tạo Vietnamese confirmation request message
 - `export_to_accounting_system`: tạo MISA-compatible export format dạng mock
-- Setup RAG: dùng pgvector embeddings cho business guidance documents, tạo `rag.py` tool cho retrieval
 - Tool call logging: mỗi tool execution tạo records trong `tool_calls` + `audit_events`
 
 **Exit criteria:**
@@ -266,10 +264,9 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 - `generate_tax_readiness_report("M001", "2026-07", "2026.07")` trả về checklist có 2 failing items do missing invoices
 - `create_draft_export("M001", "2026-07", "json")` tạo valid JSON file
 - `draft_merchant_message("CASE-001", exception_id)` trả về Vietnamese message
-- RAG query trả về guidance document phù hợp
 - Mọi tool call có records trong `tool_calls` + `audit_events` với `input_hash`, `output_hash`
 
-**Files:** `backend/app/tools/{bank,pos,invoice,case,rules,rag}.py` (full implementations), `backend/app/services/tax_rules.py` (updated), `backend/app/services/export.py`, `backend/app/services/rag.py`, `backend/tests/test_tools.py`
+**Files:** `backend/app/tools/{bank,pos,invoice,case,rules}.py` (full implementations), `backend/app/services/tax_rules.py` (updated), `backend/app/services/export.py`, `backend/tests/test_tools.py`
 
 ---
 
@@ -300,7 +297,7 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 
 **Công việc:**
 - Vietnamese note interpretation: normalize diacritics bằng NFC, expand abbreviations như “ck” → “chuyển khoản”, “toc” → “tóc”, suggest transaction type + confidence
-- RAG với pgvector: index business guidance docs, query procedures phù hợp
+- Inline context injection: nhúng business guidance documents (~200 lines) trực tiếp vào agent prompts phù hợp
 - Tune agent prompts để cải thiện plan quality, match reasoning, message drafting
 - Confidence calibration: bảo đảm AI suggestions khớp truth set
 - Message drafting: tiếng Việt tự nhiên, merchant-friendly, yêu cầu hành động rõ ràng
@@ -311,9 +308,9 @@ translated = r'''# Phân chia công việc nhóm — TaxLens Hackathon MVP
 - AI suggestions đạt ≥80% agreement với human decisions trên seed data
 - Drafted messages có ≥90% đạt mức chấp nhận được mà không cần major edit
 - Hallucination rate <5% tính theo invalid tool calls / total
-- RAG trả về guidance phù hợp cho test queries
+- Inline context injection cung cấp guidance phù hợp cho agent prompts
 
-**Files:** `backend/app/agents/prompts.py` (tuned), `backend/app/services/vietnamese_nlp.py`, `backend/app/services/rag.py` (updated), `backend/tests/test_vietnamese_nlp.py`, `backend/tests/test_agent_evaluation.py`
+**Files:** `backend/app/agents/prompts.py` (tuned), `backend/app/services/vietnamese_nlp.py`, `backend/tests/test_vietnamese_nlp.py`, `backend/tests/test_agent_evaluation.py`
 
 ---
 

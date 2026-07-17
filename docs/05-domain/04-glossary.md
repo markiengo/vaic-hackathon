@@ -38,7 +38,6 @@
 | Payment intent | Record của expected payment với unique reference, amount, và expiry |
 | Payment reference | Unique code system-generated (e.g., PAY-A8F21X) link orders với bank transactions |
 | Planner Agent | Agent phân tách requests và delegate cho specialist agents |
-| RAG | Retrieval-Augmented Generation — query vector database cho relevant context |
 | Reconciliation | Quá trình match bank transactions, cash, và invoices với sales orders |
 | Reconciliation Agent | Specialist agent chịu trách nhiệm matching và exception creation |
 | RM | Relationship Manager — SHB staff quản lý merchant relationships |
@@ -65,7 +64,6 @@
 | POS | Point of Sale |
 | QR | Quick Response (code) |
 | RBAC | Role-Based Access Control |
-| RAG | Retrieval-Augmented Generation |
 | RM | Relationship Manager |
 | RLS | Row-Level Security |
 | SHB | Saigon-Hanoi Bank (Ngân hàng Sài Gòn – Hà Nội) |

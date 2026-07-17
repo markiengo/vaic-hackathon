@@ -12,7 +12,7 @@ Hộ kinh doanh Việt Nam có dữ liệu tài chính phân mảnh across POS, 
 | ---------------------| -----------------------------------| ---------|
 | Frontend            | Next.js + TypeScript              | 14+     |
 | Backend             | FastAPI (Python)                  | 0.110+  |
-| Database            | PostgreSQL + pgvector             | 16+     |
+| Database            | PostgreSQL                        | 16+     |
 | Agent orchestration | LangGraph                         | latest  |
 | Tool protocol       | MCP or typed function calling     | —       |
 | LLM                 | Provider abstraction (no lock-in) | —       |
