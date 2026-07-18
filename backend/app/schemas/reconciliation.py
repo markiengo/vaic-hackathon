@@ -25,6 +25,7 @@ class ReconcileRequest(BaseModel):
 class ReconcileResponse(BaseModel):
     run_id: str
     status: str
+    plan: dict | None = None  # TODO [P2]: populated by LangGraph planner when agent runs
 
 
 class CaseCreateRequest(BaseModel):

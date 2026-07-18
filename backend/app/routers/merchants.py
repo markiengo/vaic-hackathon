@@ -221,4 +221,4 @@ async def trigger_reconcile(
 
     background_tasks.add_task(_run_reconciliation, merchant_id, case_id, body.period)
 
-    return ReconcileResponse(run_id=case_id, status="PLANNING")
+    return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})

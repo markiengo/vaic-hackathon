@@ -17,6 +17,7 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 async def list_transactions(
     merchant_id: str = Query(...),
     period: str = Query(..., description="YYYY-MM"),
+    status: str | None = Query(None, description="Filter: matched|unmatched|pending|all"),
     db: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
 ) -> dict:
@@ -54,4 +55,11 @@ async def list_transactions(
         }
         for r in rows
     ]
+    # Filter by match_status (Python-level until P1 wires match_status to DB column)
+    if status and status != "all":
+        if status == "matched":
+            transactions = [t for t in transactions if t["match_status"] is not None]
+        elif status in ("unmatched", "pending"):
+            transactions = [t for t in transactions if t["match_status"] is None]
+
     return {"transactions": transactions, "total": len(transactions)}

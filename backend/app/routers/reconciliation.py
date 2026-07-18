@@ -126,7 +126,7 @@ async def start_reconciliation(
     await db.commit()
 
     background_tasks.add_task(_noop_agent_run, body.merchant_id, case_id, body.period)
-    return ReconcileResponse(run_id=case_id, status="PLANNING")
+    return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})
 
 
 @router.get("/{case_id}")
