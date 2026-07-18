@@ -1864,3 +1864,39 @@ release remain blocked by the explicitly listed P1/P2/P4 contracts. Pitch deck,
 work-split, backend, matching, agent internals, infrastructure and seed/reset
 files remain untouched.
 
+### 2026-07-18 — P3: Synchronize latest integration documentation
+
+**Changed:**
+
+- Merged current `origin/main@4eb7391` into the P3 delivery branch after a
+  conflict-free merge-tree simulation. This brings in the integration owner's
+  canonical `AGENTS.md` and latest shared work-split commit without editing
+  either file in P3's branch delta.
+- Rechecked the Sprint 4 P3 section. It defines the live six-scene rehearsal as
+  the P3 completion gate and adds no separate P3 S1–Sn simulation block.
+
+**Reasoning:**
+
+- Main advanced after the P3 release commits. Merging the one documentation
+  commit keeps the branch current while retaining the already referenced P3
+  checkpoint hashes and avoiding a stale-base PR.
+- The new shared work-split still contains older `30/25/5`, SHB-on-assistant and
+  pitch requirements. P3 did not rewrite this shared cross-role authority: the
+  current demo handoff records P5's validated `23/15/8`, assigns the merchant
+  assistant to Hương, and follows the product owner's explicit instruction to
+  defer the pitch deck. These inconsistencies are flagged for the integration
+  owner rather than silently changed by P3.
+
+**Verification:**
+
+- `git fetch origin --prune` — latest main is `4eb7391`.
+- All `origin/p1-chau`, `origin/p2-nguyen`, `origin/p4-hoang` and
+  `origin/p5-nhi` tips are ancestors of current main.
+- `git merge-tree $(git merge-base origin/main HEAD) origin/main HEAD` — no
+  conflict markers before merge.
+- `git merge --no-commit --no-ff origin/main` — automatic merge completed with
+  no conflicts and paused for this mandatory log entry.
+
+**Status:** Latest main documentation integrated without conflict. P3 scope and
+the deferred pitch decision remain unchanged; live rehearsal remains blocked.
+
