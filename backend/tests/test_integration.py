@@ -48,6 +48,26 @@ from app.models.user import User
 
 
 # ---------------------------------------------------------------------------
+# Monkeypatch run_agent_workflow to a no-op for ALL integration tests.
+#
+# BackgroundTasks in Starlette 0.36.x + httpx 0.27.0 ASGITransport runs INLINE
+# (confirmed by probe: execution log ['BEFORE_POST', 'TASK_RAN', 'AFTER_POST']).
+# Without this patch, run_agent_workflow() would:
+#   1. Open AsyncSessionLocal() → real Postgres (not test SQLite) → fail/early-return
+# That's fragile. Patch to a deterministic no-op so AgentRun stays at status="PLANNING"
+# and ERR-RECON-001 tests are reliable regardless of DB environment.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _patch_run_agent_workflow(monkeypatch):
+    async def _noop(*_args, **_kwargs):
+        pass
+
+    monkeypatch.setattr("app.routers.merchants.run_agent_workflow", _noop, raising=False)
+    monkeypatch.setattr("app.routers.reconciliation.run_agent_workflow", _noop, raising=False)
+
+
+# ---------------------------------------------------------------------------
 # SQLite compat: JSONB → JSON
 # ---------------------------------------------------------------------------
 
@@ -332,13 +352,35 @@ async def test_err_merchant_001_not_found(api_client):
 # --- RECON (2 unique codes × 2 paths each = 4 tests) ---
 
 async def test_err_recon_001_already_running(api_client):
+    """POST /reconciliation/start: second call for same merchant+period while AgentRun
+    is still active (PLANNING — run_agent_workflow no-op keeps it there) must 409."""
     client, tok, _, __ = api_client
     payload = {"merchant_id": "M-TEST-001", "period": "2020-01"}
     first = await client.post("/api/v1/reconciliation/start", json=payload, headers=_auth(tok))
     assert first.status_code == 202  # spec: async kick-off returns 202
+    assert first.json()["run_id"].startswith("RUN-")
     second = await client.post("/api/v1/reconciliation/start", json=payload, headers=_auth(tok))
     assert second.status_code == 409
     assert second.json()["error"]["code"] == "ERR-RECON-001"
+
+
+async def test_err_recon_001_active_run_blocks_merchant_reconcile(api_client):
+    """POST /merchants/{id}/reconcile: second call for same merchant+period while
+    AgentRun is still PLANNING must return 409 ERR-RECON-001.
+
+    _patch_run_agent_workflow (autouse) keeps AgentRun at PLANNING so check is reliable.
+    """
+    client, tok, _, __ = api_client
+    headers = _auth(tok)
+    payload = {"period": "2020-01"}
+
+    r1 = await client.post("/api/v1/merchants/M-TEST-001/reconcile", json=payload, headers=headers)
+    assert r1.status_code == 202
+    assert r1.json()["run_id"].startswith("RUN-")
+
+    r2 = await client.post("/api/v1/merchants/M-TEST-001/reconcile", json=payload, headers=headers)
+    assert r2.status_code == 409
+    assert r2.json()["error"]["code"] == "ERR-RECON-001"
 
 
 async def test_err_recon_002_no_transactions_via_reconciliation_start(api_client):
@@ -774,7 +816,7 @@ async def test_flow_transactions_status_filter(api_client):
 
 
 async def test_flow_reconcile_returns_plan_placeholder(api_client):
-    """Verify #14: POST reconcile response includes plan field with steps placeholder."""
+    """Verify #14: POST reconcile returns RUN-xxx run_id + plan placeholder."""
     client, tok, _, __ = api_client
     resp = await client.post(
         "/api/v1/merchants/M-TEST-001/reconcile",
@@ -784,6 +826,7 @@ async def test_flow_reconcile_returns_plan_placeholder(api_client):
     assert resp.status_code == 202  # spec API-RECON-POST-001: async kick-off → 202
     body = resp.json()
     assert "run_id" in body
+    assert body["run_id"].startswith("RUN-")  # P0: returns RUN-xxx not CASE-xxx
     assert body["status"] == "PLANNING"
     assert body.get("plan") is not None
     assert "steps" in body["plan"]
