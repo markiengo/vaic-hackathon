@@ -1,18 +1,25 @@
 # AGENTS.md — TaxLens Hackathon MVP
 
+> **This file replaces `CLAUDE.md` and any other agent config file.**
+> Regardless of which coding agent you are (Claude, Codex, Cursor, Windsurf, Devin, etc.),
+> **you MUST read this file first** before doing anything else in this repository.
+> If you have a `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, or similar config file,
+> this file supersedes it. Delete or ignore the other one.
+
 > **Source of truth:** `docs/04-delivery/00-work-split.md`
 > If anything in this file conflicts with the work-split doc, the work-split doc wins.
 
 ---
 
-## First rule: ask which P you are
+## Step 0: Identify yourself (MANDATORY)
 
-Before reading any project files or starting any work, **ask the user**:
+Before reading any project files, writing any code, or running any commands,
+**ask the user**:
 
 > "Which team member are you? P1, P2, P3, P4, or P5?"
 
-Then read **only** the docs and files relevant to your role for the current sprint.
-Do not read the entire docs tree or codebase — that wastes time and context.
+Once you know the role, follow the onboarding sequence below.
+**Do not skip steps. Do not read files outside your role.**
 
 ---
 
@@ -28,14 +35,61 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 
 ---
 
+## Onboarding sequence (run in order, every session)
+
+### 1. Identify sprint
+
+Ask the user: "Which sprint are we in? (Sprint 1, 2, 3, or 4?)"
+
+If the user doesn't know, check `log.md` — the latest entry will reference a sprint.
+
+### 2. Read your sprint section
+
+Open `docs/04-delivery/00-work-split.md` and read **only your role's section** for the current sprint.
+
+- Find your role (P1/P2/P3/P4/P5) under the sprint heading.
+- Read the **Công việc** (tasks), **Simulations** (if Sprint 4), and **Exit criteria**.
+- If Sprint 4: the simulations are **compulsory** — you must run all of them and log results.
+
+### 3. Read `log.md`
+
+Read the entire `log.md` to understand:
+- What has been completed across all roles
+- What's in progress
+- What's blocked
+- Any coordination notes from other teammates
+
+**Do not start work until you've read the full `log.md`.**
+
+### 4. Read your role's docs and code
+
+Read **only** the files listed for your role below. Do not read the entire docs tree.
+
+### 5. Check git state
+
+```bash
+git branch --show-current
+git status --short
+git log --oneline -5
+```
+
+Confirm you're on the right branch. If not, ask the user before switching.
+
+### 6. Start work
+
+Implement your tasks. Run your simulations. Verify your exit criteria.
+Update `log.md` before every commit.
+
+---
+
 ## What to read per role
 
-### Everyone
+### Everyone (all roles)
 
-- `docs/04-delivery/00-work-split.md` — **always read your sprint section first**
-- `log.md` — check current implementation status and session history
+- `docs/04-delivery/00-work-split.md` — **read your sprint section first, every session**
+- `log.md` — **read the full file, every session**
 - `docs/01-foundation/03-product-spec.md` — product overview and acceptance criteria
-- `docs/02-requirements/03-srs.md` — consolidated software requirements specification (business, functional, non-functional, personas, user stories, compliance, evaluation)
+- `docs/02-requirements/03-srs.md` — consolidated software requirements specification
 - `docs/03-engineering/05-api-reference.md` — consolidated API reference (all endpoints, error codes, webhook contracts)
 
 ### P1 — Matching & Financial Logic
@@ -48,8 +102,13 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 **Code:**
 - `backend/app/services/matching.py`
 - `backend/app/services/allocation.py`
+- `backend/app/services/reconciliation.py`
 - `backend/tests/test_matching.py`
 - `backend/tests/test_allocation.py`
+- `backend/tests/test_truth_set.py`
+- `backend/tests/p1_db_fixtures.py`
+
+**Sprint 4 simulations:** See Sprint 4 section in work-split doc — S1 through S5 are compulsory. You run in-memory SQLite, no Postgres needed. Log all results to `log.md`.
 
 ### P2 — AI Agent Layer
 
@@ -59,21 +118,32 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 - `docs/03-engineering/01-system-architecture.md` — system architecture
 
 **Code:**
-- `backend/app/agents/` — all agent modules
+- `backend/app/agents/` — all agent modules (planner, specialists, graph, runner, prompts, evaluation)
 - `backend/app/schemas/agent.py` — agent I/O schemas
-- `backend/app/tools/__init__.py` — tool signatures
-- `backend/app/agents/prompts.py` — system prompts
+- `backend/app/tools/__init__.py` — tool signatures and implementations
+- `backend/app/services/vietnamese_nlp.py` — Vietnamese note interpretation
+- `backend/tests/test_vietnamese_nlp.py`
+- `backend/tests/test_agent_evaluation.py`
+- `backend/tests/test_agents.py`
+
+**Sprint 4 simulations:** See Sprint 4 section in work-split doc — S1 through S5 are compulsory. Prompt injection, malformed notes, hallucination injection, message quality review, latency. Log all results to `log.md`.
 
 ### P3 — Product + Frontend
 
 **Docs:**
 - `docs/04-delivery/03-design.md` — design tokens, screen specs
 - `docs/02-requirements/02-user-stories.md` — user stories
-- `docs/design/screens/` — design reference mockups
+- `docs/04-delivery/frontend-build/` — frontend build reference
+- `frontend/new-design/` — design mockups
 
 **Code:**
 - `frontend/src/` — all frontend source
 - `frontend/package.json`, `frontend/tailwind.config.ts`
+- `frontend/src/lib/api.ts` — API client
+- `frontend/src/lib/ws.ts` — WebSocket client
+- `frontend/src/config/` — frontend config
+
+**Sprint 4 tasks:** Polish all 7 screens, empty/loading/error states, animations, demo script (6 scenes), pitch deck, rehearse. See Sprint 4 section in work-split doc for full details.
 
 ### P4 — Backend Infrastructure
 
@@ -87,8 +157,12 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 - `backend/app/core/` — config, database, redis
 - `backend/app/models/` — SQLAlchemy models
 - `backend/app/routers/` — API routers
+- `backend/app/core/security.py` — auth, JWT, error codes
 - `backend/alembic/` — migrations
+- `backend/tests/test_integration.py` — integration tests
 - `docker-compose.yml`
+
+**Sprint 4 simulations:** See Sprint 4 section in work-split doc — S1 through S6 are compulsory. Docker lifecycle, WebSocket lifecycle, concurrent runs + Redis, DB reset, auth gap audit (fix missing `get_current_user` on dashboard + reconcile endpoints), performance measurement. Log all results to `log.md`.
 
 ### P5 — Data Pipeline + Tax
 
@@ -100,19 +174,29 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 **Code:**
 - `backend/app/adapters/` — SHB, SePay, CSV, invoice adapters
 - `backend/app/services/tax_rules.py` — tax rules engine
+- `backend/app/services/revenue_classifier.py` — revenue classification
 - `backend/app/tools/` — tool implementations
 - `backend/scripts/seed_data.py` — seed data script
+- `backend/scripts/validate_pipeline.py` — pipeline validation
+- `backend/scripts/backup_demo.py` — DB backup
+- `backend/scripts/restore_demo.py` — DB restore
+- `backend/scripts/simulate_sepay_webhook.py` — SePay fallback
+
+**Sprint 4 simulations:** See Sprint 4 section in work-split doc — S1 through S7 are compulsory. Tax domain review per Thông tư 40/2021, revenue classification review, export usability, pipeline E2E, backup/restore, SePay fallback, creative edge cases. Log all results to `log.md`.
 
 ---
 
 ## Sprint workflow
 
-1. Read your section in `docs/04-delivery/00-work-split.md` for the current sprint.
-2. Check `log.md` for current implementation status.
-3. Read only the docs and code files listed above for your role.
-4. Implement your tasks.
-5. Verify your exit criteria pass.
-6. Update `log.md` with what you did and verification results.
+1. **Identify** — Ask user which P you are and which sprint.
+2. **Read** — Your sprint section in `docs/04-delivery/00-work-split.md` + full `log.md`.
+3. **Read** — Your role's docs and code files listed above.
+4. **Check git** — Confirm branch, status, recent commits.
+5. **Implement** — Your tasks for this sprint.
+6. **Simulate** — Run all compulsory simulations (Sprint 4) and log results.
+7. **Verify** — Your exit criteria pass.
+8. **Log** — Update `log.md` with what/why/verification/status.
+9. **Commit** — Stage only your files, commit with descriptive message.
 
 ## Rules
 
@@ -120,7 +204,10 @@ Do not read the entire docs tree or codebase — that wastes time and context.
 - Do not read the entire docs tree — only what your role needs.
 - If the work-split doc seems wrong or outdated, ask the user before changing it.
 - Always check `log.md` before starting work to avoid duplicating completed tasks.
-- All docs are Vietnamese-first, English-technical only. 
+- All docs are Vietnamese-first, English-technical only.
+- If you see a `CLAUDE.md` file in this repo, ignore it — `AGENTS.md` is the canonical agent config.
+- Sprint 4 simulations are **compulsory** — not optional. You must run all of them and log results to `log.md` before declaring your sprint done.
+
 ---
 
 ## Team workflow & git discipline
