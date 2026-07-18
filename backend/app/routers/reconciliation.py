@@ -7,7 +7,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.queue import run_agent_workflow
 from app.core.security import TaxLensError, get_current_user
+from app.models.agent import AgentRun
 from app.models.merchant import Merchant
 from app.models.payment import PaymentAllocation
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
@@ -23,10 +25,6 @@ class ReconciliationStartRequest(BaseModel):
     merchant_id: str
     period: str  # "YYYY-MM"
     request_text: str | None = None
-
-
-async def _noop_agent_run(merchant_id: str, case_id: str, period: str) -> None:
-    pass
 
 
 @router.get("/exceptions")
@@ -79,26 +77,28 @@ async def start_reconciliation(
     if merchant is None:
         raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
 
-    existing = await db.scalar(
-        select(ReconciliationCase).where(
-            ReconciliationCase.merchant_id == body.merchant_id,
-            ReconciliationCase.period == body.period,
-        )
-    )
-    if existing is not None:
-        raise TaxLensError(
-            "ERR-RECON-001",
-            409,
-            f"Case đối soát cho kỳ {body.period} đã tồn tại (case_id={existing.id})",
-        )
-
+    # ERR-GEN-001: period must have ended
     year, month = (int(p) for p in body.period.split("-"))
     period_end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
     if date.today() < period_end:
-        # Period not ended → no complete data yet → ERR-GEN-001 (bad request)
         raise TaxLensError("ERR-GEN-001", 400, f"Kỳ {body.period} chưa kết thúc — không thể đối soát")
 
-    # ERR-RECON-002: no transactions found for this merchant+period
+    # ERR-RECON-001: check active AgentRun (NOT ReconciliationCase) for same merchant+period
+    existing_run = await db.scalar(
+        select(AgentRun).where(
+            AgentRun.merchant_id == body.merchant_id,
+            AgentRun.period == body.period,
+            AgentRun.status.not_in(["COMPLETED", "FAILED"]),
+        )
+    )
+    if existing_run is not None:
+        raise TaxLensError(
+            "ERR-RECON-001",
+            409,
+            f"Đang có agent run active cho kỳ {body.period} (run_id={existing_run.id})",
+        )
+
+    # ERR-RECON-002: no transactions found
     period_start = date(year, month, 1)
     tx_count = await db.scalar(
         select(func.count(BankTransaction.id)).where(
@@ -123,30 +123,66 @@ async def start_reconciliation(
         priority="MEDIUM",
     )
     db.add(case)
+
+    run_id = f"RUN-{uuid.uuid4().hex[:10].upper()}"
+    request_text = body.request_text or f"Reconcile {body.merchant_id} kỳ {body.period}"
+    agent_run = AgentRun(
+        id=run_id,
+        case_id=case_id,
+        merchant_id=body.merchant_id,
+        user_id=str(_user.id),
+        period=body.period,
+        request_text=request_text,
+        status="PLANNING",
+        started_at=datetime.now(timezone.utc),
+    )
+    db.add(agent_run)
     await db.commit()
 
-    background_tasks.add_task(_noop_agent_run, body.merchant_id, case_id, body.period)
-    return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})
+    background_tasks.add_task(
+        run_agent_workflow,
+        run_id=run_id,
+        case_id=case_id,
+        merchant_id=body.merchant_id,
+        period=body.period,
+        request_text=request_text,
+    )
+    return ReconcileResponse(run_id=run_id, status="PLANNING", plan={"steps": []})
 
 
-@router.get("/{case_id}")
+@router.get("/{run_id}")
 async def get_reconciliation_result(
-    case_id: str,
+    run_id: str,
     db: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
 ) -> dict:
-    c = await db.get(ReconciliationCase, case_id)
+    # Try AgentRun first (RUN-xxx from P0 onwards)
+    agent_run = await db.get(AgentRun, run_id)
+    if agent_run is not None:
+        return {
+            "run_id": agent_run.id,
+            "status": agent_run.status,
+            "merchant_id": agent_run.merchant_id,
+            "period": agent_run.period,
+            "plan": agent_run.plan,
+            "error": agent_run.error,
+            "started_at": agent_run.started_at.isoformat() if agent_run.started_at else None,
+            "completed_at": agent_run.completed_at.isoformat() if agent_run.completed_at else None,
+        }
+
+    # Fallback: try ReconciliationCase (CASE-xxx — backward compat for existing tests/clients)
+    c = await db.get(ReconciliationCase, run_id)
     if c is None:
         raise TaxLensError("ERR-RUN-001", 404, "Case/run không tồn tại")
     ex_result = await db.execute(
-        select(ExceptionRecord).where(ExceptionRecord.case_id == case_id)
+        select(ExceptionRecord).where(ExceptionRecord.case_id == run_id)
     )
     exceptions = ex_result.scalars().all()
     pending = [e for e in exceptions if e.status == "PENDING"]
     return {
         "run_id": c.id,
         "status": c.status,
-        "matched": 0,  # placeholder — P1 wires match counts
+        "matched": 0,
         "unmatched": len(pending),
         "duplicate_candidates": 0,
         "missing_invoice_cases": 0,
