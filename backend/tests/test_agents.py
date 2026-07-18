@@ -68,7 +68,11 @@ def test_agent_workflow_returns_specialist_summary_json(monkeypatch: pytest.Monk
     from app.agents import specialists
     from app.agents.graph import agent_workflow
 
+    score_note_arguments = []
+
     def fake_execute(agent_name: str, tool_name: str, arguments: dict, *, agent_run_id: str | None = None) -> ToolExecution:
+        if tool_name == "score_match_candidates":
+            score_note_arguments.append(arguments["note"])
         outputs = {
             "get_bank_transactions": [{"id": f"TX-{index}"} for index in range(30)],
             "get_sales_orders": [{"id": f"SALE-{index}"} for index in range(30)],
@@ -110,6 +114,7 @@ def test_agent_workflow_returns_specialist_summary_json(monkeypatch: pytest.Monk
             "merchant_id": "M001",
             "period": "2026-07",
             "request_text": "Kiểm tra Salon Hoa đã sẵn sàng cho kỳ báo cáo tháng 7 chưa",
+            "note": "ck cat toc",
             "plan": {
                 "plan": [
                     {"step": 1, "action": "Đối soát", "agent": "reconciliation"},
@@ -130,6 +135,8 @@ def test_agent_workflow_returns_specialist_summary_json(monkeypatch: pytest.Monk
     assert len(output["tax_compliance_tool_calls"]) == 6
     assert len(output["merchant_ops_tool_calls"]) == 6
     assert output["merchant_ops_tool_calls"][-1]["status"] == "skipped"
+    assert score_note_arguments == ["chuyển khoản cắt tóc"]
+    assert output["note_interpretation"]["suggested_type"] == "revenue"
 
 
 def test_agent_runner_records_state_machine_transitions() -> None:
