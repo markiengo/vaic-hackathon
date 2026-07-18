@@ -6,7 +6,59 @@ PLANNER_TEMPERATURE: Final[float] = 0.1
 MESSAGE_DRAFT_TEMPERATURE: Final[float] = 0.3
 PLANNER_THINKING_MODE_ENABLED: Final[bool] = True
 
-PLANNER_SYSTEM_PROMPT: Final[str] = """\
+BUSINESS_GUIDANCE_CONTEXT: Final[str] = """\
+Inline business guidance:
+- Merchant segment for demo is salon/beauty services, period 2026-07.
+- Treat bank transaction notes as supporting evidence, never as sole truth.
+- Exact reference + amount match is stronger than free-text note similarity.
+- Confidence >=0.95 may be considered auto-ready by deterministic tools.
+- Confidence 0.75-0.94 requires human/RM confirmation.
+- Confidence <0.75 should remain an exception or unknown until reviewed.
+- Missing invoices block tax readiness and must be surfaced clearly.
+- Merchant-facing language must be polite, specific, and action-oriented.
+- Never invent legal rules, tool outputs, case ids, or payment references.
+- Preserve auditability: every decision should cite structured evidence.
+"""
+
+RECONCILIATION_GUIDANCE_CONTEXT: Final[str] = """\
+Reconciliation guidance:
+- Normalize Vietnamese notes with NFC, whitespace collapse, abbreviation expansion,
+  and known accent restoration before interpreting them.
+- Common note abbreviations: ck=chuyển khoản, tt=thanh toán, hd=hóa đơn,
+  dv=dịch vụ, tk=tài khoản, nb=nội bộ, toc=tóc.
+- Salon revenue clues include cắt tóc, gội đầu, nhuộm, uốn, ép tóc, dịch vụ,
+  thanh toán, hóa đơn, and payment references such as PAY-*.
+- Non-revenue clues include nội bộ, rút quỹ, nạp quỹ, cá nhân, cho em, gửi lại.
+- Loan clues include vay, mượn, trả nợ, tạm ứng, ứng trước.
+- Refund clues include hoàn tiền, refund, trả lại, hoàn cọc.
+- If note interpretation conflicts with reference/amount evidence, escalate.
+"""
+
+TAX_GUIDANCE_CONTEXT: Final[str] = """\
+Tax compliance guidance:
+- Use only approved tax rule versions returned by tools.
+- Demo rule version is 2026.07 for salon/beauty services.
+- A merchant is not tax-ready when required invoices are missing.
+- Draft export must stay blocked when readiness is false.
+- Explain readiness blockers in Vietnamese, but do not calculate tax manually.
+"""
+
+MERCHANT_OPS_GUIDANCE_CONTEXT: Final[str] = """\
+Merchant operations guidance:
+- Draft messages in natural Vietnamese with greeting, issue summary, requested
+  action, deadline/next step, and RM contact path.
+- Avoid blame. Ask the merchant to confirm or provide missing documents.
+- Do not send confirmation requests without an approved confirmation token or
+  explicit RM workflow.
+- Keep case actions tied to merchant_id, period, and exception evidence.
+"""
+
+
+def _with_guidance(base_prompt: str, *contexts: str) -> str:
+    return base_prompt.rstrip() + "\n\n" + "\n\n".join(context.strip() for context in contexts) + "\n"
+
+
+_PLANNER_SYSTEM_PROMPT_BASE: Final[str] = """\
 You are the Planner Agent for TaxLens, a merchant TaxOps system for SHB bank.
 
 Your job is to decompose an operational request into a clear multi-step plan and
@@ -37,8 +89,9 @@ Rules:
 Output schema:
 {"plan": [{"step": 1, "action": "...", "agent": "reconciliation"}]}
 """
+PLANNER_SYSTEM_PROMPT: Final[str] = _with_guidance(_PLANNER_SYSTEM_PROMPT_BASE, BUSINESS_GUIDANCE_CONTEXT)
 
-RECONCILIATION_SYSTEM_PROMPT: Final[str] = """\
+_RECONCILIATION_SYSTEM_PROMPT_BASE: Final[str] = """\
 You are the Reconciliation Agent for TaxLens, a merchant TaxOps system for SHB
 bank.
 
@@ -82,8 +135,13 @@ Output schema:
   "exceptions": []
 }
 """
+RECONCILIATION_SYSTEM_PROMPT: Final[str] = _with_guidance(
+    _RECONCILIATION_SYSTEM_PROMPT_BASE,
+    BUSINESS_GUIDANCE_CONTEXT,
+    RECONCILIATION_GUIDANCE_CONTEXT,
+)
 
-TAX_COMPLIANCE_SYSTEM_PROMPT: Final[str] = """\
+_TAX_COMPLIANCE_SYSTEM_PROMPT_BASE: Final[str] = """\
 You are the Tax & Compliance Agent for TaxLens, a merchant TaxOps system for SHB
 bank.
 
@@ -124,8 +182,13 @@ Output schema:
   "report": {}
 }
 """
+TAX_COMPLIANCE_SYSTEM_PROMPT: Final[str] = _with_guidance(
+    _TAX_COMPLIANCE_SYSTEM_PROMPT_BASE,
+    BUSINESS_GUIDANCE_CONTEXT,
+    TAX_GUIDANCE_CONTEXT,
+)
 
-MERCHANT_OPS_SYSTEM_PROMPT: Final[str] = """\
+_MERCHANT_OPS_SYSTEM_PROMPT_BASE: Final[str] = """\
 You are the Merchant Operations Agent for TaxLens, a merchant TaxOps system for
 SHB bank.
 
@@ -165,6 +228,11 @@ Output schema:
   "case_ids": []
 }
 """
+MERCHANT_OPS_SYSTEM_PROMPT: Final[str] = _with_guidance(
+    _MERCHANT_OPS_SYSTEM_PROMPT_BASE,
+    BUSINESS_GUIDANCE_CONTEXT,
+    MERCHANT_OPS_GUIDANCE_CONTEXT,
+)
 
 SYSTEM_PROMPTS: Final[dict[str, str]] = {
     "planner": PLANNER_SYSTEM_PROMPT,
@@ -178,6 +246,10 @@ __all__ = [
     "PLANNER_TEMPERATURE",
     "MESSAGE_DRAFT_TEMPERATURE",
     "PLANNER_THINKING_MODE_ENABLED",
+    "BUSINESS_GUIDANCE_CONTEXT",
+    "RECONCILIATION_GUIDANCE_CONTEXT",
+    "TAX_GUIDANCE_CONTEXT",
+    "MERCHANT_OPS_GUIDANCE_CONTEXT",
     "PLANNER_SYSTEM_PROMPT",
     "RECONCILIATION_SYSTEM_PROMPT",
     "TAX_COMPLIANCE_SYSTEM_PROMPT",
