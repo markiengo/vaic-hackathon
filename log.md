@@ -1380,582 +1380,81 @@ be rerun in the normal backend database environment before final merge.
 without rolling back P1/P2/P5. Remaining confidence gate is normal Postgres
 backend verification for seed-backed API/tool suites.
 
-### 2026-07-18 — P5 Sprint 3: end-to-end pipeline validation
+### 2026-07-19 — Sprint 4 P4 pre-coding audit and fixes
 
-- Read the current work-split doc fresh (it had been restructured since
-  Sprint 2) and surveyed the codebase before starting: P1's Sprint 2
-  reconciliation integration (`reconcile_period`,
-  `reconcile_cash_session`) and P2's agent-tool wiring
-  (`app/agents/specialists.py`, `executor.py`) had both landed on `main`,
-  but neither is actually called by anything running — both
-  `POST /reconciliation/start` and `POST /agents/run` dispatch no-op
-  background tasks, and the specialist `reconciliation_node` always emits
-  one hardcoded `PENDING_REVIEW` exception instead of using the real
-  matching path. P1's own Sprint 2 log entry had already flagged the
-  broader shared-DB test suite as unverified and deferred it — this
-  sprint's core job was exactly that verification.
-- Fixed a one-line dataclass bug in `app/agents/runner.py` that blocked
-  `pytest tests` from collecting at all (not my file, but blocked
-  everyone — see "Created and updated files" above for the exact issue).
-- Ran `reconcile_period` against the seeded `M001` data for the first time
-  ever via a throwaway probe script and hit an immediate hard crash: a
-  cash discrepancy with no `discrepancy_reason` aborts the *entire*
-  period's reconciliation, not just its own exception, because
-  `reconcile_cash_session`'s error isn't caught. Traced it to my own
-  Sprint 1 seed data (`discrepancy_reason=None`, deliberately, to match
-  "system detects it, human explains later") conflicting with P1's
-  function requiring the reason up front. Fixed on my side with an
-  honest placeholder string.
-- Fixing that revealed a second, deeper bug: the cash discrepancy came
-  out wrong (not -120,000) because `reconcile_cash_session` sums cash
-  sales from `payment_allocations` rows with `bank_transaction_id IS
-  NULL`, not from `Sale.payment_status` — which is what my seed data set
-  directly with zero corresponding allocation rows. Fixed by inserting a
-  `PaymentAllocation` row per cash sale with `created_at` pinned to the
-  sale's own timestamp (the allocation-window check would otherwise use
-  real wall-clock seeding time, landing outside the cash session's July
-  2026 window).
-- With the pipeline actually running end-to-end, found that my 3 "fuzzy
-  match" transactions from Sprint 1 scored only 60 under P1's real
-  weights — below the 75 human-review threshold — and fell through to an
-  orphaned `NO_MATCH` instead of a reviewable candidate. Concluded this
-  is correct, conservative engine behavior, not a bug to route around;
-  fixed the scenario itself (known sender, tighter timing) so it lands
-  where it was always supposed to: `MATCH_REVIEW`.
-- `validate_pipeline.py` then caught a real bug in my own Sprint 2 code:
-  `classify_revenue_category` misclassified the "nhap hang 20/10"
-  purchase transaction as `internal_transfer` because the no-sender
-  fallback was checked before the purchase-keyword check. The Sprint 2
-  test suite never caught this because it hand-supplied a sender name
-  instead of exercising the adapter's real (marker-less, so `None`)
-  parse of that exact note.
-- Documented the real, observed truth set (16 matched, 8 exceptions
-  across 5 types — not the early planning docs' "25/5" headline, written
-  before this exception-type taxonomy existed) rather than reshaping seed
-  data to force a number, since the actual auto-reconciliation-rate gap
-  (69.6%, target ≥80%) is explicitly P1's own stated Sprint 3 tuning task.
-- Built `validate_pipeline.py`, `backup_demo.py`/`restore_demo.py` (real
-  `pg_dump -Fc`/`pg_restore`, not a hand-rolled exporter), and
-  `simulate_sepay_webhook.py` (manual fallback, tested in both modes
-  against a live server), plus `tests/test_end_to_end.py`.
-- Adding a test that mutates the shared session-scoped seeded DB
-  surfaced 4 pre-existing tests whose assertions silently assumed
-  "nothing has reconciled yet" — fixed each to assert the invariant
-  that's actually true regardless of execution order, keeping the one
-  exact-value fixture pin in the test that's genuinely guaranteed to run
-  first.
-- Verified everything together: full pipeline validation (30/30 checks),
-  backup/restore cycle (simulated corruption, confirmed exact restore),
-  reconciliation idempotency, both fallback-script modes against a live
-  server, and the full test suite run twice in a row without reseeding.
-  156 passed both times (1 pre-existing, not-mine failure in
-  `test_agents.py`, left alone).
-- Not committed — left for the user to review.
+**Auth gap fixes (3 endpoints — Sprint 4 P4 Simulation S5)**
 
-### 2026-07-18 — P1 Sprint 3 matching calibration and truth-set integration
+Found and fixed three endpoints missing `get_current_user` dependency:
+- `GET /merchants/{id}/dashboard` (`backend/app/routers/merchants.py`) — explicitly
+  flagged in `docs/04-delivery/00-work-split.md` Sprint 4 Simulation S5
+- `POST /merchants/{id}/reconcile` (`backend/app/routers/merchants.py`) — ibid
+- `GET /sales` (`backend/app/routers/sales.py`) — found by full audit of all 13
+  routers; was not mentioned in any prior doc or sprint
 
-**Changed:**
+Also fixed a pre-existing inconsistency: `OAuth2PasswordBearer` was configured with
+`auto_error=True`, causing missing-token 401s to return `{"error": {"code": "HTTP-401"}}`
+rather than `ERR-AUTH-001`. Changed to `auto_error=False` and handle the `None` token
+case explicitly in `get_current_user` — now all unauthenticated requests (missing or
+invalid token) return `ERR-AUTH-001` consistently.
 
-- Fast-forwarded local `main` to `origin/main@60cdc9b` and created the fresh
-  branch `p1-sprint3-matching-truth-set`; no Sprint 2 branch was merged into it.
-- `backend/app/services/matching.py`: calibrated trusted sender from `+10` to
-  `+35` and duplicate penalty from `-30` to `-35`; documented that sender
-  history is caller-supplied trusted evidence, not a value copied from the
-  transaction under evaluation.
-- `backend/app/services/reconciliation.py`: added optional `matching_config` to
-  `reconcile_period()` and passed it to candidate matching, preserving all
-  existing callers through the default.
-- `backend/tests/test_matching.py` and
-  `backend/tests/test_reconciliation_integration.py`: updated expected factor
-  values and added a calibration case proving trusted history reaches 95 while
-  the same amount/time evidence without history remains unmatched.
-- `backend/tests/test_truth_set.py`: added an isolated, reproducible evaluation
-  over P5's 23 canonical bank transactions and 30 sales, with explicit expected
-  IDs, exact/fuzzy/refund allocations, exception classes, status counts,
-  idempotence, false-match, and `<5s` latency assertions.
-- `docs/05-domain/02-algorithm.md`: synchronized the normative scoring weights,
-  sender trust boundary, calibration rationale, and canonical `SEPAY-*` IDs.
-- `docs/05-domain/03-evaluation.md`: documented every seeded bank transaction's
-  expected outcome and the exact KPI calculations.
+Three regression tests added to `backend/tests/test_integration.py` (Group F). All
+40 tests pass. Commit: `9815a3d`.
 
-**Reasoning:**
+**`scripts/reset_demo.py` (Sprint 4 P4 exit criterion)**
 
-- Lowering the auto threshold or allowing note/NLP score into the threshold was
-  rejected because either choice would weaken the false-match policy agreed in
-  Sprint 1. Three deterministic signals are required for the calibrated fuzzy
-  path: exact amount, under-five-minute timing, and independent sender history.
-- Raising only sender weight made a non-identified duplicate rival land exactly
-  at 75, which would correctly block auto-match but also prevent a truly unique
-  identifier from resolving its duplicate group. Raising duplicate penalty to
-  35 keeps that rival at 70 and preserves both safety rules.
-- P1 imports P5 seed builders in the test rather than copying their fixtures, so
-  future seed-ID or amount drift fails visibly. P1 does not modify P5's seed file.
-- Cash is intentionally excluded from the raw-seed matching fixture because the
-  current P5 seed lacks cash allocation ledger rows and discrepancy reason. P1
-  keeps allocation ledger as source of truth instead of deriving money from a
-  status flag and risking double-counting.
+New script at `backend/scripts/reset_demo.py`:
+- Safety gate: aborts immediately (exit 1) if `ENVIRONMENT=production`; no DB is touched
+- Logs each phase with `[HH:MM:SS]` timestamps
+- Measures total elapsed time; prints warning to stderr if > 30s
+- Calls `seed(reset=True)` from `seed_data.py` — FK-safe row deletion then full
+  M001 reseed, no `alembic downgrade` needed
 
-**Verification:**
+Verified: `ENVIRONMENT=production python scripts/reset_demo.py` → exit 1, error message,
+no DB access. Live timing requires running Postgres — static verify passed on this machine.
+Commit: `93794e1`.
 
-- P1 focused suite with isolated fixtures:
-  `python -m pytest tests/test_matching.py tests/test_allocation.py
-  tests/test_cash_reconciliation.py tests/test_reconciliation_integration.py
-  tests/test_truth_set.py -q -p no:cacheprovider --noconftest` — `51 passed`.
-- Sprint 3 truth set alone — `3 passed`; assertions verify `19/23 = 82.61%`
-  bank auto-reconciliation, 0 false matches, refund allocation correctness,
-  25/30 `PAID` sales, idempotence, and latency below 5 seconds.
-- `python -m pyflakes` over all changed Python files — passed.
-- Broader local SQLite regression, excluding environment-incompatible tests —
-  `142 passed, 1 deselected`. The local interpreter lacks installed `langgraph`
-  and `python-jose` despite both being declared in requirements; one existing P5
-  public scorer test also relies on PostgreSQL returning timezone-aware
-  timestamps whereas SQLite returns naive values. These are not P1 regressions.
+**Docker volume — static verify (no Docker on this machine)**
 
-**Status:** P1 Sprint 3 matching calibration and bank truth set are complete.
-The remaining full-seed cash handoff is documented for P5 and does not require
-weakening or bypassing P1's ledger invariants.
+Read `docker-compose.yml` directly. Postgres persistence is **already correctly
+configured**: `volumes: - pgdata:/var/lib/postgresql/data` on the postgres service,
+and `volumes: pgdata:` named-volume declaration at the bottom of the file (lines 12–13,
+63–64). No change needed. Data survives `docker-compose down`.
 
-### 2026-07-18 — Full-system regression and cross-role integration fixes
+---
 
-**Changed:**
+### OPEN ARCHITECTURE QUESTIONS — Awaiting leader decision (do NOT implement)
 
-- `backend/app/tools/__init__.py`: normalized ORM sale timestamps to UTC at the
-  P5 tool → P1 matching-domain boundary. PostgreSQL supplies timezone-aware
-  values, while SQLite and some legacy/import adapters can return naive values;
-  the adapter now restores the canonical UTC interpretation before P1 scoring.
-- `backend/requirements-dev.txt`: made standalone development ranges compatible
-  with the runtime pins and declared the previously missing `asyncpg`,
-  `passlib[bcrypt]`, and `pytest-cov` dependencies.
-- `frontend/package-lock.json`: synchronized the lockfile with `package.json`,
-  allowing a clean `npm ci` instead of failing on a missing transitive
-  `es-abstract` package and a stale `lucide-react` entry.
-- `frontend/.eslintrc.json`: added the non-interactive Next.js Core Web Vitals
-  lint configuration required by CI.
-- `frontend/src/app/layout.tsx`: documented and locally suppressed the
-  app-router font rule for the intentionally shared Material Symbols icon font.
+> Logged 2026-07-19. These are BLOCKED — no code change will be made until the
+> leader provides a decision. P4 has escalated both items directly.
 
-**Reasoning:**
+#### Q.S3-2: Redis queue vs BackgroundTasks — UNRESOLVED
 
-- P1 domain models deliberately reject naive datetimes because timezone guesses
-  inside financial matching can alter candidate ordering. Timestamp repair
-  belongs at the persistence/tool adapter boundary, where UTC is the documented
-  database meaning; P1's invariant remains strict.
-- The previous dev requirements could not be installed together with runtime
-  requirements because their lower bounds excluded the pinned versions, and a
-  fresh environment could not import webhook/security or PostgreSQL modules.
-- Frontend source compiled, but the stale lockfile made reproducible installation
-  fail and the missing ESLint config opened an interactive prompt. Both are CI
-  integration defects, so they were fixed without changing product behavior.
+**Status:** ESCALATED to leader (2026-07-19). Awaiting direct response.
 
-**Verification:**
+The Sprint 3 plan (`docs/04-delivery/00-work-split.md` §Sprint 3 P4, Testing §D)
+requires: "Kill backend mid-run → restart → queue resumes." `BackgroundTasks`
+(in-process, tied to uvicorn process) cannot survive a process kill.
+Implementing a real Redis queue is a significant architecture change.
 
-- `python -m pip check` — no broken requirements.
-- Full backend suite against a generated SQLite test schema — `154 passed`.
-- P1 matching/allocation/reconciliation/truth-set suite — `51 passed`.
-- Targeted `pyflakes` over the P1 services and P5 adapter — passed.
-- FastAPI smoke check — `/health` returned HTTP 200; 43 routes registered.
-- Clean frontend install — `npm ci` passed (417 packages).
-- Frontend lint — no warnings or errors.
-- Frontend production build — passed; TypeScript validation and all 12 routes
-  completed successfully.
+No evidence found in log.md, commit messages, or README that a leader decision
+was ever made to accept BackgroundTasks as the answer to this requirement.
 
-**Environment notes:**
+**Do not implement Redis queue or close this item until leader responds.**
 
-- Docker and a local PostgreSQL client/server were unavailable, so the backend
-  integration run used SQLite with test-only SQLAlchemy JSONB/BigInteger dialect
-  adapters. PostgreSQL-specific deployment behavior remains a CI/staging gate.
-- Python 3.14 emitted dependency deprecation warnings from FastAPI, LangGraph,
-  Starlette, and `pytest-asyncio`; none were application failures.
-- Next.js 14.2.5 still reports its upstream security advisory during install.
-  Upgrading Next.js should be handled by P3/tech lead as a dedicated dependency
-  change with UI regression testing, rather than silently bundled into P1 work.
+#### P0: `POST /reconcile` does not create AgentRun — UNRESOLVED
 
-**Status:** Full locally executable regression is green, including all P1
-financial logic and its P5/P4 integration paths. No known application test,
-lint, build, dependency, or health-smoke failure remains in this branch.
+**Status:** ESCALATED to leader (2026-07-19). Awaiting choice of option (a) or (b).
 
-### 2026-07-18 — P2 Sprint 3: Vietnamese NLP, inline business guidance, evaluation gates
+Both `_run_reconciliation` (merchants.py) and `_noop_agent_run` (reconciliation.py)
+are `async def … pass`. No `AgentRun` row is created, no WebSocket events are fired.
+Demo Scenes 1 ("Planner hiển thị plan") and 2 ("SePay webhook → auto-match") will have
+zero agent-trace real-time activity.
 
-**Changed:**
+Options sent to leader:
+- **(a)** Wire `POST /reconcile` → create `AgentRun` → trigger LangGraph pipeline.
+  Effort: P4 ~2h + P2 ~4–6h. Requires P1 + P2 + P4 coordination. High risk in last sprint.
+- **(b)** Keep no-op. Agent Trace page shows empty/static. All other features (matching,
+  Exception Inbox, Tax Readiness, POS, Cases) remain demo-able. Effort: 0h.
 
-- `backend/app/services/vietnamese_nlp.py` (206 lines): NFC normalization,
-  abbreviation expansion ("ck"→"chuyển khoản", "tt"→"thanh toán", etc.),
-  diacritic restoration ("toc"→"tóc"), transaction type classification with
-  confidence scores.
-- `backend/app/agents/prompts.py`: Inline business guidance injected into all 4
-  agent prompts (planner, reconciliation, tax, merchant ops). Each gets
-  domain-specific context (Vietnamese note clues, confidence thresholds,
-  message drafting rules).
-- `backend/app/agents/specialists.py`: Reconciliation node now calls
-  `interpret_transaction_note()` and passes the expanded note to
-  `score_match_candidates` instead of raw text. `note_interpretation` added to
-  graph state and output.
-- `backend/app/agents/evaluation.py` (172 lines): Sprint 4 quality gates —
-  structured output validation against Pydantic schemas, message quality scoring
-  (Vietnamese markers + action markers + context), confidence calibration
-  (≥80% agreement, 0 overconfident errors), hallucination rate (<5%), latency
-  check.
-- `backend/app/agents/__init__.py`: Updated exports for new evaluation module.
-- `backend/app/agents/graph.py`: Added note_interpretation to graph state.
-- `backend/tests/test_vietnamese_nlp.py` (4 tests, 50 note cases): NFC,
-  abbreviation, diacritic, classification coverage.
-- `backend/tests/test_agent_evaluation.py` (6 tests): Schema validation,
-  message quality, confidence calibration, hallucination, latency.
-- `backend/tests/test_agents.py`: Updated to verify note interpretation flows
-  through the agent graph.
-
-**Reasoning:**
-
-- NLP is deterministic (regex + dictionary, no ML dependency) to keep the
-  hackathon MVP reliable and avoid model hosting complexity.
-- Note interpretation is injected at the reconciliation node boundary rather
-  than inside the matching service, preserving P1's clean domain interface.
-- Evaluation module is structured for Sprint 4 reuse — quality gates are
-  independent and composable.
-
-**Verification:**
-
-- `pytest tests/test_vietnamese_nlp.py -v` — 4/4 pass, 50-case accuracy ≥85%.
-- `pytest tests/test_agent_evaluation.py -v` — 6/6 pass.
-- `pytest tests/test_agents.py -v` — all pass, note interpretation verified in
-  graph output.
-
-**Status:** P2 Sprint 3 complete. NLP, prompt guidance, and evaluation gates
-delivered. No `log.md` entry was written by P2 — this entry was added by P3
-(team lead) during merge integration.
-
-### 2026-07-18 — P4 Sprint 3: Endpoint fixes, ERR-TAX-003 dead code path, integration tests
-
-**Changed:**
-
-- `backend/app/routers/reconciliation.py`: POST /reconcile endpoints now return
-  HTTP 202 instead of 200, matching spec API-RECON-POST-001 for async
-  acceptance.
-- `backend/app/routers/tax.py`: Fixed ERR-TAX-003 dead code path — now uses
-  `case.tax_rule_version` to detect expired rules instead of the unreachable
-  branch.
-- `backend/app/routers/merchants.py`: Expanded merchant management endpoints
-  (+112 lines).
-- `backend/app/routers/pos.py`: Minor endpoint fixes.
-- `backend/app/routers/audit.py`: Minor fixes.
-- `backend/app/routers/transactions.py`: Enhanced transaction query endpoints.
-- `backend/app/core/security.py`: Minor fix.
-- `backend/app/schemas/reconciliation.py`: Added schema field for async
-  response.
-- `backend/tests/test_integration.py` (845 lines, 37 test cases): Covers 22/28
-  error codes — comprehensive integration test suite.
-
-**Reasoning:**
-
-- 202 vs 200 for async reconcile: spec explicitly states 202 Accepted for
-  endpoints that dispatch background processing.
-- ERR-TAX-003 fix: the original code path was unreachable because it checked a
-  condition that could never be true given the query logic. Using
-  `tax_rule_version` from the case record is the correct domain approach.
-- Integration tests cover error codes systematically to catch regressions in
-  Sprint 4.
-
-**Verification:**
-
-- `pytest tests/test_integration.py -v` — 37 test cases covering 22/28 error
-  codes.
-- Manual smoke test of POST /reconcile — returns 202 as expected.
-- ERR-TAX-003 path verified with expired tax rule fixture.
-
-**Status:** P4 Sprint 3 complete. Endpoint spec compliance, dead code fix, and
-integration test suite delivered. No `log.md` entry was written by P4 — this
-entry was added by P3 (team lead) during merge integration.
-
-### 2026-07-18 — P3 Sprint 4: Frontend product integration on current main
-
-**Changed:**
-
-- Created the clean delivery branch `p3-frontend-design-consistency-final` from
-  integrated `origin/main@13a3b74` and selectively ported only P3-owned
-  `frontend/**` work. The old 44-commit mixed-role branch was not merged or
-  rebased, preventing stale P1/P2/P4/P5 implementations from replacing the
-  current shared code.
-- Replaced the starter frontend with the complete TaxLens Next.js product:
-  secure same-origin session gateway, seven-screen merchant workspace, SHB
-  operations workspace, public confirmation, settings/import, sales/QR/cash,
-  assistant evidence, responsive navigation, dark mode, accessible primitives,
-  loading/empty/error states, and API/SSE/WebSocket client contracts.
-- Preserved the supplied Stitch HTML/screens and brand assets as design
-  references while implementing the approved TaxLens visual system as reusable
-  React components. Removed Material Symbols from the app layout and retained
-  the locked Momo Trust Display, Newsreader, JetBrains Mono, navy, cream, and
-  orange identity.
-- Fixed the Playwright release harness to exercise a production server instead
-  of a hot-reload development server. The test build alone disables Next
-  standalone output; deploy builds remain standalone. Dev-only showcase routes
-  are exposed only when `PLAYWRIGHT_TEST=1`.
-- Updated the compact transactions visual baseline after production rendering
-  correctly wrapped filter controls instead of clipping them.
-- Added `docs/demo-script.md` with exactly six scenes, an 8:30 runbook, expected
-  outcomes, presenter cues, recovery paths, rehearsal records, and claim
-  guardrails. The pitch deck was explicitly deferred by the product owner and
-  was not created or modified.
-- Ported `docs/04-delivery/03-design.md`, the frontend build state/acceptance
-  documents, and `frontend-design-consistency-cf1ebe.md`. Changes to the
-  original plan are additive/minor: current evidence, fresh-branch state, P3
-  scope guard, owner blockers, and dependency risk are recorded without
-  rewriting the 14-stage plan.
-
-**Reasoning:**
-
-- Current `main` already contains the teammates' Sprint 3 work. A whole-branch
-  merge would conflict with and potentially regress calibrated matching,
-  Vietnamese agent logic, backend security/routes, and the data pipeline, so
-  P3's frontend was ported as a role-owned tree onto a fresh base.
-- Production-mode browser tests are more representative and deterministic than
-  Next development mode. The earlier dev run showed Fast Refresh navigation
-  races; the production harness removes that false failure class while keeping
-  deployment configuration unchanged.
-- Integrated-main contract review found missing or incompatible runtime
-  contracts for invoices, full tax readiness, agent streaming/approvals,
-  realtime payment allocation, portfolio ops, and settings integrations. Those
-  belong to P1/P2/P4/P5, so P3 records exact blockers rather than duplicating or
-  overwriting teammate code.
-- `npm audit` reports two moderate entries for one transitive PostCSS advisory
-  pinned by the latest stable Next 16. There is no patched stable Next 16;
-  npm's suggested Next 9 downgrade and preview/canary adoption would create more
-  release risk. The current risk is accepted conditionally because no dynamic
-  or user-controlled CSS processing path exists.
-
-**Verification:**
-
-- `npm ci` — 499 packages installed from the committed lockfile.
-- `npm run lint` — pass.
-- `npm run typecheck` — pass.
-- `npm test -- --run` — 13 files, 41/41 tests pass.
-- `npm run build` — pass; all 27 app routes compile and prerender as expected.
-- `npm run test:e2e` with isolated production server — 33/33 tests pass across
-  desktop, compact, and mobile. Coverage includes accessibility, keyboard,
-  responsive overflow, visual snapshots, ledger, readiness, sales, settings,
-  assistant, SHB ops, and public confirmation.
-- `npm ci --dry-run --ignore-scripts` — manifest and lockfile are consistent.
-- `git diff --check` over executable frontend and P3-owned docs — pass. The raw
-  Stitch reference HTML/design files retain eight pre-existing trailing-space
-  lines intentionally so the supplied reference assets remain byte-for-byte.
-
-**Status:** P3-owned frontend product and deterministic browser gate are
-complete. Live six-scene rehearsal is pending because integrated-main backend
-contracts and demo data are owned by other Sprint 4 roles. No backend, matching,
-agent-core, infrastructure, seed, reset, or data-pipeline file was modified.
-
-### 2026-07-18 — P3: Integrated-main frontend contract hardening
-
-**Changed:**
-
-- Added one canonical dashboard adapter shared by the merchant dashboard and
-  SHB operations views. It accepts both the documented rich response and P4's
-  merged `matched`, decimal rate, boolean readiness, and missing-score shape;
-  recent transactions are loaded through the existing transaction client and
-  remain an optional enhancement.
-- Normalized P4's `{transactions, total}` response, P4's bare sales array, the
-  compact tax-readiness checklist, and the SePay WebSocket envelope into the
-  stable frontend domain model. Tax export now uses the merged `POST` contract
-  and exposes only the supported JSON and CSV formats.
-- Removed the development-only `/pos/demo-payments` action because no such
-  merged endpoint exists. Cash receipts now fall back to the returned cash
-  session identifier when P4 omits `allocation_id`, avoiding
-  `CASH-undefined`. A missing `/pos/context` contract now produces an explicit
-  unavailable state rather than leaving checkout silently inert.
-- Kept the future SSE assistant contract but added a compatibility fallback to
-  merged `POST /agents/run`. A `PLANNING` response is displayed as accepted and
-  waiting for backend execution; approval actions are queried only when a run
-  actually emits an approval checkpoint.
-- Corrected frontend session expiry to `ERR-AUTH-002`, made nullable transaction
-  match status truthful, and removed proven-unused scaffold assets, legacy
-  ESLint config, and domain declarations. Supplied Stitch/reference assets,
-  fixtures, showcase routes, snapshots, and all used dependencies were kept.
-- Expanded contract tests to cover P4's exact dashboard/readiness shapes,
-  nullable/default response fields, SePay's merged WebSocket wrapper, the cash
-  receipt fallback, POST tax export, and the non-streaming agent fallback.
-
-**Reasoning:**
-
-- The frontend previously passed mocked browser tests while bypassing main's
-  actual response shapes in Ops and calling two routes absent from main. One
-  adapter per domain prevents future consumer drift without editing P4-owned
-  routers or P2-owned agent execution.
-- Main currently accepts reconciliation/agent work in `PLANNING` but provides no
-  lifecycle transition. The UI must not claim completion or poll indefinitely;
-  it now reports the accepted state exactly and preserves the SSE path for the
-  owning backend team to activate later.
-- Dead-code removal required both symbol/import scans and repository-wide
-  reference scans. Ambiguous or intentional material was retained, including
-  the contract-correct but currently secondary `startAgentRun` client.
-
-**Verification:**
-
-- `npm test -- --run tests/ledger-api.test.ts tests/domain-contracts.test.tsx tests/sales-workspace.test.tsx tests/agentops-contract.test.tsx` — 4 files, 18/18 tests pass.
-- `npm run typecheck` — pass.
-- `npm run lint` — pass.
-- `git diff --check` — pass for this compatibility slice.
-
-**Status:** P3 compatibility hardening complete. Remaining live-contract gaps
-are explicitly owned elsewhere: P4 must provide POS context, authenticated
-dashboard/reconcile, merchant portfolio and operations routes; P1/P4 must
-persist matching fields and correct the dashboard count; P2/P4 must execute and
-transition agent/reconciliation runs. No teammate-owned file was modified.
-
-### 2026-07-18 — P3: Release documentation and final browser gate
-
-**Changed:**
-
-- Replaced the generic create-next-app README with Vietnamese-first TaxLens
-  onboarding: supported Node/npm flow, server-only backend URL, same-origin
-  gateway, WebSocket/cookie variables, real route map and exact release gates.
-- Reconciled the six-scene demo script with P5's validated truth set of 23 bank
-  transactions, 15 matched and 8 exceptions. Hương now owns the merchant
-  `/assistant` scene; Linh stays in SHB `/ops`; account/tab switches are
-  explicit; unsupported MISA submission/export claims and unverified
-  45-minute/under-5-minute claims were removed.
-- Preserved the original frontend goal rather than rewriting it. Added a status
-  banner, marked the old branch name and direct-browser API examples as
-  historical, pointed current contracts to the API/schema owners, and recorded
-  the `90fae49` compatibility checkpoint plus current gate evidence.
-- Marked earlier duplicate information-architecture, Ops and screen-inventory
-  sections in `03-design.md` as superseded by the later normative sections,
-  leaving decision history intact while providing one clear current authority.
-- Refreshed `STATE.md`, `ACCEPTANCE.md` and `NEXT_PROMPT.md` into a current
-  release handoff with exact P3 evidence and P1/P2/P4 owner blockers. The
-  corrupted/stale shared `00-work-split.md` and deferred pitch deck were
-  intentionally not modified because they are outside the P3 boundary.
-- Updated Ops E2E fixtures to prevent an unmocked optional transaction request
-  from reaching the local backend and clearing the test session. Updated the
-  compact tax-readiness snapshot after reviewing the intentional removal of the
-  unsupported MISA control.
-
-**Reasoning:**
-
-- Repository docs had competing “final” sections and stale demo claims. Small
-  authority annotations and one current handoff are safer than deleting design
-  history or heavily rewriting the approved 14-stage plan.
-- The first full Playwright run had 28 passes and five failures. Four failures
-  were caused by the new dashboard enrichment requesting an unmocked
-  `/transactions` endpoint; the gateway received an upstream auth failure and
-  correctly cleared the test cookie before the next Ops navigation. The fifth
-  was the expected 24px height reduction after removing MISA. Adding the
-  explicit transaction fixture and regenerating only the reviewed compact
-  snapshot fixed test infrastructure without weakening assertions.
-- The frontend gate proves P3 implementation quality, not live backend
-  completeness. POS context, authenticated/reliable lifecycle endpoints,
-  allocation-derived dashboard metrics and real agent execution remain with
-  their named owners and keep the overall product release blocked.
-
-**Verification:**
-
-- `npm run lint` — pass.
-- `npm run typecheck` — pass.
-- `npm test -- --run` — 13 files, 44/44 tests pass.
-- `npm run build` — pass; 27 routes compile/prerender. Next emits one non-fatal
-  warning because it has no fallback font metrics for Momo Trust Display.
-- `npx playwright test tests/e2e/agentops.spec.ts` — 9/9 pass after fixture fix.
-- `npx playwright test tests/e2e/ledger-journey.spec.ts --project=compact --update-snapshots` — 2/2 pass; only the reviewed tax-readiness snapshot changed.
-- `npm run test:e2e` on isolated port 3313 — 33/33 pass across desktop,
-  compact and mobile.
-- `git diff --check` — pass for the current P3 release slice.
-
-**Status:** P3 code, design consistency, onboarding, deterministic tests and
-browser release gate are complete. Live six-scene rehearsal and overall product
-release remain blocked by the explicitly listed P1/P2/P4 contracts. Pitch deck,
-work-split, backend, matching, agent internals, infrastructure and seed/reset
-files remain untouched.
-
-### 2026-07-18 — P3: Synchronize latest integration documentation
-
-**Changed:**
-
-- Merged current `origin/main@4eb7391` into the P3 delivery branch after a
-  conflict-free merge-tree simulation. This brings in the integration owner's
-  canonical `AGENTS.md` and latest shared work-split commit without editing
-  either file in P3's branch delta.
-- Rechecked the Sprint 4 P3 section. It defines the live six-scene rehearsal as
-  the P3 completion gate and adds no separate P3 S1–Sn simulation block.
-
-**Reasoning:**
-
-- Main advanced after the P3 release commits. Merging the one documentation
-  commit keeps the branch current while retaining the already referenced P3
-  checkpoint hashes and avoiding a stale-base PR.
-- The new shared work-split still contains older `30/25/5`, SHB-on-assistant and
-  pitch requirements. P3 did not rewrite this shared cross-role authority: the
-  current demo handoff records P5's validated `23/15/8`, assigns the merchant
-  assistant to Hương, and follows the product owner's explicit instruction to
-  defer the pitch deck. These inconsistencies are flagged for the integration
-  owner rather than silently changed by P3.
-
-**Verification:**
-
-- `git fetch origin --prune` — latest main is `4eb7391`.
-- All `origin/p1-chau`, `origin/p2-nguyen`, `origin/p4-hoang` and
-  `origin/p5-nhi` tips are ancestors of current main.
-- `git merge-tree $(git merge-base origin/main HEAD) origin/main HEAD` — no
-  conflict markers before merge.
-- `git merge --no-commit --no-ff origin/main` — automatic merge completed with
-  no conflicts and paused for this mandatory log entry.
-
-**Status:** Latest main documentation integrated without conflict. P3 scope and
-the deferred pitch decision remain unchanged; live rehearsal remains blocked.
-
-### 2026-07-18 — P3: Final diff hygiene
-
-**Changed:**
-
-- Removed one extra blank line at EOF from the touched frontend domain types
-  after the full branch diff gate identified it.
-
-**Reasoning:**
-
-- The line was behavior-neutral, but keeping the executable P3 diff completely
-  clean avoids normalizing or waiving warnings at merge time. Raw Stitch source
-  whitespace remains intentionally excluded because those supplied references
-  are preserved byte-for-byte.
-
-**Verification:**
-
-- `npx tsc --noEmit --noUnusedLocals --noUnusedParameters` — pass.
-- P3 branch delta contains no backend, work-split, pitch or teammate-owned file.
-- Merge-tree against current `origin/main@4eb7391` — no conflict markers.
-
-**Status:** Final executable diff hygiene complete; ready for push verification.
-
-### 2026-07-18 — P3: Self-host Momo font and diagnose hydration noise
-
-**Changed:**
-
-- Replaced the `next/font/google` loader for Momo Trust Display with the same
-  official font file served locally through `next/font/local`. Newsreader and
-  JetBrains Mono remain unchanged.
-- Updated the reviewed desktop transactions snapshot for the small rasterization
-  difference between Google's served subset and the official full TTF.
-
-**Reasoning:**
-
-- Next 16 repeatedly warned that it could not calculate fallback override
-  metrics for Momo Trust Display even with fallback adjustment disabled. Local
-  font loading preserves the locked design typeface, removes the noisy warning,
-  avoids a runtime request for this UI font and keeps the build deterministic.
-- The reported hydration attributes (`bis_skin_checked`, `bis_register` and
-  `__processed_*`) are injected by a browser security/traffic extension before
-  React hydrates. They are absent in Playwright and production builds. TaxLens
-  does not suppress real descendant hydration errors or mutate the DOM to fight
-  an external extension; localhost should be tested with that extension disabled
-  or in a clean Incognito profile.
-
-**Verification:**
-
-- `npm run lint` — pass.
-- `npm run typecheck` — pass.
-- `npm run build` — 27 routes pass with no Momo fallback warning.
-- Reviewed the new desktop transactions screenshot; layout, hierarchy and
-  responsive bounds remain correct.
-- Targeted desktop ledger visual test — 2/2 pass.
-- `npm run test:e2e` on isolated port 3316 — 33/33 pass across desktop,
-  compact and mobile.
-
-**Status:** Font warning fixed and browser-extension hydration noise isolated;
-P3 remains ready to merge after protecting the dirty main worktree.
+**Do not implement either option until leader responds.**
 
