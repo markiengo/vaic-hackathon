@@ -160,17 +160,10 @@ async def assign_rm(
     return {"case_id": case.id, "assigned_rm_id": case.assigned_rm_id, "status": case.status}
 
 
-@router.post("/{case_id}/draft-message")
-async def draft_message(
-    case_id: str,
-    body: DraftMessageRequest,
-    db: AsyncSession = Depends(get_db),
-    _user=Depends(get_current_user),
-) -> dict:
+async def _handle_draft_message(case_id: str, body: DraftMessageRequest, db: AsyncSession) -> dict:
     case = await db.get(ReconciliationCase, case_id)
     if case is None:
         raise TaxLensError("ERR-CASE-001", 404, "Case không tồn tại")
-
     exceptions: list[ExceptionRecord] = []
     if body.exception_ids:
         ex_result = await db.execute(
@@ -180,6 +173,25 @@ async def draft_message(
             )
         )
         exceptions = ex_result.scalars().all()
-
     message = _draft_merchant_message(case, exceptions)
     return {"case_id": case_id, "message": message, "status": "DRAFT"}
+
+
+@router.post("/{case_id}/draft-message")
+async def draft_message(
+    case_id: str,
+    body: DraftMessageRequest,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> dict:
+    return await _handle_draft_message(case_id, body, db)
+
+
+@router.post("/{case_id}/message")
+async def draft_message_alias(
+    case_id: str,
+    body: DraftMessageRequest,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> dict:
+    return await _handle_draft_message(case_id, body, db)
