@@ -1,0 +1,16 @@
+# Required environment variables for TaxLens backend (Sprint 2)
+# Source: docs/03-engineering/03-integration.md §Configuration
+# Format: one var per line (used by diff check in verify step)
+DATABASE_URL
+REDIS_URL
+JWT_SECRET
+SEPAY_API_URL
+SEPAY_API_TOKEN
+SEPAY_WEBHOOK_API_KEY
+INVOICE_API_URL
+CASE_API_URL
+LLM_PROVIDER
+LLM_API_KEY
+LLM_MODEL_PLANNER
+LLM_MODEL_SPECIALIST
+DEEPSEEK_API_KEY
