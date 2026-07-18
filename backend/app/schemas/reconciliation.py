@@ -13,6 +13,8 @@ class ExceptionResolveResponse(BaseModel):
     status: str
     decision: str
     classification: str | None
+    resolved_by: str | None
+    resolved_at: str | None
 
 
 class ReconcileRequest(BaseModel):

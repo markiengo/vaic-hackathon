@@ -223,4 +223,6 @@ async def resolve_exception(
         status=ex.status,
         decision=ex.human_decision,
         classification=body.classification,
+        resolved_by=ex.human_decision_by,
+        resolved_at=ex.human_decision_at.isoformat() if ex.human_decision_at else None,
     )
