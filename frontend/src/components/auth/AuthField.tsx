@@ -26,8 +26,8 @@ export function AuthField({
   className,
 }: AuthFieldProps) {
   return (
-    <label className={cn("grid gap-2", className)}>
-      <span className="text-[14px] font-medium text-text">{label}</span>
+    <label className={cn("grid gap-1.5", className)}>
+      <span className="text-[13px] font-medium text-text">{label}</span>
       <input
         name={name}
         type={type}
@@ -36,7 +36,7 @@ export function AuthField({
         required={required}
         minLength={minLength}
         defaultValue={defaultValue}
-        className="h-[54px] rounded-[12px] border border-border bg-white px-4 text-[15px] text-text outline-none transition-colors placeholder:text-text-tertiary focus:border-primary"
+        className="h-[46px] rounded-[10px] border border-border bg-white px-4 text-[14px] text-text outline-none transition-colors placeholder:text-text-tertiary focus:border-primary"
       />
     </label>
   );
