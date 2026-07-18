@@ -59,6 +59,12 @@ class PosCashSessionCloseRequest(BaseModel):
     discrepancy_reason: str | None = None
 
 
+class PosCashSessionFlatCloseRequest(BaseModel):
+    session_id: int
+    counted_cash: Decimal = Field(ge=0)
+    discrepancy_reason: str | None = None
+
+
 class PosCashSessionCloseResponse(BaseModel):
     session_id: str
     opening_cash: Decimal

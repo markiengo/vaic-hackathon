@@ -17,6 +17,7 @@ from app.schemas.pos import (
     PosCashPaymentResponse,
     PosCashSessionCloseRequest,
     PosCashSessionCloseResponse,
+    PosCashSessionFlatCloseRequest,
     PosCreateSaleRequest,
     PosCreateSaleResponse,
     PosPaymentIntentRequest,
@@ -222,6 +223,39 @@ async def record_cash_payment(
     )
 
 
+async def _close_session(
+    session_id: int, counted_cash: Decimal, discrepancy_reason: str | None, db: AsyncSession
+) -> PosCashSessionCloseResponse:
+    session = await db.get(CashSession, session_id)
+    if session is None or session.status != "OPEN":
+        raise TaxLensError("ERR-POS-004", 404, "Ca tiền mặt không tồn tại hoặc đã đóng")
+    expected = session.expected_cash or Decimal("0")
+    discrepancy = counted_cash - expected
+    session.counted_cash = counted_cash
+    session.discrepancy = discrepancy
+    session.discrepancy_reason = discrepancy_reason
+    session.status = "RECONCILED" if discrepancy == Decimal("0") else "DISCREPANCY"
+    session.closed_at = datetime.now(timezone.utc)
+    await db.commit()
+    return PosCashSessionCloseResponse(
+        session_id=str(session.id),
+        opening_cash=session.opening_cash,
+        expected_cash=expected,
+        counted_cash=counted_cash,
+        discrepancy=discrepancy,
+        status=session.status,
+    )
+
+
+@router.post("/cash-sessions/close", response_model=PosCashSessionCloseResponse)
+async def close_cash_session_flat(
+    body: PosCashSessionFlatCloseRequest,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> PosCashSessionCloseResponse:
+    return await _close_session(body.session_id, body.counted_cash, body.discrepancy_reason, db)
+
+
 @router.post("/cash-sessions/{session_id}/close", response_model=PosCashSessionCloseResponse)
 async def close_cash_session(
     session_id: int,
@@ -229,25 +263,4 @@ async def close_cash_session(
     db: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
 ) -> PosCashSessionCloseResponse:
-    session = await db.get(CashSession, session_id)
-    if session is None or session.status != "OPEN":
-        raise TaxLensError("ERR-POS-004", 404, "Ca tiền mặt không tồn tại hoặc đã đóng")
-
-    expected = session.expected_cash or Decimal("0")
-    discrepancy = body.counted_cash - expected
-    session.counted_cash = body.counted_cash
-    session.discrepancy = discrepancy
-    session.discrepancy_reason = body.discrepancy_reason
-    session.status = "RECONCILED" if discrepancy == Decimal("0") else "DISCREPANCY"
-    session.closed_at = datetime.now(timezone.utc)
-
-    await db.commit()
-
-    return PosCashSessionCloseResponse(
-        session_id=str(session.id),
-        opening_cash=session.opening_cash,
-        expected_cash=expected,
-        counted_cash=body.counted_cash,
-        discrepancy=discrepancy,
-        status=session.status,
-    )
+    return await _close_session(session_id, body.counted_cash, body.discrepancy_reason, db)
