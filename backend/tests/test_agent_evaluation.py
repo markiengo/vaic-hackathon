@@ -1,3 +1,5 @@
+import pytest
+
 from app.agents.prompts import (
     BUSINESS_GUIDANCE_CONTEXT,
     MERCHANT_OPS_SYSTEM_PROMPT,
@@ -94,6 +96,38 @@ def test_sprint4_merchant_messages_are_vietnamese_and_actionable() -> None:
     assert not evaluate_message_quality("Please check.").passed
 
 
+@pytest.mark.parametrize(
+    ("message", "expected_pass", "expected_reasons"),
+    [
+        (
+            "Vui lòng kiểm tra.",
+            False,
+            {"message_too_short", "missing_merchant_context", "missing_period_context"},
+        ),
+        (
+            "Kính gửi Salon Hoa, vui lòng xác nhận giao dịch.",
+            False,
+            {"message_too_short", "missing_period_context"},
+        ),
+        (
+            "Kính gửi Salon Hoa, trong kỳ 2026-07 vui lòng xác nhận giao dịch và cung cấp hóa đơn bổ sung để RM hoàn tất đối soát.",
+            True,
+            set(),
+        ),
+    ],
+)
+def test_sprint4_message_quality_thresholds(
+    message: str, expected_pass: bool, expected_reasons: set[str]
+) -> None:
+    result = evaluate_message_quality(message)
+
+    assert result.passed is expected_pass
+    for reason in expected_reasons:
+        assert reason in result.reasons
+    if expected_pass:
+        assert result.score >= 0.8
+
+
 def test_sprint4_confidence_scores_are_calibrated_on_seed_like_sample() -> None:
     suggestions = [
         {"suggested_type": "revenue", "expected_type": "revenue", "confidence": 0.96},
@@ -115,6 +149,22 @@ def test_sprint4_confidence_scores_are_calibrated_on_seed_like_sample() -> None:
     assert result.overconfident_errors == 0
 
 
+def test_sprint4_confidence_calibration_detects_overconfident_and_underconfident_cases() -> None:
+    suggestions = [
+        {"suggested_type": "revenue", "expected_type": "revenue", "confidence": 0.96},
+        {"suggested_type": "internal_transfer", "expected_type": "internal_transfer", "confidence": 0.70},
+        {"suggested_type": "refund", "expected_type": "loan", "confidence": 0.97},
+        {"suggested_type": "fee", "expected_type": "fee", "confidence": 0.82},
+    ]
+
+    result = evaluate_confidence_calibration(suggestions)
+
+    assert not result.passed
+    assert result.agreement_rate == 0.75
+    assert result.overconfident_errors == 1
+    assert result.underconfident_correct == 1
+
+
 def test_sprint4_hallucination_rate_and_latency_gates() -> None:
     tool_calls = [
         {"agent": "reconciliation", "tool_name": "get_bank_transactions"},
@@ -127,3 +177,46 @@ def test_sprint4_hallucination_rate_and_latency_gates() -> None:
     assert hallucination_rate(tool_calls + [{"agent": "merchant_ops", "tool_name": "made_up_tool"}]) >= 0.05
     assert latency_within_limit(0.2)
     assert not latency_within_limit(30.0)
+
+
+def test_sprint4_hallucination_rate_respects_alias_fields() -> None:
+    tool_calls = [
+        {"agent_name": "merchant_ops", "tool": "draft_merchant_message"},
+        {"agent": "merchant_ops", "tool_name": "made_up_tool"},
+    ]
+
+    assert hallucination_rate(tool_calls) == 0.5
+
+
+def test_sprint4_structured_output_validation_reports_schema_errors() -> None:
+    workflow_output = {
+        "plan": [
+            {"step": 1, "action": "Đối soát", "agent": "planner"},
+        ],
+        "reconciliation_output": {
+            "merchant_id": "M001",
+            "matched": 1,
+            "unmatched": 0,
+            "duplicate_candidates": 0,
+            "missing_invoice_cases": 0,
+            "exceptions": [],
+        },
+        "tax_compliance_output": {
+            "rule_version": "2026.07",
+            "ready": True,
+            "checklist": [],
+            "report": {},
+        },
+        "merchant_ops_output": {
+            "cases_created": 1,
+            "messages_drafted": 1,
+            "exports_created": 1,
+            "case_ids": ["CASE-M001-2026-07"],
+        },
+    }
+
+    result = validate_structured_agent_outputs(workflow_output)
+
+    assert not result.passed
+    assert result.errors
+    assert any("plan" in error for error in result.errors)

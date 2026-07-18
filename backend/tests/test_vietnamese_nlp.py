@@ -1,9 +1,12 @@
 import unicodedata
 
+import pytest
+
 from app.services.vietnamese_nlp import (
     expand_vietnamese_note,
     interpret_transaction_note,
     normalize_vietnamese_note,
+    strip_diacritics,
 )
 
 
@@ -69,10 +72,25 @@ def test_normalize_vietnamese_note_uses_nfc_and_collapses_whitespace() -> None:
     assert normalized == unicodedata.normalize("NFC", "tóc khách")
 
 
+def test_normalize_vietnamese_note_handles_none_and_trims_noise() -> None:
+    assert normalize_vietnamese_note(None) == ""
+    assert normalize_vietnamese_note("   cắt   tóc   khách   ") == "cắt tóc khách"
+
+
 def test_expand_vietnamese_note_restores_common_abbreviations_and_accents() -> None:
     expanded = expand_vietnamese_note("ck cat toc hd")
 
     assert expanded == "chuyển khoản cắt tóc hóa đơn"
+
+
+def test_expand_vietnamese_note_handles_symbols_and_preserves_word_order() -> None:
+    expanded = expand_vietnamese_note("CK!!! @#$% cat toc  hd")
+
+    assert expanded == "chuyển khoản cắt tóc hóa đơn"
+
+
+def test_strip_diacritics_removes_marks_without_reordering_words() -> None:
+    assert strip_diacritics("Đặng Thùy Trâm") == "dang thuy tram"
 
 
 def test_note_classification_reaches_85_percent_accuracy_on_50_note_set() -> None:
@@ -92,3 +110,32 @@ def test_note_interpretation_returns_confidence_and_evidence() -> None:
     assert interpretation.suggested_type == "internal_transfer"
     assert interpretation.confidence >= 0.8
     assert interpretation.evidence
+
+
+@pytest.mark.parametrize(
+    ("raw_note", "expected_type", "minimum_confidence"),
+    [
+        ("hoan tien don hang", "refund", 0.85),
+        ("vay tam ung", "loan", 0.8),
+        ("phi ngan hang", "fee", 0.8),
+        ("ck noi bo", "internal_transfer", 0.85),
+        ("", "other", 0.4),
+    ],
+)
+def test_note_interpretation_covers_non_revenue_paths(
+    raw_note: str, expected_type: str, minimum_confidence: float
+) -> None:
+    interpretation = interpret_transaction_note(raw_note)
+
+    assert interpretation.suggested_type == expected_type
+    assert interpretation.confidence >= minimum_confidence
+
+
+def test_note_interpretation_caps_confidence_for_repetitive_revenue_signal() -> None:
+    note = " ".join(["chuyen khoan cat toc goi dau uon toc"] * 20)
+
+    interpretation = interpret_transaction_note(note)
+
+    assert interpretation.suggested_type == "revenue"
+    assert interpretation.confidence == 0.95
+    assert "Có dịch vụ cắt tóc" in interpretation.evidence

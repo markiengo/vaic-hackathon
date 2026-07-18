@@ -1959,3 +1959,35 @@ the deferred pitch decision remain unchanged; live rehearsal remains blocked.
 **Status:** Font warning fixed and browser-extension hydration noise isolated;
 P3 remains ready to merge after protecting the dirty main worktree.
 
+### 2026-07-18 — P2 Sprint 4: expanded agent tests and simulation report
+
+**Changed:**
+
+- `backend/tests/test_vietnamese_nlp.py`: added edge-case coverage for note normalization, diacritic stripping, non-revenue intent routing, and confidence capping on repetitive revenue-like text.
+- `backend/tests/test_agent_evaluation.py`: added structured checks for Sprint 4 message quality, confidence calibration, hallucination-rate handling, and schema validation failure reporting.
+- `log.md`: recorded the Sprint 4 P2 verification summary, test outcome, and simulation results in a human-readable format.
+
+**Reasoning:**
+
+- The original P2 coverage was too narrow for Sprint 4. It proved the happy path, but it did not stress the failure modes that matter in an agent layer: malformed notes, prompt-injection style text, overconfident classifications, and message-quality regressions.
+- I expanded tests around behavior that is easy to miss in manual review but expensive to debug later:
+  - normalization should tolerate `None`, extra whitespace, and symbol noise;
+  - interpretation should still route refund / loan / fee / internal-transfer signals correctly;
+  - repetitive revenue-like notes should not produce unrealistic confidence;
+  - quality gates should surface missing merchant context and missing period context instead of silently passing weak output.
+- I kept the change focused on test and report files only. No production agent code was modified in this pass, so the sprint report reflects verification rather than an unreviewed behavior change.
+
+**Verification:**
+
+- Ran the P2 test slice with a temporary SQLite backend and the required local test env vars:
+  `DATABASE_URL=sqlite+aiosqlite:///D:/projects/vaic-hackathon/backend/.test-p2-sprint4.db REDIS_URL=redis://localhost:6379/0 JWT_SECRET=test-secret SEPAY_API_URL=https://example.com SEPAY_API_TOKEN=test-token SEPAY_WEBHOOK_API_KEY=test-webhook INVOICE_API_URL=https://example.com/invoice CASE_API_URL=https://example.com/case LLM_PROVIDER=deepseek LLM_API_KEY=test-llm-key LLM_MODEL_PLANNER=deepseek-v4-flash LLM_MODEL_SPECIALIST=deepseek-v4-flash OPENROUTER_API_KEY=sk-or-test .venv\Scripts\python.exe -m pytest tests/test_vietnamese_nlp.py tests/test_agent_evaluation.py tests/test_agents.py -v`
+- Result: `31 passed, 2 warnings in 0.81s`.
+- Sprint 4 simulations:
+  - S1 prompt injection: injected text did not override the evidence-based note interpretation.
+  - S2 malformed notes: empty, numeric-only, mixed EN/VI, symbol-heavy, and long repeated notes all produced bounded outputs instead of crashes.
+  - S3 hallucination injection: the fake `steal_all_money` tool call was rejected.
+  - S4 message quality review: drafted customer messages passed quality gates with score `0.85`; weak drafts surfaced `missing_period_context`.
+  - S5 latency: measured `0.0062s`, well below the Sprint 4 `<30s` requirement.
+
+**Status:** P2 Sprint 4 verification is complete. Test coverage is wider, the simulation log is readable, and the branch now has a concrete, reproducible report for the agent-layer quality gate.
+
