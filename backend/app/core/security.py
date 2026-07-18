@@ -31,7 +31,7 @@ from app.core.redis import get_redis
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 
-_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 # ---------------------------------------------------------------------------
@@ -108,12 +108,14 @@ def decode_token(token: str) -> dict:
 
 
 async def get_current_user(
-    token: str = Depends(_oauth2_scheme),
+    token: str | None = Depends(_oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ):
     """Decode JWT and return the matching active User row."""
     from app.models.user import User  # local import avoids circular at module load
 
+    if token is None:
+        raise TaxLensError("ERR-AUTH-001", 401, "Thiếu token xác thực")
     payload = decode_token(token)
     if payload.get("type") != "access":
         raise TaxLensError("ERR-AUTH-001", 401, "Token không đúng loại")

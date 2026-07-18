@@ -843,3 +843,41 @@ async def test_slow_transactions_response_time(api_client):
 
     assert resp.status_code == 200
     assert elapsed_ms < 5000, f"Transactions took {elapsed_ms:.0f} ms (>5000 ms)"
+
+
+# ===========================================================================
+# GROUP F — Auth guard regressions (Sprint 4 — previously unprotected endpoints)
+# ===========================================================================
+
+
+async def test_auth_guard_dashboard_returns_401_without_token(api_client):
+    """GET /merchants/{id}/dashboard must require auth (Sprint 4 fix)."""
+    client, _, __, ___ = api_client
+    resp = await client.get(
+        "/api/v1/merchants/M-TEST-001/dashboard",
+        params={"period": "2020-01"},
+    )
+    assert resp.status_code == 401
+    assert resp.json()["error"]["code"] == "ERR-AUTH-001"
+
+
+async def test_auth_guard_reconcile_returns_401_without_token(api_client):
+    """POST /merchants/{id}/reconcile must require auth (Sprint 4 fix)."""
+    client, _, __, ___ = api_client
+    resp = await client.post(
+        "/api/v1/merchants/M-TEST-001/reconcile",
+        json={"period": "2020-01"},
+    )
+    assert resp.status_code == 401
+    assert resp.json()["error"]["code"] == "ERR-AUTH-001"
+
+
+async def test_auth_guard_sales_returns_401_without_token(api_client):
+    """GET /sales must require auth (Sprint 4 fix — was missing auth entirely)."""
+    client, _, __, ___ = api_client
+    resp = await client.get(
+        "/api/v1/sales",
+        params={"merchant_id": "M-TEST-001", "period": "2020-01"},
+    )
+    assert resp.status_code == 401
+    assert resp.json()["error"]["code"] == "ERR-AUTH-001"

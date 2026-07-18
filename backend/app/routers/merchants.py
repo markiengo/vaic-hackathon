@@ -46,6 +46,7 @@ async def dashboard(
     merchant_id: str,
     period: str = Query(..., description="YYYY-MM"),
     db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ) -> dict:
     year, month = period.split("-")
     period_start = date(int(year), int(month), 1)
@@ -167,6 +168,7 @@ async def trigger_reconcile(
     body: ReconcileRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ) -> ReconcileResponse:
     # ERR-MERCHANT-001: merchant must exist
     merchant = await db.get(Merchant, merchant_id)
