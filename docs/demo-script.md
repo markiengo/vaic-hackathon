@@ -12,12 +12,12 @@
 
 Trong sáu cảnh, TaxLens phải chứng minh một vòng khép kín:
 
-1. Nhân viên SHB giao mục tiêu bằng tiếng Việt và thấy Planner chia việc.
+1. Hương giao mục tiêu bằng tiếng Việt trong Merchant Workspace và thấy Planner chia việc.
 2. Merchant tạo sale 350.000₫, nhận dynamic QR và giao dịch được auto-match sau SePay webhook.
 3. Giao dịch mơ hồ 5.000.000₫ không bị tự động xử lý; AI đề xuất "chuyển nội bộ" với confidence 82% và chờ con người xác nhận.
 4. Tax Agent chỉ ra đúng hai đơn thiếu hóa đơn trong tax-readiness checklist.
 5. Merchant Ops Agent tạo case, gán RM, soạn tin nhắn tiếng Việt và tạo draft export có kiểm soát.
-6. Kết quả trước/sau cho thấy 30 records trở thành 25 auto-matched và 5 exceptions, thời gian thao tác dưới 5 phút thay vì 45 phút.
+6. Kết quả đã kiểm chứng trên seed chuẩn cho thấy 23 giao dịch gồm 15 matched và 8 exceptions; presenter chỉ đọc số live nếu chúng vẫn khớp checkpoint sau các thao tác demo.
 
 Thông điệp kết thúc:
 
@@ -28,14 +28,14 @@ Thông điệp kết thúc:
 | Vai | Người dùng trong câu chuyện | Workspace |
 |---|---|---|
 | Presenter | Điều khiển demo và giải thích | Tất cả |
-| Linh | Nhân viên SHB Operations | `/assistant`, `/ops/cases`, `/ops/agent-runs` |
-| Hương | Chủ Salon Hương | `/sales`, `/exceptions`, `/invoices`, `/tax-readiness`, `/transactions` |
+| Linh | Nhân viên SHB Operations | `/ops/cases`, `/ops/agent-runs`, `/ops/audit` |
+| Hương | Chủ Salon Hương | `/assistant`, `/sales`, `/exceptions`, `/invoices`, `/tax-readiness`, `/transactions` |
 | Operator | Gửi SePay webhook sandbox khi presenter ra hiệu | Không trình chiếu terminal |
 
 Chuẩn bị hai tab đã đăng nhập trước khi bắt đầu:
 
-- **Tab A — Merchant Workspace:** mở `/sales`.
-- **Tab B — SHB Operations:** mở `/assistant`.
+- **Tab A — Merchant Workspace (Hương):** mở `/assistant`.
+- **Tab B — SHB Operations (Linh):** mở `/ops/cases`.
 
 Không mở DevTools hoặc terminal trong phần trình bày chính. Chỉ dùng chúng trong preflight hoặc khi ban giám khảo hỏi sâu.
 
@@ -52,14 +52,14 @@ Thực hiện trước giờ trình bày 15 phút. Đây không tính vào thờ
 - [ ] `/exceptions` có giao dịch `5.000.000₫`, đề xuất `chuyển nội bộ`, confidence `82%` và đang ở trạng thái chưa xử lý.
 - [ ] `/invoices` và `/tax-readiness` cùng phản ánh `2` đơn thiếu hóa đơn.
 - [ ] `/ops/cases` có thể hiển thị case, thao tác gán RM và soạn yêu cầu merchant xác nhận.
-- [ ] Draft export được tạo trong sandbox và không tự động nộp cho cơ quan thuế hoặc gửi sang MISA.
-- [ ] Dashboard cuối có bộ số `30 / 25 / 5`; nếu số liệu đã bị thay đổi bởi lần rehearsal trước, yêu cầu P5 reset seed. P3 không tự sửa seed.
+- [ ] Draft JSON/CSV được tạo trong sandbox và không tự động nộp cho cơ quan thuế hoặc gửi sang hệ thống kế toán.
+- [ ] Checkpoint seed chuẩn có bộ số `23 / 15 / 8`; nếu số liệu đã bị thay đổi bởi lần rehearsal trước, yêu cầu P5 reset seed. P3 không tự sửa seed.
 - [ ] Đã chụp fallback screenshots sau một lần rehearsal thành công; mỗi ảnh có timestamp và tên route.
 - [ ] Tắt thông báo hệ điều hành; đặt zoom trình duyệt 100%; dùng viewport tối thiểu 1280×720.
 
 ### Stop gate
 
-Không bắt đầu demo nếu một trong bốn bằng chứng cốt lõi bị thiếu: Planner plan, QR/reference, exception 5.000.000₫, hoặc kết quả 30/25/5. Dành tối đa 60 giây để sửa ở preflight; sau đó chuyển sang bản ghi rehearsal đã xác minh thay vì ứng biến dữ liệu.
+Không bắt đầu demo nếu một trong bốn bằng chứng cốt lõi bị thiếu: Planner plan, QR/reference, exception 5.000.000₫, hoặc checkpoint 23/15/8. Dành tối đa 60 giây để sửa ở preflight; sau đó chuyển sang bản ghi rehearsal đã xác minh thay vì ứng biến dữ liệu.
 
 ## 4. Timeline tổng
 
@@ -80,7 +80,7 @@ Không bắt đầu demo nếu một trong bốn bằng chứng cốt lõi bị 
 
 ## 5. Kịch bản sáu cảnh
 
-### Cảnh 1 — Nhân viên SHB nhập yêu cầu, Planner hiển thị plan
+### Cảnh 1 — Hương nhập yêu cầu, Planner hiển thị plan
 
 **Route:** `/assistant`
 
@@ -97,7 +97,7 @@ Không bắt đầu demo nếu một trong bốn bằng chứng cốt lõi bị 
 
 **Presenter cue:**
 
-> “Linh không cần tìm qua nhiều menu. Planner hiểu mục tiêu tiếng Việt, chia việc cho các specialist agent và công khai tool, duration, kết quả cùng điểm cần con người duyệt.”
+> “Hương không cần tìm qua nhiều menu. Planner hiểu mục tiêu tiếng Việt, chia việc cho các specialist agent và công khai tool, duration, kết quả cùng điểm cần con người duyệt.”
 
 **Expected outcome:**
 
@@ -225,18 +225,18 @@ Không bắt đầu demo nếu một trong bốn bằng chứng cốt lõi bị 
 
 ### Cảnh 5 — Merchant Ops Agent tạo case, gán RM, draft tin nhắn và draft export
 
-**Routes:** `/ops/cases` → `/assistant` → `/tax-readiness`
+**Routes:** Tab B `/ops/cases` → Tab A `/assistant` → Tab A `/tax-readiness`
 
 **Thời lượng:** 1 phút 35 giây
 
 **Thao tác chính xác:**
 
-1. Mở `/ops/cases`; chọn case vừa tạo hoặc case liên quan tới ngoại lệ demo.
+1. Chuyển sang Tab B, tài khoản Linh; mở `/ops/cases` và chọn case vừa tạo hoặc case liên quan tới ngoại lệ demo.
 2. Chỉ vào evidence, AI suggestion, status và action history.
 3. Giữ hoặc nhập mã RM `U003`, bấm `Gán case cho RM`; chờ `Đã cập nhật case`.
 4. Bấm `Soạn yêu cầu merchant xác nhận`; đọc một câu từ draft tiếng Việt và chỉ trạng thái draft.
-5. Quay lại `/assistant`; tại `Human checkpoint`, bấm `Duyệt riêng hành động này` cho action tạo draft export, sau đó bấm `Thực thi payload đã duyệt`.
-6. Mở `/tax-readiness` và chỉ artifact/file draft nếu trạng thái đã ready. Nhắc rõ đây là **draft export**, không phải nộp thuế hoặc tự động gửi sang MISA.
+5. Chuyển rõ ràng về Tab A, tài khoản Hương; mở `/assistant`. Tại `Human checkpoint`, bấm `Duyệt riêng hành động này` cho action tạo draft export, sau đó bấm `Thực thi payload đã duyệt`.
+6. Trong Tab A, mở `/tax-readiness` và chỉ file nháp JSON/CSV nếu trạng thái đã ready. Nhắc rõ đây là **draft export**, không phải nộp thuế hoặc tự động gửi sang hệ thống kế toán.
 
 **Presenter cue:**
 
@@ -275,13 +275,13 @@ Không bắt đầu demo nếu một trong bốn bằng chứng cốt lõi bị 
 
 | Trước TaxLens | Sau TaxLens |
 |---|---|
-| 30 records phải kiểm thủ công | 25 records auto-matched |
-| Ước tính 45 phút | 5 exceptions được đưa đúng người xử lý |
-| Không có luồng evidence thống nhất | Thao tác dưới 5 phút trong demo flow |
+| 23 giao dịch cần đối chiếu trong seed chuẩn | 15 giao dịch matched có evidence |
+| Không có hàng chờ ưu tiên | 8 exceptions được giữ lại cho con người |
+| Không có checkpoint tái lập | Truth set `23 / 15 / 8` đã qua 30/30 kiểm tra pipeline |
 
 **Presenter cue:**
 
-> “25 trên 30 records được tự động đối soát, tương đương 83,3% và vượt mục tiêu demo 80%. Chỉ 5 ngoại lệ cần con người, giảm 83,3% khối lượng kiểm tay. Thao tác giảm từ 45 phút xuống dưới 5 phút trên demo dataset.”
+> “Trên seed chuẩn đã kiểm chứng, 15 trên 23 giao dịch được matched, tương đương 65,2%. Tám ngoại lệ được giữ lại đúng cho con người thay vì bị hệ thống tự quyết. Đây là truth set của demo, không phải accuracy production.”
 
 Sau đó kết thúc:
 
@@ -289,7 +289,7 @@ Sau đó kết thúc:
 
 **Expected outcome:**
 
-- Các số `30`, `25`, `5`, `<5 phút`, `45 phút` nhất quán với dataset và narrative.
+- Các số `23`, `15`, `8` nhất quán với seed checkpoint và pipeline validation; nếu demo live đã thêm giao dịch, presenter đọc số live và nói rõ phần chênh lệch.
 - Presenter phân biệt rõ **kết quả demo** với KPI pilot; không suy rộng thành production accuracy.
 
 **Recovery:**
@@ -329,9 +329,9 @@ P3 điền sau mỗi lần chạy. Một rehearsal chỉ được đánh dấu `
 
 ## 8. Claim guardrails
 
-- `25/30 = 83,3%` là auto-reconciliation rate của **demo dataset**, không phải production accuracy.
-- `5/30` records cần kiểm tay nghĩa là workload exception giảm `83,3%` so với 30 records kiểm tay trong baseline demo.
-- `45 phút → dưới 5 phút` là so sánh workflow demo; chưa phải kết quả pilot tại merchant thật.
+- `15/23 = 65,2%` là matched rate của **seed truth set đã kiểm chứng**, không phải production accuracy.
+- `8/23 = 34,8%` là tỷ lệ exceptions được giữ lại cho con người trong seed checkpoint; không được mô tả thành false-positive rate hoặc mức giảm workload production.
+- Không đọc claim `45 phút → dưới 5 phút` khi chưa có rehearsal có timestamp xác minh thời lượng đó.
 - Confidence `82%` là mức tin cậy của một đề xuất cụ thể, không phải độ chính xác tổng thể của model.
-- Draft export là file để review; TaxLens không tự nộp thuế và không tự gửi sang MISA trong flow này.
+- Draft export là file JSON/CSV để review; TaxLens không tự nộp thuế và không tự gửi sang hệ thống kế toán trong flow này.
 - Agent trace chỉ hiển thị plan, tool calls, duration, evidence, artifact và approval state; không trình bày private chain-of-thought.

@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TaxLens Frontend
 
-## Getting Started
+Giao diện TaxLens cho chủ hộ kinh doanh và nhân viên vận hành SHB, xây dựng bằng Next.js 16, React 19 và TypeScript.
 
-First, run the development server:
+## Chạy local
 
-```bash
+Yêu cầu: Node.js 20+ và backend TaxLens đang chạy tại `http://127.0.0.1:8000`.
+
+```powershell
+cd frontend
+npm ci
+Copy-Item .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Mở `http://localhost:3000`. Tài khoản demo và dữ liệu đăng nhập do backend cung cấp.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Các biến môi trường chính:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```dotenv
+# Chỉ được đọc ở server Next.js; không đưa URL backend trực tiếp vào browser.
+TAXLENS_BACKEND_URL=http://127.0.0.1:8000
 
-## Learn More
+# Browser dùng hostname hiện tại và cổng này cho WebSocket.
+NEXT_PUBLIC_TAXLENS_WS_PORT=8000
 
-To learn more about Next.js, take a look at the following resources:
+# Đặt false khi chạy HTTP local; giữ true sau HTTPS ở production.
+TAXLENS_COOKIE_SECURE=false
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Frontend dùng gateway cùng origin tại `/api/backend/*`. Gateway gắn access token từ HttpOnly cookie, tự thử refresh session khi backend trả `401`, và chuyển tiếp yêu cầu đến `${TAXLENS_BACKEND_URL}/api/v1/*`. Không thêm `NEXT_PUBLIC_API_URL` hoặc lưu JWT trong JavaScript phía client.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tuyến chính
 
-## Deploy on Vercel
+- Merchant: `/dashboard`, `/transactions`, `/exceptions`, `/invoices`, `/tax-readiness`, `/sales`, `/assistant`, `/settings`
+- SHB Operations: `/ops`, `/ops/merchants`, `/ops/cases`, `/ops/agent-runs`, `/ops/audit`, `/ops/compliance`
+- Public/Auth: `/login`, `/confirm/[token]`
+- Design QA nội bộ: `/_dev/showcase`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Cổng kiểm tra
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```powershell
+npm run lint
+npm run typecheck
+npm test -- --run
+npm run build
+npm run test:e2e
+```
+
+`npm run test:e2e` chạy Playwright trên ba kích thước desktop, compact và mobile. Cổng release chỉ đạt khi toàn bộ lệnh trên đều qua và luồng demo sáu cảnh được diễn tập với backend tích hợp.

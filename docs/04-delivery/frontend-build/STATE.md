@@ -1,29 +1,28 @@
-# TaxLens Product Build State
+# TaxLens Frontend Build State
 
-> Technical execution state for autonomous stage handoffs. Product requirements remain owned by `frontend-design-consistency-cf1ebe.md` and the canonical repository docs.
+> Trạng thái kỹ thuật P3 tại ngày 2026-07-18. Yêu cầu sản phẩm do `frontend-design-consistency-cf1ebe.md` và tài liệu chuẩn của repository sở hữu.
 
-## Current checkpoint
+## Điểm kiểm soát hiện tại
 
+- Role: P3 Tan, Product + Frontend
 - Branch: `p3-frontend-design-consistency-final`
-- Base: `origin/main` at `13a3b74` after the P1, P2, P4, and P5 Sprint 3 integrations
-- Recovery stash: `codex-pre-p3-frontend-design-consistency-20260718` (retain until pushed branch verification)
-- Current stage: P3 frontend release integration and Sprint 4 demo rehearsal
-- Last accepted evidence: lint, typecheck, 41 Vitest tests, production build, and 33 Playwright tests across desktop, compact, and mobile all pass
-- Next unit: probe the six-scene demo against integrated `main`; adapt only P3 frontend contracts and report backend gaps to their Sprint 4 owners
-- Demo clock: `2026-08-03`
-- Hero period: `2026-07`
+- Base tích hợp: `origin/main` tại `13a3b74`
+- Commit tương thích contract hiện tại: `90fae49`
+- Đã xác minh tập trung: 18/18 Vitest cho adapter dashboard, transactions, sales, tax, realtime và domain contracts
+- Cổng frontend cuối tại worktree hiện tại: `lint`, `typecheck`, 44/44 Vitest, production build 27 routes và 33/33 Playwright trên desktop/compact/mobile đều qua
+- Demo: đang chờ diễn tập sáu cảnh với backend tích hợp; pitch deck được chủ sản phẩm hoãn
 
-## Non-negotiable state
+## Phạm vi đã chốt
 
-- Preserve `frontend/new-design/` and `frontend/reference/` byte-for-byte.
-- Do not modify the existing P1 or P4 worktrees.
-- Do not expose JWTs to browser JavaScript or private model reasoning to users.
-- Do not execute a persistent agent tool before its individual approval.
-- Use canonical POS routes and one shared ledger/readiness calculation path.
-- Update `log.md`, run the unit gate, and commit exact paths before advancing.
-- Do not modify P1 matching, P2 agent internals, P4 backend/infra, or P5 seed/reset/data files without Tan explicitly widening scope.
-- Pitch deck work is deferred by product-owner direction; do not create or modify it in this run.
+- Frontend gọi REST qua gateway cùng origin `/api/backend/*`; `TAXLENS_BACKEND_URL` chỉ tồn tại phía server.
+- JWT nằm trong HttpOnly cookie; không đưa token hoặc private model reasoning vào browser.
+- Giữ nguyên `frontend/new-design/` và `frontend/reference/` làm tài sản tham chiếu.
+- P3 chỉ sửa frontend, P3 tests, design/build docs và demo script. Không sửa P1/P2/P4/P5 để che contract thiếu.
 
-## Handoff protocol
+## Blocker ngoài P3
 
-Every fresh implementation session must verify the expected branch, clean checkpoint, current HEAD, recovery stash, acceptance state, and relevant test evidence before editing. If any value disagrees with Git or the repository, Git and tested code win; update this file before continuing.
+- P4: backend chưa có `/pos/context`; dashboard/reconcile còn thiếu auth; WebSocket chưa có tenant isolation/auth đầy đủ; reconcile trả `PLANNING` nhưng chưa có lifecycle hoàn tất.
+- P1: dashboard vẫn suy ra `matched` bằng số transaction/invoice thay vì kết quả allocation thực, nên reconciliation rate chưa phải số liệu nghiệp vụ chuẩn.
+- P2: agent flow hiện là skeleton, chưa có streamed execution, approval và persisted run lifecycle mà giao diện cần cho luồng end-to-end.
+
+Không được tuyên bố sản phẩm live end-to-end hoàn tất cho đến khi các owner đóng blocker và diễn tập demo thành công. Cổng frontend P3 đã qua; mọi thay đổi code tiếp theo phải chạy lại cổng tương ứng.

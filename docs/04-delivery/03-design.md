@@ -124,6 +124,8 @@ Linh, SHB merchant support:
 
 ## 4. Final information architecture
 
+> **Superseded navigation snapshot:** Section 27.1 is the current normative information architecture and adds `Trợ lý TaxLens`. This section remains for decision history only.
+
 ## 4.1 Merchant Workspace sidebar
 
 The final merchant navigation is:
@@ -1433,6 +1435,8 @@ Never use:
 
 # 14. SHB Operations Console core screens
 
+> **Superseded summary:** Use sections 27 and 28 for the current SHB Operations and agent-first specifications. The screen principles below remain historical context where they do not conflict.
+
 ## 14.1 Tổng quan danh mục
 
 Purpose:
@@ -1936,6 +1940,8 @@ A screen is ready for implementation only when:
 ---
 
 # 25. Screen inventory summary
+
+> **Superseded inventory:** Use the current inventory and route requirements in sections 27, 28, and 32. This earlier table remains for decision history only.
 
 ## Merchant Workspace
 

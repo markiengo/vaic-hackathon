@@ -1,23 +1,19 @@
-# TaxLens Product Build Acceptance
+# TaxLens Frontend Build Acceptance
 
-| Stage | Outcome | Status | Required evidence |
-| --- | --- | --- | --- |
-| 0 | Git-safe bootstrap | Complete | Fresh branch from current `origin/main`, stash retained, assets verified |
-| 1 | Frontend foundation | Complete | Install, lint, typecheck, build, routes, desktop/mobile browser and brand smoke |
-| 2 | Locked design system | Complete | Showcase, component tests, responsive shell, accessibility primitives, auth/security and persistence contracts |
-| 3 | Dashboard and transactions | P3 complete | Contract tests, visual snapshots, accessibility, and responsive browser evidence |
-| 4 | Exceptions, invoices, readiness | P3 complete | Persisted 92-to-100 contract journey passes in Playwright |
-| 5 | Sales capture | P3 complete | Sale, QR, cash, intent, and history UI journeys pass |
-| 6 | SHB operations | P3 complete | Portfolio, merchant, case, run, audit, and compliance browser journeys pass |
-| 7 | Public confirmation | P3 complete | Confirmed, expired, and invalid UI states pass across three viewports |
-| 8 | Integrated UI gate | Complete | 41 Vitest and 33 Playwright tests pass; production build succeeds |
-| 9 | Production data wiring | Partial | Same-origin authenticated clients exist; integrated-main response gaps remain owner-blocked |
-| 10 | Agent runner | Blocked outside P3 | P2/main lacks the streamed execution and approval contracts consumed by the P3 UI |
-| 11 | Realtime payments | Blocked outside P3 | Integrated webhook does not yet produce the allocation/status transition required by the UI |
-| 12 | Settings and appearance | Complete | Light/dark/system, import journey, accessibility, and responsive parity pass |
-| 13 | Real SHB data and traces | Partial | P3 UI and sanitized trace contracts pass; live tenant/RBAC behavior requires owner verification |
-| 14 | Product release gate | In progress | P3 frontend gate passes; live six-scene rehearsal and cross-role backend contracts remain |
+> Baseline: `origin/main@13a3b74`; branch P3 `p3-frontend-design-consistency-final`; compatibility commit `90fae49`.
 
-No stage is accepted by visual appearance alone. A user-facing action must reach its persisted backend outcome and the relevant read models must refresh.
+| Hạng mục | Trạng thái | Bằng chứng / điều kiện còn lại |
+| --- | --- | --- |
+| Git-safe integration | Đạt ở checkpoint | Branch P3 tách khỏi main và chỉ thay đổi phạm vi P3; cần kiểm tra conflict lại sau commit docs cuối |
+| Design system và responsive shell | P3 đạt | Desktop, compact, mobile và accessibility states đã có test |
+| Merchant screens | P3 đạt | Dashboard, ledger, exceptions, invoices, tax, sales, assistant, settings có loading/empty/error states |
+| SHB Operations và public confirmation | P3 đạt | Ops views và confirmed/expired/invalid states đã được triển khai |
+| Adapter tương thích main | Đạt tập trung | 18/18 Vitest qua tại `90fae49` cho dashboard, transactions, sales, tax và WebSocket |
+| Cổng frontend đầy đủ | P3 đạt | `lint`, `typecheck`, 44/44 Vitest, production build 27 routes và 33/33 Playwright desktop/compact/mobile qua ngày 2026-07-18 |
+| Demo sáu cảnh | Đang chờ | Phải diễn tập trên backend tích hợp và ghi kết quả thực tế |
+| Persisted product outcome | Bị chặn ngoài P3 | P4 thiếu POS context, auth/lifecycle/realtime isolation; P1 rate chưa dựa trên allocation thật; P2 agent chưa có streamed approval/persisted lifecycle |
+| Product release | Chưa đạt | Chỉ đạt sau khi full gate qua, không conflict với main, demo rehearsal qua và blocker owner được đóng |
 
-`P3 complete` means the P3-owned product surface and contract behavior are verified. It does not claim that a missing P1/P2/P4/P5 runtime contract is complete.
+Không chấp nhận một stage chỉ vì giao diện đẹp hoặc mock test qua. Mỗi hành động người dùng phải tạo kết quả backend được lưu, sau đó read model liên quan phải refresh đúng.
+
+`P3 đạt` chỉ xác nhận bề mặt sản phẩm và contract behavior thuộc phạm vi P3. Cụm từ này không xác nhận P1/P2/P4 runtime đã sẵn sàng production.

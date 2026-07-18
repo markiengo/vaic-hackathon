@@ -1800,3 +1800,67 @@ dashboard/reconcile, merchant portfolio and operations routes; P1/P4 must
 persist matching fields and correct the dashboard count; P2/P4 must execute and
 transition agent/reconciliation runs. No teammate-owned file was modified.
 
+### 2026-07-18 — P3: Release documentation and final browser gate
+
+**Changed:**
+
+- Replaced the generic create-next-app README with Vietnamese-first TaxLens
+  onboarding: supported Node/npm flow, server-only backend URL, same-origin
+  gateway, WebSocket/cookie variables, real route map and exact release gates.
+- Reconciled the six-scene demo script with P5's validated truth set of 23 bank
+  transactions, 15 matched and 8 exceptions. Hương now owns the merchant
+  `/assistant` scene; Linh stays in SHB `/ops`; account/tab switches are
+  explicit; unsupported MISA submission/export claims and unverified
+  45-minute/under-5-minute claims were removed.
+- Preserved the original frontend goal rather than rewriting it. Added a status
+  banner, marked the old branch name and direct-browser API examples as
+  historical, pointed current contracts to the API/schema owners, and recorded
+  the `90fae49` compatibility checkpoint plus current gate evidence.
+- Marked earlier duplicate information-architecture, Ops and screen-inventory
+  sections in `03-design.md` as superseded by the later normative sections,
+  leaving decision history intact while providing one clear current authority.
+- Refreshed `STATE.md`, `ACCEPTANCE.md` and `NEXT_PROMPT.md` into a current
+  release handoff with exact P3 evidence and P1/P2/P4 owner blockers. The
+  corrupted/stale shared `00-work-split.md` and deferred pitch deck were
+  intentionally not modified because they are outside the P3 boundary.
+- Updated Ops E2E fixtures to prevent an unmocked optional transaction request
+  from reaching the local backend and clearing the test session. Updated the
+  compact tax-readiness snapshot after reviewing the intentional removal of the
+  unsupported MISA control.
+
+**Reasoning:**
+
+- Repository docs had competing “final” sections and stale demo claims. Small
+  authority annotations and one current handoff are safer than deleting design
+  history or heavily rewriting the approved 14-stage plan.
+- The first full Playwright run had 28 passes and five failures. Four failures
+  were caused by the new dashboard enrichment requesting an unmocked
+  `/transactions` endpoint; the gateway received an upstream auth failure and
+  correctly cleared the test cookie before the next Ops navigation. The fifth
+  was the expected 24px height reduction after removing MISA. Adding the
+  explicit transaction fixture and regenerating only the reviewed compact
+  snapshot fixed test infrastructure without weakening assertions.
+- The frontend gate proves P3 implementation quality, not live backend
+  completeness. POS context, authenticated/reliable lifecycle endpoints,
+  allocation-derived dashboard metrics and real agent execution remain with
+  their named owners and keep the overall product release blocked.
+
+**Verification:**
+
+- `npm run lint` — pass.
+- `npm run typecheck` — pass.
+- `npm test -- --run` — 13 files, 44/44 tests pass.
+- `npm run build` — pass; 27 routes compile/prerender. Next emits one non-fatal
+  warning because it has no fallback font metrics for Momo Trust Display.
+- `npx playwright test tests/e2e/agentops.spec.ts` — 9/9 pass after fixture fix.
+- `npx playwright test tests/e2e/ledger-journey.spec.ts --project=compact --update-snapshots` — 2/2 pass; only the reviewed tax-readiness snapshot changed.
+- `npm run test:e2e` on isolated port 3313 — 33/33 pass across desktop,
+  compact and mobile.
+- `git diff --check` — pass for the current P3 release slice.
+
+**Status:** P3 code, design consistency, onboarding, deterministic tests and
+browser release gate are complete. Live six-scene rehearsal and overall product
+release remain blocked by the explicitly listed P1/P2/P4 contracts. Pitch deck,
+work-split, backend, matching, agent internals, infrastructure and seed/reset
+files remain untouched.
+

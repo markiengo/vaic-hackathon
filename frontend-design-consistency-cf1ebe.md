@@ -1,5 +1,7 @@
 # TaxLens Frontend — Complete Build with Design Consistency (v2)
 
+> **Execution status — 2026-07-18:** This file remains the approved implementation plan and historical execution record. Current API examples are superseded by `docs/03-engineering/05-api-reference.md` and executable frontend/backend schemas; current branch, gate evidence, and owner blockers live in `docs/04-delivery/frontend-build/STATE.md` and `ACCEPTANCE.md`. P3 does not use historical backend-change examples as authorization to modify P1/P2/P4/P5 scope.
+
 Build the entire Next.js frontend from scratch, translate HTML mockups into production React components with a locked design system from `docs/04-delivery/03-design.md`, wire every page to the real FastAPI backend, implement SSE-streamed agent tool calling, WebSocket real-time payment notifications, and verify three end-to-end demo flows — all in a 14-stage implementation order that prevents drift.
 
 ---
@@ -105,7 +107,7 @@ Dashboard page title must not use inline `text-[44px]` — use the `text-h1` tok
 | `--color-text-tertiary` | `#858B9D` | OK |
 | `--color-mango` | `#F59A1E` | OK |
 
-**Dark mode tokens** (from section 27.2, NOT Material dark tokens):
+**Dark mode tokens** (historical snapshot; the current normative values are owned by section 27.2 of `docs/04-delivery/03-design.md`, NOT Material dark tokens):
 
 ```text
 --color-dark-background: #0F1220
@@ -167,7 +169,7 @@ This stage protects the team repository before the rebuild begins. It is the onl
 
 - [x] Fetch current `origin/main` without changing another worktree.
 - [x] Preserve all tracked and untracked product/design work in `codex-pre-p3-frontend-design-consistency-20260718`.
-- [x] Create `p3-frontend-design-consistency` from current `origin/main`.
+- [x] Create the original `p3-frontend-design-consistency` recovery branch from current `origin/main`; delivery was later ported to `p3-frontend-design-consistency-final` to avoid stale mixed-role history.
 - [x] Apply, but do not pop, the recovery stash and verify `frontend/new-design/`, `frontend/reference/`, and this plan are present.
 - [x] Retain the stash until the delivery branch is pushed and its full diff is verified.
 - [ ] Never use `git reset --hard`, `git clean`, force push, broad `git add .` / `git add -A`, or modify the existing P1/P4 worktrees.
@@ -175,7 +177,7 @@ This stage protects the team repository before the rebuild begins. It is the onl
 
 ### Stage 0 acceptance criteria
 
-- [x] Branch is `p3-frontend-design-consistency` and based on current `origin/main`
+- [x] Historical bootstrap branch was `p3-frontend-design-consistency`; final delivery branch is `p3-frontend-design-consistency-final` on integrated `origin/main`
 - [x] Recovery stash remains available
 - [x] Stash applied without conflicts
 - [x] Expected design and reference assets are present
@@ -1427,6 +1429,8 @@ frontend/
 
 ## Stage 9 — Backend Integration: API Client & Data Layer Rewrite
 
+> **Historical contract note:** The examples in Stage 9 describe the target known when the plan was written. The shipped frontend uses the authenticated same-origin `/api/backend/*` gateway with server-only `TAXLENS_BACKEND_URL`, and adapters normalize merged-main response shapes. Do not copy the direct `NEXT_PUBLIC_API_URL` snippets as current implementation guidance.
+
 Rip out mock fixtures from Stage 2-8 and wire every hook to the real FastAPI backend. The API client switches from fixture imports to live `fetch` calls against `http://localhost:8000/api/v1`.
 
 ### 9.1 API surface map (frontend → backend)
@@ -1497,6 +1501,8 @@ export function useTransactions(period: string) {
 
 ### 9.5 Backend adjustments (allowed)
 
+This subsection is retained as plan history. Under the final team work split these changes belong to P4/P5; P3 records blockers and adapts the frontend but does not implement them.
+
 The following backend changes are permitted to make the frontend work:
 
 - **CORS**: ensure `CORS_ORIGINS` includes `http://localhost:3000` (already in `.env.example`)
@@ -1512,7 +1518,7 @@ Before wiring frontend, verify seed data exists:
 cd backend && python scripts/seed_data.py
 ```
 
-Confirm: M001 merchant exists, 30 transactions for 2026-07, 25 matched, 5 exceptions, sales with invoice issues.
+Confirm the integrated P5 truth set: M001 exists with 23 bank transactions for 2026-07, 15 matched and 8 exceptions, plus the documented sales/invoice fixtures. Any later demo mutation must be reported separately from this seed checkpoint.
 
 ### Stage 9 acceptance criteria
 
@@ -2069,7 +2075,7 @@ This additive checkpoint preserves the original plan while recording what is ver
 - Branch: `p3-frontend-design-consistency-final`, created from integrated `origin/main@13a3b74`; the stale mixed-role P3 branch was not merged or rebased wholesale.
 - Scope: P3 frontend, API/WebSocket clients, browser integration, design consistency, and demo script only. P1 matching, P2 agent internals, P4 backend/infra, and P5 seed/reset/data remain untouched.
 - Visual system: the supplied Stitch HTML and screenshots remain the reference; the shipped product translates them into reusable Next/React components under the locked TaxLens design system.
-- Deterministic frontend evidence: `npm run lint`, `npm run typecheck`, 41 Vitest tests, production build, and 33 Playwright tests across desktop, compact, and mobile pass.
+- Deterministic frontend evidence: `npm run lint`, `npm run typecheck`, 44 Vitest tests, production build of 27 routes, and 33 Playwright tests across desktop, compact, and mobile pass on 2026-07-18.
 - Production-mode Playwright builds without standalone output only inside the test server, avoiding development hot-reload races while preserving standalone deployment builds.
 - Dependency note: the two moderate `npm audit` entries are one transitive PostCSS advisory in the latest stable Next release. No stable patched Next 16 exists; do not accept npm's breaking Next 9 downgrade or move to a preview solely for this advisory.
 - Live integration boundary: current integrated backend contracts remain incomplete for invoices, full readiness, agent streaming/approvals, realtime allocation, and several SHB/settings flows. These are owner blockers rather than cross-role P3 patches.

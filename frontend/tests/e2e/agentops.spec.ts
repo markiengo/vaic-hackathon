@@ -23,6 +23,7 @@ test.describe("Assistant and SHB operations", () => {
   test.beforeEach(async ({ page }) => {
     await authenticated(page);
     await page.route("**/api/auth/session", (route) => route.fulfill({ json: { user: { id: "U001", name: "Hương", email: "merchant@test", role: "merchant", merchant_id: "M001" }, csrfToken: "e2e-csrf" } }));
+    await page.route("**/api/backend/transactions?*", (route) => route.fulfill({ json: { transactions: [], total: 0 } }));
   });
 
   test("streams safe assistant evidence and exposes one-action review", async ({ page }) => {
@@ -31,9 +32,9 @@ test.describe("Assistant and SHB operations", () => {
       { type: "progress_summary", agent: "planner", status: "PLANNING", message: "Đang phân tích yêu cầu theo dữ liệu TaxLens." },
       { type: "plan", steps: [{ step: 1, action: "Đối soát giao dịch", agent: "reconciliation" }] },
       { type: "tool_started", tool: "get_bank_transactions", args: { merchant_id: "M001", period: "2026-07" }, agent: "reconciliation" },
-      { type: "tool_completed", tool: "get_bank_transactions", output: { kind: "collection", count: 30 }, duration_ms: 12 },
+      { type: "tool_completed", tool: "get_bank_transactions", output: { kind: "collection", count: 23 }, duration_ms: 12 },
       { type: "approval_required", action_id: "ACT-1", summary: action.human_summary, impact: "CREATE_CASE" },
-      { type: "artifact", artifact: { reconciliation: { matched: 25, unmatched: 5 }, status: "WAITING_FOR_HUMAN" } },
+      { type: "artifact", artifact: { reconciliation: { matched: 15, unmatched: 8 }, status: "WAITING_FOR_HUMAN" } },
       { type: "done", run_id: "RUN-1" },
     ].map((event) => `data: ${JSON.stringify(event)}\n\n`).join("");
     await page.route("**/api/backend/agents/runs/stream", (route) => route.fulfill({ body: sse, contentType: "text/event-stream" }));
@@ -54,7 +55,7 @@ test.describe("Assistant and SHB operations", () => {
 
   test("turns portfolio triage into an assignable case workspace", async ({ page }) => {
     await page.route("**/api/backend/merchants", (route) => route.fulfill({ json: { merchants: [{ id: "M001", name: "Salon Hoa", business_type: "HOUSEHOLD", business_category: "beauty", status: "ACTIVE", open_cases: 1, active_runs: 1 }], summary: { total: 1, active: 1, open_cases: 1, active_runs: 1 } } }));
-    await page.route("**/api/backend/merchants/M001/dashboard?period=2026-07", (route) => route.fulfill({ json: { merchant_id: "M001", period: "2026-07", total_transactions: 30, reconciled_count: 25, reconciliation_rate: 0.8333, exception_count: 5, open_exceptions: 5, missing_invoice_count: 2, unclassified_count: 5, tax_readiness: { score: 92, ready: false, rule_version: "2026.07", bank_reconciliation: 0.8333, cash_session_closure: 1, missing_invoices: 2, unclassified_transactions: 5 }, active_agents: [] } }));
+    await page.route("**/api/backend/merchants/M001/dashboard?period=2026-07", (route) => route.fulfill({ json: { merchant_id: "M001", period: "2026-07", total_transactions: 23, reconciled_count: 15, reconciliation_rate: 0.6522, exception_count: 8, missing_invoice_count: 2, unclassified_count: 5, tax_readiness: { score: 92, ready: false, rule_version: "2026.07", bank_reconciliation: 0.6522, cash_session_closure: 1, missing_invoices: 2, unclassified_transactions: 5 }, active_agents: [] } }));
     await page.route("**/api/backend/agents/runs", (route) => route.fulfill({ json: [{ id: "RUN-1", case_id: "CASE-M001-2026-07", merchant_id: "M001", request_text: "Kiểm tra tháng 7", plan: null, status: "WAITING_FOR_HUMAN", started_at: "2026-07-18T00:00:00Z", completed_at: null, error: null }] }));
     await page.route("**/api/backend/cases", (route) => route.fulfill({ json: { cases: [{ id: "CASE-M001-2026-07", merchant_id: "M001", period: "2026-07", status: "OPEN", priority: "MEDIUM", assigned_rm_id: null, exception_count: 1, created_at: "2026-07-18T00:00:00Z", updated_at: "2026-07-18T00:00:00Z" }] } }));
     await page.route("**/api/backend/cases/CASE-M001-2026-07", (route) => route.fulfill({ json: { id: "CASE-M001-2026-07", merchant_id: "M001", period: "2026-07", status: "OPEN", priority: "MEDIUM", assigned_rm_id: null, tax_rule_version: "2026.07", human_approvals: [], exception_count: 1, exceptions: [{ id: 1, exception_type: "NO_MATCH", status: "PENDING", bank_transaction_id: "TX-1", sale_id: null, ai_suggestion: null, human_decision: null, created_at: "2026-07-18T00:00:00Z" }], actions: [{ id: "ACT-1", action_type: "CREATE_CASE", human_summary: action.human_summary, status: "COMPLETED", version: 4 }], created_at: "2026-07-18T00:00:00Z", updated_at: "2026-07-18T00:00:00Z" } }));
@@ -72,7 +73,7 @@ test.describe("Assistant and SHB operations", () => {
     const run = { id: "RUN-1", case_id: "CASE-M001-2026-07", merchant_id: "M001", request_text: "Kiểm tra tháng 7", plan: { period: "2026-07", steps: [{ step: 1, action: "Đối soát giao dịch", agent: "reconciliation" }] }, status: "WAITING_FOR_HUMAN", started_at: "2026-07-18T00:00:00Z", completed_at: null, error: null };
     const caseDetail = { id: "CASE-M001-2026-07", merchant_id: "M001", period: "2026-07", status: "OPEN", priority: "HIGH", assigned_rm_id: "U003", tax_rule_version: "2026.07", human_approvals: [], exception_count: 1, exceptions: [{ id: 1, exception_type: "NO_MATCH", status: "PENDING", bank_transaction_id: "TX-1", sale_id: null, ai_suggestion: { amount: 1250000, confidence: 0.88, classification: "revenue", reason: "Khớp nội dung chuyển khoản" }, human_decision: null, created_at: "2026-07-18T00:00:00Z" }], actions: [action], created_at: "2026-07-18T00:00:00Z", updated_at: "2026-07-18T00:00:00Z" };
     await page.route("**/api/backend/merchants", (route) => route.fulfill({ json: { merchants: [{ id: "M001", name: "Salon Hoa", business_type: "HOUSEHOLD", business_category: "beauty", status: "ACTIVE", open_cases: 1, active_runs: 1 }], summary: { total: 1, active: 1, open_cases: 1, active_runs: 1 } } }));
-    await page.route("**/api/backend/merchants/M001/dashboard?period=2026-07", (route) => route.fulfill({ json: { merchant_id: "M001", period: "2026-07", total_transactions: 30, reconciled_count: 25, reconciliation_rate: 0.8333, exception_count: 5, open_exceptions: 5, missing_invoice_count: 2, unclassified_count: 5, tax_readiness: { score: 92, ready: false, rule_version: "2026.07", bank_reconciliation: 0.8333, cash_session_closure: 1, missing_invoices: 2, unclassified_transactions: 5 }, active_agents: [] } }));
+    await page.route("**/api/backend/merchants/M001/dashboard?period=2026-07", (route) => route.fulfill({ json: { merchant_id: "M001", period: "2026-07", total_transactions: 23, reconciled_count: 15, reconciliation_rate: 0.6522, exception_count: 8, missing_invoice_count: 2, unclassified_count: 5, tax_readiness: { score: 92, ready: false, rule_version: "2026.07", bank_reconciliation: 0.6522, cash_session_closure: 1, missing_invoices: 2, unclassified_transactions: 5 }, active_agents: [] } }));
     await page.route("**/api/backend/cases", (route) => route.fulfill({ json: { cases: [caseDetail] } }));
     await page.route("**/api/backend/cases/CASE-M001-2026-07", (route) => route.fulfill({ json: caseDetail }));
     await page.route("**/api/backend/agents/runs", (route) => route.fulfill({ json: [run] }));
