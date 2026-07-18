@@ -122,4 +122,3 @@ export interface InvoiceCoverageResponse {
   items?: InvoiceCoverageRecord[];
   records: InvoiceCoverageRecord[];
 }
-

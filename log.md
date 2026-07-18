@@ -1900,3 +1900,25 @@ files remain untouched.
 **Status:** Latest main documentation integrated without conflict. P3 scope and
 the deferred pitch decision remain unchanged; live rehearsal remains blocked.
 
+### 2026-07-18 — P3: Final diff hygiene
+
+**Changed:**
+
+- Removed one extra blank line at EOF from the touched frontend domain types
+  after the full branch diff gate identified it.
+
+**Reasoning:**
+
+- The line was behavior-neutral, but keeping the executable P3 diff completely
+  clean avoids normalizing or waiving warnings at merge time. Raw Stitch source
+  whitespace remains intentionally excluded because those supplied references
+  are preserved byte-for-byte.
+
+**Verification:**
+
+- `npx tsc --noEmit --noUnusedLocals --noUnusedParameters` — pass.
+- P3 branch delta contains no backend, work-split, pitch or teammate-owned file.
+- Merge-tree against current `origin/main@4eb7391` — no conflict markers.
+
+**Status:** Final executable diff hygiene complete; ready for push verification.
+
