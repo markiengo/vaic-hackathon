@@ -36,7 +36,6 @@ vi.mock("@/lib/api/sales", async (importOriginal) => {
     getProducts: vi.fn(),
     getSales: vi.fn(),
     recordCashPayment: vi.fn(),
-    simulateDemoPayment: vi.fn(),
   };
 });
 
@@ -95,7 +94,6 @@ describe("sales workspace", () => {
       sale_id: "ORDER-001",
       payment_status: "PAID",
       cash_session_id: "1",
-      allocation_id: 7,
     });
   });
 
@@ -116,7 +114,7 @@ describe("sales workspace", () => {
     );
     expect(await screen.findByText("Đã nhận thanh toán · Đã tự động khớp")).toBeInTheDocument();
     expect(screen.getByText("ORDER-001")).toBeInTheDocument();
-    expect(screen.getByText("CASH-7")).toBeInTheDocument();
+    expect(screen.getByText("CASH-SESSION-1")).toBeInTheDocument();
   });
 
   it("keeps the order retry-safe while creating a QR intent", async () => {

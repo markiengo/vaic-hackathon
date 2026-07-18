@@ -44,7 +44,7 @@ async function installLedgerApi(page: Page) {
       const check = ready ? passed : failed;
       return route.fulfill({ json: { merchant_id: merchantId, period: "2026-07", score: ready ? 100 : 92, ready, export_allowed: ready, rule_version: "2026.07", effective_from: "2026-07-01", legal_source: "TT40", approved_by: "compliance", generated_at: "2026-08-03T00:00:00Z", checklist: [check], checks: [check], blockers: ready ? [] : [failed] } });
     }
-    if (path === "tax/export" && request.method() === "GET") return route.fulfill({ status: 200, body: "MaChungTu,SoTien\nTX-001,100000", headers: { "content-type": "text/csv", "content-disposition": "attachment; filename=misa_july.csv" } });
+    if (path === "tax/export" && request.method() === "POST") return route.fulfill({ status: 200, body: "MaChungTu,SoTien\nTX-001,100000", headers: { "content-type": "text/csv", "content-disposition": "attachment; filename=taxlens_july.csv" } });
     if (path === "transactions") return route.fulfill({ json: { transactions: [
       { id: "TX-030", merchant_id: merchantId, amount: 400000, sender_name: "Lê Thu", raw_note: "thanh toan toc", normalized_note: "thanh toan toc", transaction_date: "2026-07-30T09:00:00Z", match_status: "matched", matched_sale_id: "SALE-030", matched_sale_ids: ["SALE-030"], allocated_amount: 400000, classification: "revenue", invoice_id: null, reference_number: "PAY-SALON-030", source: "SEPAY", ai_interpretation: { confidence: 1, reasoning: ["Mã thanh toán trùng khớp", "Số tiền bằng giá trị đơn"] } },
       { id: "TX-029", merchant_id: merchantId, amount: 390000, sender_name: "Nguyễn Minh Anh", raw_note: "ck tien toc thang 7", normalized_note: "ck tien toc thang 7", transaction_date: "2026-07-29T08:00:00Z", match_status: "ambiguous", matched_sale_id: null, matched_sale_ids: [], allocated_amount: 0, classification: null, invoice_id: null, pending_exception_id: 101, source: "SHB", ai_interpretation: { confidence: 0.84, reasoning: ["Số tiền trùng một đơn hàng", "Nội dung nhắc dịch vụ tóc"] } },
@@ -60,7 +60,7 @@ test.describe("merchant ledger product journey", () => {
     await installLedgerApi(page);
   });
 
-  test("moves persisted decisions from 92 to 100 and unlocks MISA export", async ({ page }) => {
+  test("moves persisted decisions from 92 to 100 and unlocks CSV export", async ({ page }) => {
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { level: 1, name: "Tổng quan vận hành" })).toBeVisible();
     await expect(page.getByText("92%", { exact: true })).toBeVisible();
@@ -80,9 +80,9 @@ test.describe("merchant ledger product journey", () => {
     await expect(page.getByLabel("Mức sẵn sàng 100%")).toBeVisible();
     await expect(page.getByText("Đã mở khóa")).toBeVisible();
     const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: /MISA CSV/ }).click();
+    await page.getByRole("button", { name: "CSV" }).click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toBe("misa_july.csv");
+    expect(download.suggestedFilename()).toBe("taxlens_july.csv");
   });
 
   test("keeps every ledger route accessible and within the viewport", async ({ page }, testInfo) => {

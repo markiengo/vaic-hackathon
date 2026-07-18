@@ -33,6 +33,36 @@ export async function* streamAgentRun(
     signal,
     body: JSON.stringify({ merchant_id: merchantId, request_text: requestText, period }),
   });
+  if (response.status === 404 || response.status === 405) {
+    const fallback = await fetch("/api/backend/agents/run", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: new Headers(headers),
+      signal,
+      body: JSON.stringify({ merchant_id: merchantId, request: requestText, period }),
+    });
+    if (!fallback.ok) {
+      throw new Error(fallback.status === 401 ? "Phiên đăng nhập đã hết hạn." : "Không thể bắt đầu trợ lý TaxLens.");
+    }
+    const accepted = await fallback.json() as {
+      run_id: string;
+      status?: string;
+      plan?: { steps?: Array<{ step: number; action: string; agent: string }> };
+    };
+    yield { type: "run_started", run_id: accepted.run_id };
+    if (accepted.plan?.steps?.length) yield { type: "plan", steps: accepted.plan.steps };
+    const status = accepted.status ?? "PLANNING";
+    yield {
+      type: "progress_summary",
+      agent: "supervisor",
+      status,
+      message: status === "PLANNING"
+        ? "Yêu cầu đã được nhận và đang chờ backend thực thi kế hoạch."
+        : `Backend đã nhận yêu cầu với trạng thái ${status}.`,
+    };
+    if (["COMPLETED", "DONE"].includes(status)) yield { type: "done", run_id: accepted.run_id };
+    return;
+  }
   if (!response.ok || !response.body) {
     throw new Error(response.status === 401 ? "Phiên đăng nhập đã hết hạn." : "Không thể bắt đầu trợ lý TaxLens.");
   }

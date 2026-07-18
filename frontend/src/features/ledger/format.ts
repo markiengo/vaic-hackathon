@@ -2,8 +2,6 @@ import type { MatchStatus } from "@/lib/domain/types";
 import type { TaxLensStatus } from "@/components/ui";
 
 export const DEMO_PERIOD = "2026-07";
-export const PERIOD_LABEL = "Tháng 07/2026";
-
 export function formatMoney(value: number) {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value);
 }
@@ -19,7 +17,7 @@ export function formatConfidence(value?: number | null) {
   return `${Math.round(Math.min(100, Math.max(0, percentage)))}%`;
 }
 
-export function matchStatusLabel(status: MatchStatus | string): TaxLensStatus {
+export function matchStatusLabel(status: MatchStatus | string | null): TaxLensStatus {
   if (status === "matched") return "Đã khớp";
   if (status === "ambiguous") return "Cần xác nhận";
   if (status === "partial") return "Sai số tiền";

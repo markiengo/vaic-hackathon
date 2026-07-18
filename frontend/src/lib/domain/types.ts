@@ -3,18 +3,6 @@ export type MoneyValue = number;
 
 export type MatchStatus = "matched" | "unmatched" | "partial" | "ambiguous";
 export type ResolutionStatus = "PENDING" | "RESOLVED" | "DISMISSED";
-export type PaymentMethod = "bank_transfer" | "cash" | "card" | "other";
-export type PaymentStatus = "PENDING" | "PAID" | "PARTIAL" | "REFUNDED" | "CANCELLED";
-
-export interface MerchantSummary {
-  id: string;
-  name: string;
-  business_type: string;
-  business_category?: string | null;
-  tax_id?: string | null;
-  status: string;
-}
-
 export interface BankTransaction {
   id: string;
   merchant_id?: string;
@@ -28,7 +16,7 @@ export interface BankTransaction {
   payment_code?: string | null;
   source?: string | null;
   transaction_date: IsoDateTime;
-  match_status: MatchStatus | string;
+  match_status: MatchStatus | string | null;
   matched_sale_id: string | null;
   matched_sale_ids?: string[];
   allocated_amount?: MoneyValue;
@@ -112,37 +100,6 @@ export interface ReconciliationException {
   created_at?: IsoDateTime | null;
 }
 
-export interface SaleLineItem {
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  unit_price: MoneyValue;
-}
-
-export interface SaleSummary {
-  id: string;
-  merchant_id: string;
-  created_at: IsoDateTime;
-  items: SaleLineItem[];
-  gross_amount: MoneyValue;
-  discount: MoneyValue;
-  net_amount: MoneyValue;
-  payment_method: PaymentMethod | null;
-  payment_status: PaymentStatus | string;
-  invoice_status: string;
-}
-
-export interface InvoiceSummary {
-  id: string;
-  merchant_id: string;
-  sale_id: string | null;
-  invoice_number: string | null;
-  amount: MoneyValue;
-  issued_at: IsoDateTime | null;
-  status: string;
-  source?: string | null;
-}
-
 export interface InvoiceCoverageRecord {
   sale_id: string;
   amount: MoneyValue;
@@ -166,30 +123,3 @@ export interface InvoiceCoverageResponse {
   records: InvoiceCoverageRecord[];
 }
 
-export interface AgentEvidence {
-  label: string;
-  record_type: string;
-  record_id: string;
-  href?: string;
-}
-
-export interface AgentActionProposal {
-  id: string;
-  run_id: string;
-  merchant_id: string;
-  action_type: string;
-  title: string;
-  summary: string;
-  impact: string;
-  status:
-    | "PROPOSED"
-    | "APPROVED"
-    | "REJECTED"
-    | "EXECUTING"
-    | "COMPLETED"
-    | "FAILED"
-    | "CANCELLED"
-    | "EXPIRED";
-  evidence: AgentEvidence[];
-  created_at: IsoDateTime;
-}

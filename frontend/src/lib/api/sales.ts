@@ -59,15 +59,7 @@ export interface CashPaymentResult {
   sale_id: string;
   payment_status: string;
   cash_session_id: string;
-  allocation_id: number;
-}
-
-export interface DemoPaymentResult {
-  transaction_id: string;
-  payment_intent_id: string;
-  sale_id: string;
-  payment_status: string;
-  idempotent_replay: boolean;
+  allocation_id?: number;
 }
 
 export interface SaleHistoryItem {
@@ -124,9 +116,25 @@ export function getProducts(merchantId: string): Promise<PosProduct[]> {
   return apiFetch(`pos/products?merchant_id=${encodeURIComponent(merchantId)}`);
 }
 
-export function getSales(merchantId: string, period: string): Promise<SalesPageResult> {
+export async function getSales(merchantId: string, period: string): Promise<SalesPageResult> {
   const query = new URLSearchParams({ merchant_id: merchantId, period });
-  return apiFetch(`sales?${query}`);
+  const response = await apiFetch<SalesPageResult | Array<Partial<SaleHistoryItem>>>(`sales?${query}`);
+  if (!Array.isArray(response)) return response;
+  const items = response.map((sale): SaleHistoryItem => ({
+    id: sale.id ?? "unknown",
+    merchant_id: sale.merchant_id ?? merchantId,
+    store_id: sale.store_id ?? "unknown",
+    gross_amount: sale.gross_amount ?? 0,
+    discount: sale.discount ?? 0,
+    net_amount: sale.net_amount ?? 0,
+    payment_method: sale.payment_method ?? null,
+    payment_status: sale.payment_status ?? "UNKNOWN",
+    invoice_status: sale.invoice_status ?? "UNKNOWN",
+    created_at: sale.created_at ?? "",
+    lines: sale.lines ?? [],
+    relationship: sale.relationship ?? { order_id: sale.id ?? "unknown", payment_id: null, invoice_id: null },
+  }));
+  return { items, total: items.length, next_cursor: null };
 }
 
 export function createSale(
@@ -181,13 +189,6 @@ export function recordCashPayment(
       store_id: context.store_id,
       staff_id: context.staff_id,
     }),
-  });
-}
-
-export function simulateDemoPayment(paymentIntentId: string): Promise<DemoPaymentResult> {
-  return apiFetch("pos/demo-payments", {
-    method: "POST",
-    ...jsonBody({ payment_intent_id: paymentIntentId }),
   });
 }
 

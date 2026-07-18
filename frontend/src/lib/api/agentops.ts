@@ -1,4 +1,5 @@
 import { apiFetch, jsonBody } from "./client";
+import { getDashboard } from "./dashboard";
 
 export type AgentActionStatus =
   | "PROPOSED"
@@ -97,28 +98,6 @@ export interface MerchantPortfolio {
     active_runs: number;
   }>;
   summary: { total: number; active: number; open_cases: number; active_runs: number };
-}
-
-export interface MerchantDashboard {
-  merchant_id: string;
-  period: string;
-  total_transactions: number;
-  reconciled_count: number;
-  reconciliation_rate: number;
-  exception_count: number;
-  open_exceptions: number;
-  missing_invoice_count: number;
-  unclassified_count: number;
-  tax_readiness: {
-    score: number;
-    ready: boolean;
-    rule_version: string;
-    bank_reconciliation: number;
-    cash_session_closure: number;
-    missing_invoices: number;
-    unclassified_transactions: number;
-  };
-  active_agents: Array<{ agent_name: string; status: string; run_id: string }>;
 }
 
 export interface CaseSummary {
@@ -230,9 +209,7 @@ export function getMerchantPortfolio() {
 }
 
 export function getMerchantDashboard(merchantId: string, period = "2026-07") {
-  return apiFetch<MerchantDashboard>(
-    `merchants/${encodeURIComponent(merchantId)}/dashboard?period=${encodeURIComponent(period)}`,
-  );
+  return getDashboard(merchantId, period);
 }
 
 export function getCases() {

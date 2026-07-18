@@ -1743,3 +1743,60 @@ complete. Live six-scene rehearsal is pending because integrated-main backend
 contracts and demo data are owned by other Sprint 4 roles. No backend, matching,
 agent-core, infrastructure, seed, reset, or data-pipeline file was modified.
 
+### 2026-07-18 — P3: Integrated-main frontend contract hardening
+
+**Changed:**
+
+- Added one canonical dashboard adapter shared by the merchant dashboard and
+  SHB operations views. It accepts both the documented rich response and P4's
+  merged `matched`, decimal rate, boolean readiness, and missing-score shape;
+  recent transactions are loaded through the existing transaction client and
+  remain an optional enhancement.
+- Normalized P4's `{transactions, total}` response, P4's bare sales array, the
+  compact tax-readiness checklist, and the SePay WebSocket envelope into the
+  stable frontend domain model. Tax export now uses the merged `POST` contract
+  and exposes only the supported JSON and CSV formats.
+- Removed the development-only `/pos/demo-payments` action because no such
+  merged endpoint exists. Cash receipts now fall back to the returned cash
+  session identifier when P4 omits `allocation_id`, avoiding
+  `CASH-undefined`. A missing `/pos/context` contract now produces an explicit
+  unavailable state rather than leaving checkout silently inert.
+- Kept the future SSE assistant contract but added a compatibility fallback to
+  merged `POST /agents/run`. A `PLANNING` response is displayed as accepted and
+  waiting for backend execution; approval actions are queried only when a run
+  actually emits an approval checkpoint.
+- Corrected frontend session expiry to `ERR-AUTH-002`, made nullable transaction
+  match status truthful, and removed proven-unused scaffold assets, legacy
+  ESLint config, and domain declarations. Supplied Stitch/reference assets,
+  fixtures, showcase routes, snapshots, and all used dependencies were kept.
+- Expanded contract tests to cover P4's exact dashboard/readiness shapes,
+  nullable/default response fields, SePay's merged WebSocket wrapper, the cash
+  receipt fallback, POST tax export, and the non-streaming agent fallback.
+
+**Reasoning:**
+
+- The frontend previously passed mocked browser tests while bypassing main's
+  actual response shapes in Ops and calling two routes absent from main. One
+  adapter per domain prevents future consumer drift without editing P4-owned
+  routers or P2-owned agent execution.
+- Main currently accepts reconciliation/agent work in `PLANNING` but provides no
+  lifecycle transition. The UI must not claim completion or poll indefinitely;
+  it now reports the accepted state exactly and preserves the SSE path for the
+  owning backend team to activate later.
+- Dead-code removal required both symbol/import scans and repository-wide
+  reference scans. Ambiguous or intentional material was retained, including
+  the contract-correct but currently secondary `startAgentRun` client.
+
+**Verification:**
+
+- `npm test -- --run tests/ledger-api.test.ts tests/domain-contracts.test.tsx tests/sales-workspace.test.tsx tests/agentops-contract.test.tsx` — 4 files, 18/18 tests pass.
+- `npm run typecheck` — pass.
+- `npm run lint` — pass.
+- `git diff --check` — pass for this compatibility slice.
+
+**Status:** P3 compatibility hardening complete. Remaining live-contract gaps
+are explicitly owned elsewhere: P4 must provide POS context, authenticated
+dashboard/reconcile, merchant portfolio and operations routes; P1/P4 must
+persist matching fields and correct the dashboard count; P2/P4 must execute and
+transition agent/reconciliation runs. No teammate-owned file was modified.
+

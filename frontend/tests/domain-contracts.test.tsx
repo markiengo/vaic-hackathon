@@ -66,4 +66,23 @@ describe("safe realtime events", () => {
     ).not.toBeNull();
     expect(parseRealtimeEvent({ type: "agent.chain_of_thought", content: "private" })).toBeNull();
   });
+
+  it("normalizes the integrated SePay WebSocket envelope", () => {
+    expect(parseRealtimeEvent({
+      type: "transaction",
+      event: "money_received",
+      data: {
+        id: "SEPAY-902194960",
+        merchant_id: "M001",
+        amount: "620000",
+        sender_name: "NGUYEN VAN A",
+        transaction_date: "2026-07-30T09:00:00Z",
+      },
+    })).toMatchObject({
+      type: "money_received",
+      transaction_id: "SEPAY-902194960",
+      amount: 620000,
+      match_status: "unmatched",
+    });
+  });
 });

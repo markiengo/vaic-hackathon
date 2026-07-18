@@ -39,7 +39,12 @@ export async function getTransactions({
   if (status && status !== "all") query.set("status", status);
   if (search) query.set("search", search);
   const response = await apiFetch<TransactionPage | BankTransaction[]>(`transactions?${query}`);
-  return Array.isArray(response)
-    ? { page: 1, page_size: response.length, total: response.length, transactions: response }
-    : response;
+  const transactions = Array.isArray(response) ? response : response.transactions ?? [];
+  return {
+    page: Array.isArray(response) ? page : response.page ?? page,
+    page_size: Array.isArray(response) ? transactions.length : response.page_size ?? pageSize,
+    total: Array.isArray(response) ? transactions.length : response.total ?? transactions.length,
+    next_cursor: Array.isArray(response) ? null : response.next_cursor ?? null,
+    transactions,
+  };
 }

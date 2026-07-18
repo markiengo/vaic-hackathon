@@ -46,8 +46,12 @@ export function useAgentRunTrace(runId: string) {
   return useQuery({ queryKey: agentOpsKeys.trace(runId), queryFn: () => getAgentRunTrace(runId) });
 }
 
-export function useAgentActions(runId?: string) {
-  return useQuery({ queryKey: agentOpsKeys.actions(runId), queryFn: () => getAgentActions({ runId }) });
+export function useAgentActions(runId?: string, enabled = Boolean(runId)) {
+  return useQuery({
+    queryKey: agentOpsKeys.actions(runId),
+    queryFn: () => getAgentActions({ runId }),
+    enabled: Boolean(runId) && enabled,
+  });
 }
 
 export function useStartAgentRun() {

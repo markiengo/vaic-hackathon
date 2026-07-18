@@ -15,7 +15,6 @@ import {
   Clock3,
   Minus,
   Plus,
-  Radio,
   ReceiptText,
   Search,
   ShoppingBag,
@@ -54,7 +53,6 @@ import {
   getSales,
   recordCashPayment,
   salesQueryKeys,
-  simulateDemoPayment,
   type PaymentIntentResult,
   type PosContext,
   type PosProduct,
@@ -510,7 +508,10 @@ export function SalesWorkspace() {
       activeSale.current = { id: sale.sale_id, amount: sale.net_amount };
       if (method === "cash") {
         const payment = await recordCashPayment(sale.sale_id, sale.net_amount, context, checkoutKeys.current.cash);
-        setReceipt({ orderId: sale.sale_id, paymentId: `CASH-${payment.allocation_id}`, amount: sale.net_amount });
+        const paymentId = payment.allocation_id == null
+          ? `CASH-SESSION-${payment.cash_session_id}`
+          : `CASH-${payment.allocation_id}`;
+        setReceipt({ orderId: sale.sale_id, paymentId, amount: sale.net_amount });
         setCart([]);
         setDiscount("0");
         setCheckoutLocked(false);
@@ -534,30 +535,9 @@ export function SalesWorkspace() {
     }
   }
 
-  async function demoPayment() {
-    if (!qr) return;
-    setBusy(true);
-    try {
-      const result = await simulateDemoPayment(qr.payment_intent_id);
-      const amount = activeSale.current?.amount ?? qr.amount;
-      setReceipt({ orderId: result.sale_id, paymentId: result.transaction_id, amount });
-      setQrOpen(false);
-      setCart([]);
-      setDiscount("0");
-      setCheckoutLocked(false);
-      checkoutKeys.current = null;
-      activeSale.current = null;
-      await queryClient.invalidateQueries({ queryKey: ["sales", merchantId] });
-      toast({ title: "Tiền demo đã về", description: "Giao dịch đi qua cùng luồng SePay và đối soát.", tone: "success" });
-    } catch (error) {
-      toast({ title: "Không mô phỏng được thanh toán", description: errorMessage(error), tone: "danger" });
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (sessionQuery.isLoading) return <LoadingState label="Đang mở quầy bán hàng" />;
   if (!merchantId) return <ErrorState title="Không có merchant workspace" description="Tài khoản này chưa được gắn với cửa hàng để tạo đơn." />;
+  if (contextQuery.isError) return <ErrorState title="Chưa thể mở quầy bán hàng" description="Backend chưa cung cấp ngữ cảnh cửa hàng, nhân viên và ca tiền mặt cho merchant này." retry={() => contextQuery.refetch()} />;
 
   const createPanel = (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.75fr)]">
@@ -671,7 +651,6 @@ export function SalesWorkspace() {
         description="TaxLens tự xác nhận khi SePay nhận đúng mã và số tiền. Không có nút đánh dấu đã trả."
         footer={
           <>
-            {process.env.NODE_ENV !== "production" ? <Button variant="outline" disabled={busy || remaining === 0} onClick={demoPayment}><Radio aria-hidden size={16} /> Mô phỏng tiền về</Button> : null}
             {remaining === 0 ? <Button onClick={() => checkout("qr", true)}>Tạo lại mã</Button> : <Button variant="ghost" onClick={() => setQrOpen(false)}>Hủy mã QR</Button>}
             {remaining ? <Button variant="ghost" onClick={() => { setQrOpen(false); toast({ title: "Đã đóng mã QR", description: "Bạn có thể chọn phương thức thanh toán khác tại quầy.", tone: "info" }); }}>Đánh dấu thanh toán cách khác</Button> : null}
           </>

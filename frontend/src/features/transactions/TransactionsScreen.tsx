@@ -299,7 +299,7 @@ function TransactionDetail({ transaction, period }: { transaction: BankTransacti
 }
 
 function needsReview(transaction: BankTransaction): boolean {
-  return Boolean(transaction.pending_exception_id) || ["ambiguous", "unmatched"].includes(transaction.match_status);
+  return Boolean(transaction.pending_exception_id) || ["ambiguous", "unmatched"].includes(transaction.match_status ?? "");
 }
 
 function suggestionFor(transaction: BankTransaction) {

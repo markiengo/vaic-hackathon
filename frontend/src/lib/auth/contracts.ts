@@ -14,7 +14,3 @@ export interface SessionResponse {
   user: SessionUser;
   csrfToken: string;
 }
-
-export function isOperationsRole(role: UserRole): boolean {
-  return role !== "merchant";
-}

@@ -69,6 +69,21 @@ describe("agent operations contracts", () => {
     expect(JSON.parse(String(init.body))).toEqual({ merchant_id: "M001", request_text: "Kiểm tra tháng 7", period: "2026-07" });
   });
 
+  it("falls back to the merged agent-run endpoint when streaming is unavailable", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ run_id: "RUN-2", status: "PLANNING", plan: { steps: [] } }), { status: 202 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const events = [];
+    for await (const event of streamAgentRun("M001", "Đối soát tháng 7", "2026-07")) events.push(event);
+
+    expect(events.map((event) => event.type)).toEqual(["run_started", "progress_summary"]);
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe("/api/backend/agents/run");
+    expect(JSON.parse(String(init.body))).toEqual({ merchant_id: "M001", request: "Đối soát tháng 7", period: "2026-07" });
+  });
+
   it("keeps approval and execution as separate versioned requests", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ ...action, status: "APPROVED", version: 2 }), { status: 200 }))
@@ -84,7 +99,9 @@ describe("agent operations contracts", () => {
 
   it("uses the real ops detail, trace, draft, and resolution contracts", async () => {
     document.cookie = "taxlens_csrf=csrf-test; path=/";
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response("{}", { status: 200 })));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ recent_transactions: [] }), { status: 200 }))
+      .mockImplementation(() => Promise.resolve(new Response("{}", { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);
 
     await getMerchantDashboard("M001", "2026-07");

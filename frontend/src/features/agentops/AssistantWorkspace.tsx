@@ -149,7 +149,8 @@ export function AssistantWorkspace() {
   const [merchantId, setMerchantId] = useState<string | null>(null);
   const [request, setRequest] = useState(SUGGESTIONS[0]);
   const stream = useAgentStream(merchantId, PERIOD);
-  const actions = useAgentActions(stream.runId ?? undefined);
+  const hasApproval = stream.events.some((event) => event.type === "approval_required");
+  const actions = useAgentActions(stream.runId ?? undefined, hasApproval);
 
   useEffect(() => {
     fetch("/api/auth/session", { cache: "no-store" })
@@ -213,7 +214,7 @@ export function AssistantWorkspace() {
         </div>
       </section>
 
-      {stream.runId && (
+      {stream.runId && hasApproval && (
         <section aria-labelledby="approval-heading" className="space-y-4">
           <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-mango">Human checkpoint</p><h2 id="approval-heading" className="mt-2 font-display text-3xl">Hành động chờ quyết định</h2></div>
           {actions.isLoading && <Skeleton className="h-48" />}

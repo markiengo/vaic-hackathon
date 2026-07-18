@@ -37,7 +37,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (!meResponse?.ok) {
     const response = NextResponse.json(
-      { error: { code: "ERR-AUTH-001", message: "Phien dang nhap da het han." } },
+      { error: { code: "ERR-AUTH-002", message: "Phien dang nhap da het han." } },
       { status: 401 },
     );
     clearSessionCookies(response);
