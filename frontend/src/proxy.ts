@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth/session";
 
-const PUBLIC_ROUTES = ["/login", "/confirm/", "/ui", "/_dev/showcase"];
+const PUBLIC_ROUTES = ["/", "/login", "/confirm/", "/ui", "/_dev/showcase"];
 
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;

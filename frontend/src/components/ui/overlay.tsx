@@ -30,8 +30,8 @@ function NativeDialog({ open, onOpenChange, title, description, children, footer
       onCancel={() => onOpenChange(false)}
       onClick={(event) => { if (event.target === event.currentTarget) onOpenChange(false); }}
       className={cn(
-        "surface-shadow-lg m-auto max-h-[calc(100dvh-2rem)] w-[min(36rem,calc(100%-2rem))] rounded-xl border bg-surface p-0 text-text backdrop:bg-brand-navy/55 open:animate-[route-in_180ms_ease-out]",
-        sheet && "mr-0 h-dvh max-h-dvh w-[min(30rem,calc(100%-1rem))] rounded-l-xl rounded-r-none",
+        "surface-shadow-lg m-auto max-h-[calc(100dvh-2rem)] w-[min(36rem,calc(100%-2rem))] rounded-2xl border bg-surface p-0 text-text backdrop:bg-brand-navy/55 open:animate-[route-in_180ms_ease-out]",
+        sheet && "mr-0 h-dvh max-h-dvh w-[min(30rem,calc(100%-1rem))] rounded-l-2xl rounded-r-none",
       )}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}

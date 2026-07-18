@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import date, datetime, timezone
 
@@ -6,8 +7,9 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import AsyncSessionLocal, get_db
 from app.core.security import TaxLensError, get_current_user
+from app.core.ws_manager import ws_manager
 from app.models.merchant import Merchant
 from app.models.payment import PaymentAllocation
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
@@ -15,8 +17,10 @@ from app.models.transaction import BankTransaction
 from app.schemas.reconciliation import ExceptionResolveRequest, ExceptionResolveResponse, ReconcileResponse
 from app.services.allocation import AllocationLeg, AllocationType
 from app.services.matching import MatchMethod
+from app.services.reconciliation import reconcile_period
 
 router = APIRouter(prefix="/reconciliation", tags=["reconciliation"])
+logger = logging.getLogger(__name__)
 
 
 class ReconciliationStartRequest(BaseModel):
@@ -25,8 +29,45 @@ class ReconciliationStartRequest(BaseModel):
     request_text: str | None = None
 
 
-async def _noop_agent_run(merchant_id: str, case_id: str, period: str) -> None:
-    pass
+async def _run_reconciliation_bg(merchant_id: str, case_id: str, period: str) -> None:
+    """Background task: run real reconciliation and update case."""
+    try:
+        async with AsyncSessionLocal() as session:
+            summary = await reconcile_period(
+                session,
+                case_id=case_id,
+                merchant_id=merchant_id,
+                period=period,
+            )
+            case = await session.get(ReconciliationCase, case_id)
+            if case is not None:
+                case.status = "COMPLETED"
+                case.summary = {
+                    "transactions_scanned": summary.transactions_scanned,
+                    "matched": summary.matched,
+                    "exceptions": summary.exceptions,
+                    "ambiguous": summary.ambiguous,
+                    "no_match": summary.no_match,
+                    "review_required": summary.review_required,
+                    "cash_discrepancies": summary.cash_discrepancies,
+                    "matched_transaction_ids": list(summary.matched_transaction_ids),
+                    "exception_ids": list(summary.exception_ids),
+                }
+            await session.commit()
+        await ws_manager.broadcast({
+            "type": "reconciliation_completed",
+            "merchant_id": merchant_id,
+            "case_id": case_id,
+            "period": period,
+        })
+    except Exception as exc:
+        logger.exception("Reconciliation background task failed for case %s", case_id)
+        async with AsyncSessionLocal() as session:
+            case = await session.get(ReconciliationCase, case_id)
+            if case is not None:
+                case.status = "FAILED"
+                case.summary = {"error": str(exc)}
+            await session.commit()
 
 
 @router.get("/exceptions")
@@ -125,7 +166,7 @@ async def start_reconciliation(
     db.add(case)
     await db.commit()
 
-    background_tasks.add_task(_noop_agent_run, body.merchant_id, case_id, body.period)
+    background_tasks.add_task(_run_reconciliation_bg, body.merchant_id, case_id, body.period)
     return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})
 
 
@@ -143,13 +184,36 @@ async def get_reconciliation_result(
     )
     exceptions = ex_result.scalars().all()
     pending = [e for e in exceptions if e.status == "PENDING"]
+
+    # Count actual matched transactions from PaymentAllocation
+    matched_count = await db.scalar(
+        select(func.count(func.distinct(PaymentAllocation.bank_transaction_id))).where(
+            PaymentAllocation.bank_transaction_id.isnot(None)
+        )
+    ) or 0
+
+    # Use summary from case if available, otherwise derive from live data
+    summary = c.summary or {}
+    matched = summary.get("matched", matched_count)
+    transactions_scanned = summary.get("transactions_scanned", 0)
+    unmatched = summary.get("no_match", len(pending))
+    ambiguous = summary.get("ambiguous", 0)
+    review_required = summary.get("review_required", 0)
+    cash_discrepancies = summary.get("cash_discrepancies", 0)
+
+    # Count exceptions by type for missing_invoice_cases
+    missing_invoice_count = sum(1 for e in exceptions if e.exception_type == "NO_MATCH")
+
     return {
         "run_id": c.id,
         "status": c.status,
-        "matched": 0,  # placeholder — P1 wires match counts
-        "unmatched": len(pending),
-        "duplicate_candidates": 0,
-        "missing_invoice_cases": 0,
+        "matched": matched,
+        "unmatched": unmatched,
+        "duplicate_candidates": ambiguous,
+        "missing_invoice_cases": missing_invoice_count,
+        "transactions_scanned": transactions_scanned,
+        "review_required": review_required,
+        "cash_discrepancies": cash_discrepancies,
         "exceptions": [
             {
                 "id": ex.id,
@@ -163,7 +227,7 @@ async def get_reconciliation_result(
         ],
         "tax_readiness": {
             "rule_version": c.tax_rule_version or "unknown",
-            "ready": False,
+            "ready": len(pending) == 0 and c.status == "COMPLETED",
         },
     }
 

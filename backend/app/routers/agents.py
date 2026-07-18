@@ -1,4 +1,6 @@
+import logging
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import JSONResponse
@@ -6,11 +8,15 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import AsyncSessionLocal, get_db
 from app.core.security import TaxLensError, get_current_user
+from app.core.ws_manager import ws_manager
 from app.models.agent import AgentRun, ToolCall
+from app.schemas.agent import AgentRunRequest
+from app.agents.runner import AgentRunner
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+logger = logging.getLogger(__name__)
 
 
 class AgentRunStartRequest(BaseModel):
@@ -22,9 +28,84 @@ class AgentRunStartRequest(BaseModel):
     case_id: str | None = None
 
 
-async def _dispatch_agent_run(run_id: str) -> None:
-    """Background task — placeholder until P2 wires LangGraph workflow."""
-    pass
+async def _dispatch_agent_run(run_id: str, merchant_id: str, period: str, request_text: str, case_id: str | None) -> None:
+    """Background task: run the real LangGraph agent workflow and persist results."""
+    try:
+        await ws_manager.push_to_run(run_id, {
+            "type": "agent_status",
+            "run_id": run_id,
+            "status": "EXECUTING",
+        })
+
+        runner = AgentRunner()
+        response = runner.run(
+            AgentRunRequest(
+                merchant_id=merchant_id,
+                period=period,
+                request_text=request_text,
+                case_id=case_id,
+            )
+        )
+
+        async with AsyncSessionLocal() as session:
+            run = await session.get(AgentRun, run_id)
+            if run is not None:
+                run.status = response.status
+                run.plan = response.output.get("plan")
+                run.completed_at = datetime.now(timezone.utc)
+                if response.error:
+                    run.error = response.error
+                await session.commit()
+
+                # Persist tool calls
+                tool_calls = response.output.get("tool_calls", {})
+                for agent_name, calls in tool_calls.items():
+                    if not isinstance(calls, list):
+                        continue
+                    for tc in calls:
+                        if not isinstance(tc, dict):
+                            continue
+                        session.add(ToolCall(
+                            agent_run_id=run_id,
+                            agent_name=agent_name,
+                            tool_name=tc.get("tool_name", ""),
+                            input_hash=tc.get("input_hash"),
+                            output_hash=tc.get("output_hash"),
+                            confidence=tc.get("confidence"),
+                            rule_version=tc.get("rule_version"),
+                            duration_ms=tc.get("duration_ms"),
+                        ))
+                await session.commit()
+
+        # Broadcast trace events via WebSocket
+        trace = response.output.get("trace", [])
+        for event in trace:
+            await ws_manager.push_to_run(run_id, {
+                "type": "agent_trace",
+                "run_id": run_id,
+                "event": event,
+            })
+
+        await ws_manager.push_to_run(run_id, {
+            "type": "agent_status",
+            "run_id": run_id,
+            "status": response.status,
+        })
+    except Exception as exc:
+        logger.exception("Agent run %s failed", run_id)
+        async with AsyncSessionLocal() as session:
+            run = await session.get(AgentRun, run_id)
+            if run is not None:
+                run.status = "FAILED"
+                run.error = str(exc)
+                run.completed_at = datetime.now(timezone.utc)
+                await session.commit()
+        await ws_manager.push_to_run(run_id, {
+            "type": "agent_status",
+            "run_id": run_id,
+            "status": "FAILED",
+            "error": str(exc),
+        })
 
 
 # TODO Q-D: path is /agents/run (singular) per P3's api.ts; API spec §8 uses
@@ -48,7 +129,7 @@ async def start_agent_run(
     db.add(run)
     await db.commit()
 
-    background_tasks.add_task(_dispatch_agent_run, run_id)
+    background_tasks.add_task(_dispatch_agent_run, run_id, body.merchant_id, body.period, body.request, body.case_id)
 
     return JSONResponse(status_code=202, content={"run_id": run_id, "status": "PLANNING"})
 

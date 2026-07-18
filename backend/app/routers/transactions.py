@@ -1,11 +1,12 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.models.payment import PaymentAllocation
 from app.models.transaction import BankTransaction
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -35,6 +36,26 @@ async def list_transactions(
         .order_by(BankTransaction.transaction_date.desc())
     )
     rows = result.scalars().all()
+
+    # Fetch all PaymentAllocation rows for these transactions
+    tx_ids = [r.id for r in rows]
+    allocation_map: dict[str, dict] = {}
+    if tx_ids:
+        alloc_result = await db.execute(
+            select(
+                PaymentAllocation.bank_transaction_id,
+                PaymentAllocation.sale_id,
+                PaymentAllocation.match_method,
+                PaymentAllocation.confidence,
+            ).where(PaymentAllocation.bank_transaction_id.in_(tx_ids))
+        )
+        for bank_tx_id, sale_id, match_method, confidence in alloc_result:
+            allocation_map[bank_tx_id] = {
+                "sale_id": sale_id,
+                "match_method": match_method,
+                "confidence": float(confidence) if confidence else None,
+            }
+
     transactions = [
         {
             "id": r.id,
@@ -48,14 +69,15 @@ async def list_transactions(
             "payment_code": r.payment_code,
             "source": r.source,
             "transaction_date": r.transaction_date.isoformat() if r.transaction_date else None,
-            # TODO [P1]: match_status, matched_sale_id, ai_interpretation populated by matching engine
-            "match_status": None,
-            "matched_sale_id": None,
-            "ai_interpretation": None,
+            "match_status": "matched" if r.id in allocation_map else None,
+            "matched_sale_id": allocation_map.get(r.id, {}).get("sale_id"),
+            "match_method": allocation_map.get(r.id, {}).get("match_method"),
+            "match_confidence": allocation_map.get(r.id, {}).get("confidence"),
+            "ai_interpretation": r.ai_interpretation,
         }
         for r in rows
     ]
-    # Filter by match_status (Python-level until P1 wires match_status to DB column)
+    # Filter by match_status
     if status and status != "all":
         if status == "matched":
             transactions = [t for t in transactions if t["match_status"] is not None]

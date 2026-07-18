@@ -5,6 +5,7 @@ export * from "./data-table";
 export * from "./field";
 export * from "./overlay";
 export * from "./page-header";
+export * from "./primitives";
 export * from "./states";
 export * from "./status-pill";
 export * from "./tabs";

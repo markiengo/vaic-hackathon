@@ -1,4 +1,5 @@
 from redis.asyncio import Redis, ConnectionPool
+from redis.exceptions import RedisError
 
 from app.core.config import settings
 

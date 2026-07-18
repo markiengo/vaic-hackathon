@@ -16,20 +16,20 @@ type PageHeaderProps = {
 export function PageHeader({ eyebrow, merchant, period, updatedAt, title, description, subtitle, actions }: PageHeaderProps) {
   const supportingText = subtitle ?? description;
   return (
-    <header className="flex flex-col gap-5 border-b pb-7 sm:flex-row sm:items-end sm:justify-between">
+    <header className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
       <div className="max-w-3xl">
         {(eyebrow || merchant || period || updatedAt) && (
-          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold uppercase tracking-[0.14em] text-secondary">
-            {eyebrow ? <span>{eyebrow}</span> : null}
-            {merchant ? <span>{merchant}</span> : null}
-            {period ? <span className="text-text-secondary">{period}</span> : null}
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-xs">
+            {eyebrow ? <span className="font-semibold text-text-secondary">{eyebrow}</span> : null}
+            {merchant ? <span className="rounded-full bg-[#F5F6F8] px-3 py-1 text-xs font-semibold text-secondary">{merchant}</span> : null}
+            {period ? <span className="text-text-tertiary">{period}</span> : null}
             {updatedAt ? <span className="text-text-tertiary">Cập nhật {updatedAt}</span> : null}
           </div>
         )}
-        <h1 className="font-display text-4xl font-medium leading-none tracking-[-0.035em] text-text sm:text-5xl">{title}</h1>
-        {supportingText && <p className="mt-4 max-w-2xl text-[15px] leading-7 text-text-secondary">{supportingText}</p>}
+        <h2 className="mb-2 font-display text-[44px] leading-tight tracking-[-0.02em] text-ink">{title}</h2>
+        {supportingText && <p className="text-sm text-text-secondary">{supportingText}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-3 sm:justify-end">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
     </header>
   );
 }

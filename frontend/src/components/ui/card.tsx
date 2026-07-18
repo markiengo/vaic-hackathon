@@ -3,12 +3,13 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const cardVariants = cva("rounded-xl border p-5 sm:p-6", {
+const cardVariants = cva("rounded-2xl border bg-surface", {
   variants: {
     variant: {
-      standard: "bg-surface",
-      information: "border-secondary/20 bg-accent text-text",
-      workspace: "bg-surface-elevated surface-shadow",
+      standard: "p-8 shadow-[0_4px_24px_rgba(25,36,78,0.04)]",
+      compact: "p-6 shadow-[0_4px_24px_rgba(25,36,78,0.04)]",
+      information: "border-border bg-[var(--taxlens-information-soft)] p-5 text-text",
+      workspace: "bg-surface-elevated surface-shadow p-6",
     },
   },
   defaultVariants: { variant: "standard" },
@@ -35,8 +36,8 @@ export function KpiCard({ label, value, detail, trend, accent = "default" }: Kpi
   return (
     <Card className={cn("relative overflow-hidden", accent === "mist" && "bg-accent", accent === "mango" && "border-mango")}>
       <div aria-hidden className={cn("absolute inset-x-0 top-0 h-1 bg-border-strong", accent === "mist" && "bg-secondary", accent === "mango" && "bg-mango")} />
-      <p className={cn("text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary", accent === "mist" && "text-text")}>{label}</p>
-      <p className="font-display mt-4 text-4xl leading-none tracking-[-0.03em] text-text">{value}</p>
+      <p className={cn("text-[13px] font-medium text-text-secondary", accent === "mist" && "text-text")}>{label}</p>
+      <p className="font-display mt-4 text-[36px] leading-tight tracking-[-0.03em] text-ink">{value}</p>
       {(detail || trend) && (
         <div className={cn("mt-4 flex min-h-6 items-center justify-between gap-3 text-xs text-text-secondary", accent === "mist" && "text-text")}>
           <span>{detail}</span>

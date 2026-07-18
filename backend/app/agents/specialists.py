@@ -74,7 +74,17 @@ def reconciliation_node(state: AgentGraphState) -> dict[str, Any]:
                 "note": interpreted_note,
             },
         ),
-        _execute(
+    ]
+
+    transactions = _first_completed_output(executions, "get_bank_transactions") or []
+    sales = _first_completed_output(executions, "get_sales_orders") or []
+    invoices = _first_completed_output(executions, "get_invoices") or []
+    candidates = _first_completed_output(executions, "score_match_candidates") or []
+
+    # Only create exception if no matches found
+    exceptions = list(state.get("exceptions", []))
+    if not candidates:
+        exc_exec = _execute(
             state,
             "reconciliation",
             "create_reconciliation_exception",
@@ -83,23 +93,16 @@ def reconciliation_node(state: AgentGraphState) -> dict[str, Any]:
                 "merchant_id": merchant_id,
                 "period": period,
                 "exception_type": "PENDING_REVIEW",
-                "reason": "Agent skeleton created review hook; final exception logic pending tool data.",
+                "reason": "No match candidates found for transaction.",
                 "ai_suggestion": {
                     "source": "reconciliation_agent",
                     "note_interpretation": asdict(note_interpretation),
                 },
             },
-        ),
-    ]
-
-    transactions = _first_completed_output(executions, "get_bank_transactions") or []
-    sales = _first_completed_output(executions, "get_sales_orders") or []
-    invoices = _first_completed_output(executions, "get_invoices") or []
-    candidates = _first_completed_output(executions, "score_match_candidates") or []
-    created_exception = _first_completed_output(executions, "create_reconciliation_exception")
-    exceptions = list(state.get("exceptions", []))
-    if created_exception:
-        exceptions.append(created_exception)
+        )
+        executions.append(exc_exec)
+        if exc_exec.status == "completed" and exc_exec.output:
+            exceptions.append(exc_exec.output)
 
     summary = ReconciliationSummary(
         merchant_id=merchant_id,

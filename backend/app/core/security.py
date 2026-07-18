@@ -155,24 +155,33 @@ _MAX_FAILURES = 5
 
 async def check_lockout(email: str) -> None:
     """Raise ERR-AUTH-001 (401) if account is currently locked out."""
-    redis = await get_redis()
-    locked = await redis.exists(f"lockout:{email}")
-    if locked:
-        raise TaxLensError("ERR-AUTH-001", 401, "Tài khoản tạm thời bị khóa do đăng nhập sai nhiều lần")
+    try:
+        redis = await get_redis()
+        locked = await redis.exists(f"lockout:{email}")
+        if locked:
+            raise TaxLensError("ERR-AUTH-001", 401, "Tài khoản tạm thời bị khóa do đăng nhập sai nhiều lần")
+    except Exception:
+        pass  # Redis unavailable — skip lockout check
 
 
 async def record_failed_login(email: str) -> None:
     """Increment failure counter; lock account after MAX_FAILURES within TTL window."""
-    redis = await get_redis()
-    key = f"failed:{email}"
-    count = await redis.incr(key)
-    await redis.expire(key, _LOCKOUT_TTL)  # rolling window — reset on each failure
-    if count >= _MAX_FAILURES:
-        await redis.set(f"lockout:{email}", "1", ex=_LOCKOUT_TTL)
-        await redis.delete(key)
+    try:
+        redis = await get_redis()
+        key = f"failed:{email}"
+        count = await redis.incr(key)
+        await redis.expire(key, _LOCKOUT_TTL)  # rolling window — reset on each failure
+        if count >= _MAX_FAILURES:
+            await redis.set(f"lockout:{email}", "1", ex=_LOCKOUT_TTL)
+            await redis.delete(key)
+    except Exception:
+        pass  # Redis unavailable — skip
 
 
 async def clear_failed_login(email: str) -> None:
     """Clear failure counter on successful login."""
-    redis = await get_redis()
-    await redis.delete(f"failed:{email}")
+    try:
+        redis = await get_redis()
+        await redis.delete(f"failed:{email}")
+    except Exception:
+        pass  # Redis unavailable — skip

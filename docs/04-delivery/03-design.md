@@ -3307,3 +3307,108 @@ Compliance governs deterministic rules
 ```
 
 > **TaxLens — Dòng tiền khớp. Sổ sách sạch. Vận hành nhẹ.**
+
+---
+
+# 30. Landing page positioning and copy governance
+
+## 30.1 Audience
+
+The landing page at `/` is a **bank-facing B2B pitch** aimed at SHB decision-makers from SME Banking, Digital Banking, Merchant Solutions, Operations, Risk, Compliance, Innovation, and Relationship Management.
+
+It is **not** a consumer SaaS landing page. It does not address the merchant persona (Hương) directly. It does not use casual language, consumer CTAs, or unverified scale claims.
+
+## 30.2 Core positioning
+
+TaxLens is positioned as:
+
+> An agent-first TaxOps platform that helps banks turn fragmented merchant sales, payment, cash, and invoice data into an explainable, auditable, tax-ready operating record.
+
+The landing page must communicate that TaxLens:
+- deepens relationships with SME merchants
+- provides value beyond payment acceptance
+- improves visibility into merchant operating health
+- reduces manual merchant-support workload
+- detects unresolved data and invoice issues earlier
+- coordinates AI agents with human approval
+- preserves evidence, traceability, and rule versions
+- connects with existing banking, POS, accounting, and invoice systems
+- does not replace MISA, KiotViet, SePay, or a tax-filing product
+
+## 30.3 Language rules
+
+- **Vietnamese-first**, institutional tone suitable for a bank presentation
+- English allowed only for: TaxLens, TaxOps, AI, API, QR, POS, CSV, SHB, MISA, SePay, Cases, Agent Runs (when syncing with product UI)
+- First occurrence of English terms gets Vietnamese gloss: `khách hàng kinh doanh (merchant)`, `tác nhân AI (agent)`, `hồ sơ xử lý (Case)`, `lần chạy tác nhân AI (Agent Run)`
+- After first gloss, prefer the Vietnamese term
+- Do not address reader as `chị`
+- Do not mix English and Vietnamese in a single phrase (e.g. `AI reasoning sau, human approval cuối`)
+- Do not use: `merchant` (use `khách hàng kinh doanh`), `ledger` (use `hồ sơ dữ liệu vận hành`), `readiness` (use `mức độ sẵn sàng`), `workflow` (use `quy trình`), `confidence score` (use `mức độ tin cậy`), `evidence` (use `bằng chứng`), `export` (use `xuất dữ liệu`)
+
+## 30.4 Content rules
+
+- **No unverified metrics**: Remove `50.000+ giao dịch`, `1.200+ merchant`, `99.9% uptime`, `94% ngoại lệ tự động phân loại`
+- Demo data must be labeled as `Dữ liệu mô phỏng` or `Kịch bản demo`
+- Never present demo numbers as production traction
+- Do not claim TaxLens is `do SHB cung cấp` — use `Định hướng triển khai cùng SHB`
+- Do not show `Bảng giá` — no bank-facing commercial model exists
+- Do not use consumer CTAs: `Bắt đầu miễn phí`, `Không cần cài đặt`, `Dùng thử ngay`
+- Primary CTA is `Mở bản demo`
+- Do not expose internal scoring formulas, thresholds, or model names
+
+## 30.5 Navigation
+
+Landing page navigation labels:
+- `Nền tảng`
+- `Giá trị cho SHB`
+- `Cách vận hành`
+- `An toàn & kiểm soát`
+- `Demo`
+- `Đăng nhập` (right side)
+- `Mở bản demo` (primary CTA, right side)
+
+## 30.6 Section structure
+
+The landing page has 8 content sections in this order:
+
+1. **Hero** — dark navy background, strategic bank value headline, `Mở bản demo` CTA
+2. **Nền tảng** (StatStrip) — 4 capability statements, no fake metrics
+3. **Mô hình kiểm soát** (Pillars) — 3-layer processing model: rules, AI, human approval
+4. **Cách TaxLens vận hành** (HowItWorks) — 4-step workflow: connect, reconcile, approve, export
+5. **Giá trị cho SHB** (SHBValue) — 4 value blocks for SHB stakeholders
+6. **Năng lực nền tảng** (CapabilitySplit) — 4 platform capabilities, full-width grid, no duplicate product mockup
+7. **An toàn & kiểm soát** (SafetyGovernance) — 7 governance items in a split layout
+8. **Bản demo TaxLens** (FinalCTA) — dark navy background, `Mở bản demo` + `Xem kịch bản trình diễn`
+
+## 30.7 Product mockup rules
+
+- Only one product mockup instance (in Hero section)
+- Sidebar labels must match product architecture: `Tổng quan`, `Trợ lý TaxLens`, `Giao dịch`, `Cần xác nhận`, `Hóa đơn`, `Bán hàng`, `Sẵn sàng thuế`
+- Do not use outdated labels: `Ngoại lệ`, `Ledger`, `Sẵn sàng`
+- Header must show `Dữ liệu mô phỏng · Tháng 7/2026`
+- Stat cards use demo-scale numbers: `25/30`, `3`, `2` — not production-scale numbers
+- Exception list header: `Vấn đề cần xác nhận` with `3 mục` (not `3 items`)
+
+## 30.8 Footer
+
+- Description: `TaxLens là lớp điều phối và kiểm soát TaxOps dành cho hệ sinh thái merchant SME...`
+- 4 column groups: `Nền tảng`, `Kiểm soát`, `Tài nguyên`, `Pháp lý`
+- No `Bảng giá` link
+- No `Tài liệu API` link (not implemented)
+- Dynamic year via `new Date().getFullYear()`
+- Endorsement line: `Định hướng triển khai cùng SHB` (not `Được SHB đồng hành` or `do SHB cung cấp`)
+
+## 30.9 Reasoning for major changes
+
+| Change | Reason |
+|--------|--------|
+| Hero headline from slogan to strategic statement | Slogan `Dòng tiền khớp. Sổ sách sạch. Vận hành nhẹ.` is a brand line, not strong enough to carry a bank-facing hero alone |
+| Fake metrics → capability statements | No production data exists; unverified metrics damage credibility in a bank meeting |
+| `Bảng giá` removed | No bank-facing commercial model exists |
+| `chị` removed | Landing page speaks to SHB, not to salon owner persona |
+| English/Vietnamese mixed phrases cleaned | Mixed language weakens credibility in Vietnamese institutional context |
+| Internal scoring formulas removed | Technical implementation details belong in documentation, not buyer-facing pitch |
+| SHB Operations, Cases, Agent Runs, Audit, Compliance represented | These are core platform capabilities that SHB stakeholders need to see |
+| Product mockup labels updated | Must match current product architecture, not outdated prototypes |
+| Duplicate product mockup removed from CapabilitySplit | One mockup in hero is sufficient; duplicate looks accidental |
+| Marketing bullets (WCAG AA, reduced-motion) removed from capabilities | Implementation qualities are important but not primary buyer-facing capabilities |

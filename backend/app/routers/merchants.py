@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import date
 
@@ -5,17 +6,48 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import AsyncSessionLocal, get_db
 from app.core.security import TaxLensError, get_current_user
+from app.core.ws_manager import ws_manager
 from app.models.agent import AgentRun
 from app.models.merchant import Merchant
+from app.models.payment import PaymentAllocation
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
 from app.models.transaction import BankTransaction
 from app.models.sale import Sale
 from app.models.invoice import Invoice
 from app.schemas.reconciliation import ReconcileRequest, ReconcileResponse
+from app.services.reconciliation import reconcile_period
 
 router = APIRouter(prefix="/merchants", tags=["merchants"])
+logger = logging.getLogger(__name__)
+
+
+@router.get("")
+async def list_merchants(
+    status: str = Query(None),
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> dict:
+    q = select(Merchant).order_by(Merchant.name.asc())
+    if status:
+        q = q.where(Merchant.status == status)
+    result = await db.execute(q)
+    merchants = result.scalars().all()
+    return {
+        "merchants": [
+            {
+                "id": m.id,
+                "name": m.name,
+                "business_type": m.business_type,
+                "business_category": m.business_category,
+                "tax_id": m.tax_id,
+                "status": m.status,
+            }
+            for m in merchants
+        ],
+        "total": len(merchants),
+    }
 
 
 @router.get("/{merchant_id}")
@@ -46,6 +78,7 @@ async def dashboard(
     merchant_id: str,
     period: str = Query(..., description="YYYY-MM"),
     db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ) -> dict:
     year, month = period.split("-")
     period_start = date(int(year), int(month), 1)
@@ -73,12 +106,23 @@ async def dashboard(
         )
     )
 
-    total = (tx_count or 0) + (sale_count or 0)
-    matched = min(tx_count or 0, invoice_count or 0)
+    # Count actual matched transactions from PaymentAllocation
+    matched_count = await db.scalar(
+        select(func.count(func.distinct(PaymentAllocation.bank_transaction_id))).where(
+            PaymentAllocation.bank_transaction_id.in_(
+                select(BankTransaction.id).where(
+                    BankTransaction.merchant_id == merchant_id,
+                    BankTransaction.transaction_date >= period_start,
+                    BankTransaction.transaction_date < period_end,
+                )
+            )
+        )
+    ) or 0
+
+    total = tx_count or 0
     missing_invoice_count = max((sale_count or 0) - (invoice_count or 0), 0)
-    # #19: decimal 0-1 per spec (spec: 0.83 not 83.0)
-    # NOTE: P3 dashboard.tsx uses `rate / 100` — P3 must update to `rate * 270` after this change
-    rate = round(matched / total, 2) if total > 0 else 0.0
+    # Reconciliation rate = matched transactions / total transactions
+    rate = round(matched_count / total, 2) if total > 0 else 0.0
 
     # Exception counts from actual ExceptionRecord rows for this merchant+period
     case_result = await db.execute(
@@ -132,7 +176,7 @@ async def dashboard(
         "reconciliation_rate": rate,
         "open_exceptions": open_ex,
         "tax_ready": open_ex == 0 and missing_invoice_count == 0,
-        "matched": matched,
+        "matched": matched_count,
         "pending": missing_invoice_count,
         "exceptions": open_ex,
         # Enrichment fields (#6)
@@ -153,12 +197,45 @@ async def dashboard(
     }
 
 
-# TODO [P0-ARCHITECTURE]: Chờ quyết định (a)/(b) — xem tóm tắt gửi leader/P2/P3.
-# Hiện tại placeholder này không tạo AgentRun, không trigger WS agent-trace.
-# KHÔNG tự implement cho tới khi có quyết định kiến trúc.
 async def _run_reconciliation(merchant_id: str, case_id: str, period: str) -> None:
-    """Background task: placeholder that agent layer will replace (TODO: P2/P1)."""
-    pass
+    """Background task: run real reconciliation and update case."""
+    try:
+        async with AsyncSessionLocal() as session:
+            summary = await reconcile_period(
+                session,
+                case_id=case_id,
+                merchant_id=merchant_id,
+                period=period,
+            )
+            case = await session.get(ReconciliationCase, case_id)
+            if case is not None:
+                case.status = "COMPLETED"
+                case.summary = {
+                    "transactions_scanned": summary.transactions_scanned,
+                    "matched": summary.matched,
+                    "exceptions": summary.exceptions,
+                    "ambiguous": summary.ambiguous,
+                    "no_match": summary.no_match,
+                    "review_required": summary.review_required,
+                    "cash_discrepancies": summary.cash_discrepancies,
+                    "matched_transaction_ids": list(summary.matched_transaction_ids),
+                    "exception_ids": list(summary.exception_ids),
+                }
+            await session.commit()
+        await ws_manager.broadcast({
+            "type": "reconciliation_completed",
+            "merchant_id": merchant_id,
+            "case_id": case_id,
+            "period": period,
+        })
+    except Exception as exc:
+        logger.exception("Reconciliation background task failed for case %s", case_id)
+        async with AsyncSessionLocal() as session:
+            case = await session.get(ReconciliationCase, case_id)
+            if case is not None:
+                case.status = "FAILED"
+                case.summary = {"error": str(exc)}
+            await session.commit()
 
 
 @router.post("/{merchant_id}/reconcile", status_code=202, response_model=ReconcileResponse)
@@ -167,6 +244,7 @@ async def trigger_reconcile(
     body: ReconcileRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ) -> ReconcileResponse:
     # ERR-MERCHANT-001: merchant must exist
     merchant = await db.get(Merchant, merchant_id)

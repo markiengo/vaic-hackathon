@@ -1959,3 +1959,28 @@ the deferred pitch decision remain unchanged; live rehearsal remains blocked.
 **Status:** Font warning fixed and browser-extension hydration noise isolated;
 P3 remains ready to merge after protecting the dirty main worktree.
 
+---
+
+### 2026-07-19 — Coordination note for ALL agents
+
+**⚠️ RULE: No agent should start a dev server (`next dev`, `npm run dev`, etc.)**
+
+The user runs their own dev server in their terminal. Multiple agents starting
+servers causes port conflicts (3000 vs 3001) and kills other sessions.
+
+If you need to verify something visually:
+1. Ask the user to check in their already-running dev server
+2. Use Playwright against the user's existing port (ask which port first)
+3. **Never** run `npx next dev` or similar commands
+
+All `next dev` processes were killed at 2026-07-19 02:43 UTC+7 to clean the slate.
+The user will start one server themselves.
+
+**Login screen update (P3/Cascade session):**
+- Rebuilt login page to match `frontend/reference/auth.png`
+- Fixed hydration error caused by `LoginSearchParams` render-prop pattern
+  (functions as children not valid in Next.js 16 Server Components)
+- `LoginForm` now reads `searchParams.get("email")` directly
+- Changes: `frontend/src/app/login/page.tsx`, `frontend/src/components/auth/LoginForm.tsx`
+- Commits: `4c2fcf4` (rebuild), `01538cd` (hydration fix)
+

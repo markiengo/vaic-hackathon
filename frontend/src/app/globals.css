@@ -6,14 +6,17 @@
   --taxlens-background: #fcfbf8;
   --taxlens-surface: #ffffff;
   --taxlens-surface-elevated: #ffffff;
+  --taxlens-ink: #0c1842;
   --taxlens-text: #19244e;
   --taxlens-text-secondary: #5d647a;
   --taxlens-text-tertiary: #858b9d;
   --taxlens-primary: #f36b2e;
   --taxlens-primary-hover: #dd5c24;
-  --taxlens-on-primary: #19244e;
+  --taxlens-on-primary: #ffffff;
   --taxlens-secondary: #253c96;
   --taxlens-secondary-hover: #1f327f;
+  --taxlens-selection: #253c96;
+  --taxlens-selection-soft: #eaf0ff;
   --taxlens-accent: #c4e7e5;
   --taxlens-mango: #f59a1e;
   --taxlens-border: #e5e7ee;
@@ -26,17 +29,20 @@
   --taxlens-primary-soft: #fff3e0;
   --taxlens-danger-soft: #ffebee;
   --taxlens-neutral-soft: #f5f6f8;
+  --taxlens-information-soft: #f3f2ff;
   --taxlens-success-soft: #eaf7f0;
   --taxlens-shadow-xs: 0 1px 2px rgb(25 36 78 / 0.05);
   --taxlens-shadow-sm: 0 2px 6px rgb(25 36 78 / 0.07);
   --taxlens-shadow-md: 0 8px 20px rgb(25 36 78 / 0.09);
   --taxlens-shadow-lg: 0 18px 40px rgb(25 36 78 / 0.12);
+  --taxlens-shadow-card: 0 4px 24px rgb(25 36 78 / 0.04);
 }
 
 .dark {
   --taxlens-background: #0f1220;
   --taxlens-surface: #171b2e;
   --taxlens-surface-elevated: #1e2338;
+  --taxlens-ink: #e5e7ee;
   --taxlens-text: #e5e7ee;
   --taxlens-text-secondary: #8b92a8;
   --taxlens-text-tertiary: #747c93;
@@ -62,6 +68,7 @@
   --taxlens-shadow-sm: 0 2px 6px rgb(0 0 0 / 0.22);
   --taxlens-shadow-md: 0 8px 20px rgb(0 0 0 / 0.26);
   --taxlens-shadow-lg: 0 18px 40px rgb(0 0 0 / 0.3);
+  --taxlens-shadow-card: 0 4px 24px rgb(0 0 0 / 0.2);
 }
 
 @theme inline {
@@ -88,9 +95,13 @@
   --color-neutral-soft: var(--taxlens-neutral-soft);
   --color-success-soft: var(--taxlens-success-soft);
   --color-brand-navy: var(--taxlens-brand-navy);
+  --color-ink: var(--taxlens-ink);
+  --color-selection: var(--taxlens-selection);
+  --color-selection-soft: var(--taxlens-selection-soft);
+  --color-information-soft: var(--taxlens-information-soft);
   --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-3xl: 20px;
   --font-sans: var(--font-ui);
   --font-display: var(--font-display);
@@ -110,12 +121,19 @@ html {
 
 body {
   background-color: var(--taxlens-background);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='1' cy='1' r='.7' fill='%23858b9d' fill-opacity='.12'/%3E%3C/svg%3E");
   color: var(--taxlens-text);
   font-family: var(--font-ui), sans-serif;
   margin: 0;
   min-height: 100vh;
   text-rendering: optimizeLegibility;
+}
+
+/* Canonical Stitch shell tokens: keep the port aligned with the approved
+   standalone references while the product screens continue to evolve. */
+button,
+a {
+  transition: background-color 180ms ease, border-color 180ms ease,
+    color 180ms ease, transform 180ms ease;
 }
 
 button,
@@ -149,6 +167,10 @@ a {
   font-family: var(--font-mono), monospace;
 }
 
+.font-body {
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
 .surface-shadow {
   box-shadow: var(--taxlens-shadow-sm);
 }
@@ -168,6 +190,131 @@ a {
 @keyframes route-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(var(--reveal-ty, 16px));
+  transition: opacity 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.reveal-shown {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0) rotate(-0.6deg); }
+  50% { transform: translateY(-10px) rotate(-0.4deg); }
+}
+.hero-float {
+  animation: hero-float 7s ease-in-out infinite;
+}
+
+@keyframes accent-bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes float-up {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.landing-card {
+  position: relative;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 320ms ease;
+}
+.landing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--taxlens-shadow-md);
+  border-color: var(--taxlens-primary);
+}
+
+.landing-card-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--taxlens-primary), var(--taxlens-mango));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.landing-card:hover .landing-card-accent {
+  transform: scaleX(1);
+}
+
+.landing-icon-pulse {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.landing-step-num {
+  background: linear-gradient(135deg, var(--taxlens-primary), var(--taxlens-mango));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+
+@keyframes welcome-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes welcome-enter-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes tour-slide-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes tour-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tour-card-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-welcome-enter {
+  animation: welcome-enter 0.6s ease-out both;
+}
+
+.animate-welcome-enter-left {
+  animation: welcome-enter-left 0.6s ease-out both;
+}
+
+.animate-tour-slide-in {
+  animation: tour-slide-in 0.3s ease-out both;
+}
+
+.animate-tour-backdrop-in {
+  animation: tour-backdrop-in 0.2s ease-out both;
+}
+
+.animate-tour-card-in {
+  animation: tour-card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

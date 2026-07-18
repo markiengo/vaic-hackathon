@@ -9,8 +9,8 @@ type TaxLensLogoProps = {
 
 export function TaxLensLogo({ compact = false, className, inverse = false }: TaxLensLogoProps) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5", inverse ? "text-white" : "text-text", className)}>
-      <span className="relative block size-10 shrink-0 overflow-hidden rounded-lg">
+    <span className={cn("inline-flex items-center gap-3", inverse ? "text-white" : "text-ink", className)}>
+      <span className="relative block size-8 shrink-0 overflow-hidden rounded">
         <Image
           className={cn("object-cover", !inverse && "dark:hidden")}
           src={inverse ? "/brand/taxlens-icon-dark.png" : "/brand/taxlens-icon-light.png"}
@@ -22,9 +22,8 @@ export function TaxLensLogo({ compact = false, className, inverse = false }: Tax
         {!inverse && <Image className="hidden object-cover dark:block" src="/brand/taxlens-icon-dark.png" alt="" fill sizes="40px" priority />}
       </span>
       {!compact && (
-        <span className="leading-none">
-          <span className="font-display block text-[29px] tracking-[-0.045em]">TaxLens</span>
-          <span className={cn("mt-1 block text-[9px] uppercase tracking-[0.2em]", inverse ? "text-white/65" : "text-text-tertiary")}>by SHB</span>
+        <span className="leading-tight">
+          <span className="font-display block text-[26px] font-bold leading-tight tracking-[-0.02em]">TaxLens</span>
         </span>
       )}
     </span>

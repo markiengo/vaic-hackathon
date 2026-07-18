@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LifeBuoy, LogOut, Moon, Settings, Sparkles, Sun, X } from "lucide-react";
+import { LifeBuoy, LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { TaxLensLogo } from "@/components/brand/TaxLensLogo";
@@ -60,7 +60,7 @@ function ThemeButton() {
     <button
       type="button"
       onClick={() => setTheme(dark ? "light" : "dark")}
-      className="grid size-10 place-items-center rounded-lg border bg-surface text-text-secondary transition-[background-color,color,transform] duration-150 ease-out hover:-translate-y-0.5 hover:text-text"
+      className="grid size-10 place-items-center rounded-xl border bg-surface text-text-secondary transition-[background-color,color,transform] duration-150 ease-out hover:-translate-y-0.5 hover:text-text"
         aria-label={mounted ? (dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối") : "Chuyển giao diện"}
       >
         {mounted ? (dark ? <Sun size={18} /> : <Moon size={18} />) : <span aria-hidden className="size-[18px]" />}
@@ -95,30 +95,6 @@ function MobileNavigation({ items }: { items: NavigationItem[] }) {
   );
 }
 
-function FirstVisitHint({ operations }: { operations: boolean }) {
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed) return null;
-  const href = operations ? "/ops" : "/assistant";
-  const label = operations ? "Bắt đầu từ Tổng quan" : "Bắt đầu từ Trợ lý AI";
-  const desc = operations
-    ? "Xem danh mục merchant và hàng chờ cần quyết định."
-    : "Nhờ AI kiểm tra sổ sách — chỉ ghi dữ liệu sau khi bạn duyệt.";
-  return (
-    <div className="mx-6 mb-2 rounded-xl border border-secondary/20 bg-accent/40 p-3">
-      <div className="flex items-start gap-2">
-        <Sparkles aria-hidden className="mt-0.5 shrink-0 text-secondary" size={15} />
-        <div className="min-w-0 flex-1">
-          <Link href={href} className="block text-xs font-semibold text-secondary hover:underline">{label}</Link>
-          <p className="mt-1 text-[11px] leading-4 text-text-secondary">{desc}</p>
-        </div>
-        <button type="button" onClick={() => setDismissed(true)} className="shrink-0 text-text-tertiary hover:text-text" aria-label="Đóng gợi ý">
-          <X aria-hidden size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
   const router = useRouter();
   const operations = workspace === "operations";
@@ -137,10 +113,9 @@ export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
   }
 
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[240px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen flex-col border-r bg-[var(--taxlens-sidebar)] shadow-[4px_0_24px_rgba(25,36,78,0.02)] md:flex">
+    <div className="flex min-h-screen max-w-[1920px] mx-auto">
+      <aside className="sticky top-0 z-20 hidden h-screen w-[240px] shrink-0 flex-col border-r border-border bg-[var(--taxlens-sidebar)] shadow-[4px_0_24px_rgba(25,36,78,0.02)] md:flex">
         <div className="p-8 pb-6"><TaxLensLogo /></div>
-        <FirstVisitHint operations={operations} />
         <nav aria-label={operations ? "Điều hướng SHB" : "Điều hướng merchant"} className="flex flex-1 flex-col gap-1 overflow-y-auto px-6 py-2">
           <NavigationLinks items={items} />
         </nav>
@@ -157,31 +132,24 @@ export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
             <LogOut aria-hidden size={18} />
             Đăng xuất
           </button>
-          <div className="mt-4 flex items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm text-on-primary">{operations ? "L" : "H"}</span>
-            <span className="min-w-0 flex-1">
-              <strong className="block truncate text-sm font-normal text-text">{operations ? "Linh — SHB Ops" : "Nguyễn Thị Hương"}</strong>
-              <small className="block truncate text-xs text-text-tertiary">{operations ? "Vận hành merchant" : "Salon Hương"}</small>
-            </span>
-            <ThemeButton />
-          </div>
         </div>
       </aside>
 
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur md:hidden">
           <TaxLensLogo compact />
-          <div className="text-center">
-            <strong className="block text-sm font-normal">{operations ? "SHB Operations" : "Salon Hương"}</strong>
-            <span className="text-xs text-text-tertiary">Tháng 07/2026</span>
+          <div className="flex items-center gap-3">
+            <div className="text-center">
+              <strong className="block text-sm font-normal">{operations ? "SHB Operations" : "Salon Hương"}</strong>
+              <span className="text-xs text-text-tertiary">Tháng 07/2026</span>
+            </div>
+            <ThemeButton />
           </div>
-          <ThemeButton />
         </header>
-        <main className="mx-auto min-h-screen w-full max-w-[1600px] px-6 py-6 pb-24 md:px-12 md:py-10 md:pb-10">
+        <main className="mx-auto min-h-screen w-full max-w-[1600px] px-6 py-10 pb-14 md:px-12 md:pb-14">
           {children}
         </main>
       </div>
       <MobileNavigation items={items} />
-    </div>
-  );
+    </div>;
 }

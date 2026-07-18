@@ -19,6 +19,7 @@ from app.routers import (
     audit,
     pos,
     confirm,
+    invoices,
     ws,
 )
 from app.adapters.sepay import router as sepay_webhook_router
@@ -101,6 +102,7 @@ app.include_router(agents.router, prefix=PREFIX)
 app.include_router(audit.router, prefix=PREFIX)
 app.include_router(pos.router, prefix=PREFIX)
 app.include_router(confirm.router, prefix=PREFIX)
+app.include_router(invoices.router, prefix=PREFIX)
 app.include_router(sepay_webhook_router, prefix=PREFIX)
 app.include_router(ws.router, prefix=PREFIX)
 

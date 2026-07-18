@@ -24,10 +24,10 @@ export type NavigationItem = {
 };
 
 export const merchantNavigation: NavigationItem[] = [
+  { href: "/dashboard", label: "Tổng quan", shortLabel: "Tổng quan", icon: LayoutDashboard },
   { href: "/assistant", label: "Trợ lý TaxLens", shortLabel: "Trợ lý", icon: Bot },
-  { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
-  { href: "/exceptions", label: "Cần xác nhận", shortLabel: "Xác nhận", icon: ListChecks },
   { href: "/transactions", label: "Giao dịch", icon: WalletCards },
+  { href: "/exceptions", label: "Cần xác nhận", shortLabel: "Xác nhận", icon: ListChecks },
   { href: "/invoices", label: "Hóa đơn", icon: ReceiptText },
   { href: "/sales", label: "Bán hàng", icon: ShoppingBag },
   { href: "/tax-readiness", label: "Sẵn sàng thuế", shortLabel: "Thuế", icon: FileCheck2 },

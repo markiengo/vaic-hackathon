@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="vi" suppressHydrationWarning className={fontVariables}>
+    <html lang="vi" suppressHydrationWarning className={`${fontVariables} light`}>
       <body>
         <Providers>{children}</Providers>
       </body>

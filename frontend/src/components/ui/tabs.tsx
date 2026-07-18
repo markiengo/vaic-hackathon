@@ -25,9 +25,9 @@ export function Tabs({ items, defaultValue, ariaLabel, className }: { items: Tab
 
   return (
     <div className={className}>
-      <div role="tablist" aria-label={ariaLabel} onKeyDown={onKeyDown} className="flex gap-1 overflow-x-auto border-b">
+      <div role="tablist" aria-label={ariaLabel} onKeyDown={onKeyDown} className="flex gap-1 overflow-x-auto border-b border-border">
         {items.map((item) => (
-          <button key={item.value} id={`${id}-tab-${item.value}`} type="button" role="tab" aria-selected={active === item.value} aria-controls={`${id}-panel-${item.value}`} tabIndex={active === item.value ? 0 : -1} onClick={() => setActive(item.value)} className={cn("min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-text-secondary", active === item.value && "border-secondary text-secondary")}>
+          <button key={item.value} id={`${id}-tab-${item.value}`} type="button" role="tab" aria-selected={active === item.value} aria-controls={`${id}-panel-${item.value}`} tabIndex={active === item.value ? 0 : -1} onClick={() => setActive(item.value)} className={cn("min-h-10 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-text-secondary", active === item.value && "border-secondary text-secondary")}>
             {item.label}
           </button>
         ))}

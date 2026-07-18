@@ -73,6 +73,11 @@ def _dt(day: int, hour: int, minute: int = 0) -> datetime:
 async def reset_all(db) -> None:
     """Delete all TaxLens rows in FK-safe (child-first) order."""
 
+    # Clear tables without ORM models first (they have FKs to merchants)
+    from sqlalchemy import text
+    for tbl in ("import_batches", "integration_sync_runs", "agent_actions", "public_confirmation_tokens"):
+        await db.execute(text(f"DELETE FROM {tbl}"))
+
     for model in (
         AuditEvent,
         ToolCall,

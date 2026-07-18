@@ -131,7 +131,7 @@ def test_agent_workflow_returns_specialist_summary_json(monkeypatch: pytest.Monk
     assert output["tax_compliance_output"]["rule_version"] == "2026.07"
     assert output["tax_compliance_output"]["ready"] is False
     assert output["merchant_ops_output"]["messages_drafted"] == 1
-    assert len(output["reconciliation_tool_calls"]) == 7
+    assert len(output["reconciliation_tool_calls"]) == 6
     assert len(output["tax_compliance_tool_calls"]) == 6
     assert len(output["merchant_ops_tool_calls"]) == 6
     assert output["merchant_ops_tool_calls"][-1]["status"] == "skipped"

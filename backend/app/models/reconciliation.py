@@ -16,6 +16,7 @@ class ReconciliationCase(Base):
     assigned_rm_id = Column(String(20), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     tax_rule_version = Column(String(20), nullable=True)
     human_approvals = Column(JSONB, default=list, nullable=False)
+    summary = Column(JSONB, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

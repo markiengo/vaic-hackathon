@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 
 from app.core.database import get_db
+from app.core.security import get_current_user
 from app.models.sale import Sale, SaleLine
 
 router = APIRouter(prefix="/sales", tags=["sales"])
@@ -14,6 +15,7 @@ async def list_sales(
     merchant_id: str = Query(...),
     period: str = Query(..., description="YYYY-MM"),
     db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ) -> list[dict]:
     year, month = period.split("-")
     period_start = date(int(year), int(month), 1)
