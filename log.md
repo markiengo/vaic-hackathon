@@ -373,6 +373,142 @@ fields a real caller expects. Two implementation consequences:
   columns) — used by both `create_draft_export` and
   `export_to_accounting_system`.
 
+### P5 Sprint 3 — End-to-end pipeline validation (2026-07-18)
+
+Status: `app.services.reconciliation.reconcile_period` (P1's Sprint 2
+integration layer) had never been run against the seeded `M001` dataset
+before this — it existed fully built and tested, but only against P1's own
+synthetic SQLite truth set (`tests/p1_db_fixtures.py`), and nothing in the
+running application calls it (`POST /reconciliation/start` and
+`POST /agents/run` both dispatch literal no-op background tasks). P1's own
+Sprint 2 log entry flagged the shared-DB test suite as unverified and
+deferred it. This sprint is that verification, run for the first time, plus
+the scripts the checklist requires (`validate_pipeline.py`,
+`backup_demo.py`, `restore_demo.py`).
+
+#### One collection-blocking bug fixed (not P5's file, but blocked everyone)
+
+`backend/app/agents/runner.py`'s `AgentRunner` dataclass had
+`workflow: Any = agent_workflow` — a mutable default with no
+`field(default_factory=...)`, which is invalid in Python dataclasses and
+made `pytest tests` fail to *collect* at all (not just fail a test). Fixed
+with `field(default_factory=lambda: agent_workflow)`, matching the
+pattern already used for the class's other three fields. One separate,
+non-blocking test failure remains in `test_agents.py`
+(`_append_trace`'s `state.get("trace", [])` raises `TypeError` when
+`state["trace"]` is explicitly `None`) — left alone; it's P2's own agent
+workflow test, doesn't block anything else, and isn't something to fix
+without being asked.
+
+#### Two real integration bugs found running `reconcile_period` against seed data for the first time
+
+1. **`app.services.cash_reconciliation.reconcile_cash_session` hard-rejects
+   a non-zero discrepancy with no `discrepancy_reason`** — and
+   `reconcile_period` doesn't catch that error, so it aborted the *entire*
+   period's reconciliation (including already-matched bank transactions)
+   before any of it could commit. My seed data left `discrepancy_reason`
+   `None` deliberately (product.md: the system detects the gap, a human
+   explains it later), which this function doesn't allow. Fixed on my
+   side — seeded a placeholder reason string that names the actual
+   situation ("chưa xác định nguyên nhân") rather than fabricating an
+   explanation, since the underlying product behavior (an unresolved
+   `CASH_DISCREPANCY` exception a human must still investigate) is
+   unchanged.
+2. **`reconcile_cash_session` computes "cash sales" from
+   `payment_allocations` rows with `bank_transaction_id IS NULL`** — not
+   from `Sale.payment_status`. My seed data set `payment_status = "PAID"`
+   directly on the 8 cash sales with zero corresponding allocation rows,
+   so cash sales computed as 0 and the intended -120,000 discrepancy came
+   out as a wrong, much larger number. Fixed by also inserting a
+   `PaymentAllocation` row per cash sale (`bank_transaction_id=None`,
+   `match_method="MANUAL"`), with `created_at` explicitly pinned to the
+   sale's own timestamp — the allocation window check
+   (`created_at BETWEEN cash_session.opened_at AND closed_at`) would
+   otherwise use the real seeding wall-clock time, not July 2026.
+
+Both are seed-data fixes, not changes to P1's reconciliation code.
+
+#### One real bug found in my own Sprint 1 seed-scenario design
+
+The 3 "fuzzy match" bank transactions (no payment reference, first-time
+sender, 2 minutes after their sale) scored 60 under
+`app.services.matching`'s real weights — below the 75 `HUMAN_CONFIRM`
+threshold — and fell through to an unlinked `NO_MATCH` exception instead
+of a reviewable candidate. Not a bug in P1's algorithm (a bare amount+time
+match with no reference or identifier genuinely shouldn't clear a review
+threshold on its own — that conservatism is the point). Fixed by adjusting
+the scenario: reused "NGUYEN VAN A" (an already-known sender from the
+ORDER-1842 exact match) and tightened the arrival time to under a minute,
+scoring 80 — a real `MATCH_REVIEW` exception a human resolves in the
+Exception Inbox, which is a *better* demo of the product's actual value
+proposition than a silent auto-match would have been.
+
+#### One real bug found in my own Sprint 2 tool code
+
+`classify_revenue_category`'s keyword-priority order was wrong:
+`elif _matches_any(folded_note, PERSONAL_KEYWORDS) or not sender_name`
+fires whenever no sender name could be split out of the note — which is
+exactly what happens for "NGUYEN SUPPLIER nhap hang 20/10" (no
+sender/note split marker matches "nhap"), so it classified as
+`internal_transfer` before the purchase-keyword branch ever ran. Reordered
+so keyword-specific signals (loan, purchase) are checked before the
+generic no-sender fallback. Caught by `validate_pipeline.py`, not by the
+Sprint 2 test suite — the Sprint 2 test for this exact transaction passed
+`sender_name="Nguyen Supplier"` by hand instead of letting the adapter's
+real (marker-less) parse produce `None`, so it never exercised this path.
+
+#### Truth set: the real, observed outcome (not the aspirational one)
+
+Running the actual engine against the actual seed data gives 16
+auto-matched (15 exact + 1 refund) and 8 exceptions across 5 types (2
+`AMBIGUOUS_MATCH`, 2 `NO_MATCH`, 3 `MATCH_REVIEW`, 1 `CASH_DISCREPANCY`) —
+not literally the early planning docs' "25 matched, 5 exceptions"
+headline (written before `reconcile_period`'s richer exception-type
+taxonomy existed). Auto-reconciliation is 16/23 bank transactions
+(69.6%) — below the ≥80% KPI. This is squarely P1's own stated Sprint 3
+task ("tune scoring weights... to reach ≥80%"), not something addressed
+by further reshaping seed data to manufacture cleaner matches, which would
+undercut the demo's actual point (showing the Exception Inbox handle real
+ambiguity). `scripts/validate_pipeline.py`'s `TRUTH_SET` documents the
+exact, current, correct expected outcome for all 23 transactions for
+whoever picks up that tuning work.
+
+#### Demo support scripts
+
+- `scripts/validate_pipeline.py` — seeds (optional), runs
+  `reconcile_period`, and validates: the full 23-transaction truth set,
+  tax classification of both non-revenue transactions, invoice detection
+  (still exactly `ORDER-1868`/`ORDER-1869`), the 5-item tax-readiness
+  checklist, `create_draft_export`'s `ERR-TAX-002` gate,
+  `export_to_accounting_system`'s lack of one, and Merchant Ops case
+  creation linking all 8 exceptions. Exit code 0/1 for CI use.
+- `scripts/backup_demo.py` / `restore_demo.py` — `pg_dump -Fc` /
+  `pg_restore --clean --if-exists`, not a hand-rolled per-table exporter;
+  19 FK/JSONB-laden tables is exactly what those tools are for.
+  `scripts/_pg_dsn.py` parses `settings.DATABASE_URL` once for both.
+- `scripts/simulate_sepay_webhook.py` — manual SePay webhook fallback for
+  the demo. `--reference PAY-XXXXXX` looks up the real payment_intent and
+  replays an exact-match payload (for redoing "Scene 2" live if the real
+  tunnel/bank connection fails); `--amount/--note/--sender` posts a
+  freeform payload (e.g. for Scene 3's ambiguous-transfer moment).
+
+#### Test-isolation notes (shared session-scoped seeded DB)
+
+`tests/test_end_to_end.py` is the first file, alphabetically, to mutate
+the shared `M001` dataset that `conftest.py` seeds once per test session
+(`test_cash_reconciliation.py`/`test_reconciliation_integration.py` don't
+count — they use an isolated in-memory SQLite fixture). Running
+`reconcile_period` changes sale payment statuses, the cash session's
+status (`RECONCILED` -> `CLOSED`, since a real unresolved discrepancy
+shouldn't self-report as fully reconciled), and adds a prior-pattern
+classification that legitimately raises `classify_revenue_category`'s
+confidence on a second call. Adjusted the now-order-sensitive assertions
+in `test_seed_data.py`, `test_tax_rules.py`, and `test_tools.py` to check
+the invariant that's actually true regardless of what ran before them,
+rather than only the freshly-seeded-state snapshot; kept the one
+exact-value fixture pin (`confidence == 0.82`) in `test_end_to_end.py`,
+where it's genuinely guaranteed to run first.
+
 ## Created and updated files
 
 ### P1 — Matching and allocation
@@ -553,6 +689,38 @@ fields a real caller expects. Two implementation consequences:
 - `docs/05-domain/01-ai-advisor.md` — updated "Implementation state" to
   reflect the 19 real tool implementations.
 
+### P5 Sprint 3 — Pipeline validation and demo support
+
+- `backend/app/agents/runner.py` — one-line fix: `field(default_factory=...)`
+  for `AgentRunner.workflow` (was a bare mutable dataclass default,
+  blocked `pytest tests` from collecting at all).
+- `backend/scripts/seed_data.py` — cash sales now also insert a
+  `PaymentAllocation` row each (`bank_transaction_id=None`,
+  `match_method="MANUAL"`, `created_at` pinned to the sale's timestamp);
+  `discrepancy_reason` is a placeholder string, not `None`; the 3 fuzzy
+  transactions' sender changed to the already-known "NGUYEN VAN A" and
+  timing tightened to under a minute. See "Two real integration bugs" and
+  "One real bug in my own Sprint 1 seed-scenario design" above.
+- `backend/app/services/revenue_classifier.py` — reordered keyword checks
+  so purchase/loan phrases are checked before the no-sender-name fallback.
+  See "One real bug found in my own Sprint 2 tool code" above.
+- `backend/scripts/validate_pipeline.py` — new: end-to-end pipeline
+  validation script and the 23-transaction `TRUTH_SET`.
+- `backend/scripts/_pg_dsn.py` — new: shared `DATABASE_URL` -> pg CLI args
+  parsing for backup/restore.
+- `backend/scripts/backup_demo.py` / `restore_demo.py` — new: `pg_dump
+  -Fc` / `pg_restore --clean --if-exists` snapshot cycle.
+- `backend/scripts/simulate_sepay_webhook.py` — new: manual SePay webhook
+  fallback for the demo.
+- `backend/tests/test_end_to_end.py` — new: 7 tests running the real
+  pipeline against the shared seeded DB, reusing `validate_pipeline.py`'s
+  truth set rather than duplicating it.
+- `backend/tests/test_seed_data.py`, `tests/test_tax_rules.py`,
+  `tests/test_tools.py` — 4 assertions made order-independent (see
+  "Test-isolation notes" above); no behavior change to the code under test.
+- `.gitignore` — excludes `backend/scripts/demo_backups/*.dump`
+  (regenerable binary snapshots).
+
 ## Verification
 
 ### P1 tests (no external dependencies)
@@ -686,6 +854,45 @@ literal exit criterion or expected behavior:
   `input_hash`/`output_hash`, and `duration_ms`.
 - Booted the real app (`uvicorn app.main:app`) after all of the above —
   still starts cleanly.
+
+### P5 Sprint 3 — Pipeline validation (2026-07-18)
+
+Run from `backend/` against the same local PostgreSQL 16:
+
+```
+python scripts/seed_data.py --reset
+python scripts/validate_pipeline.py
+python scripts/backup_demo.py
+python scripts/restore_demo.py
+python -m pytest tests -q
+```
+
+```text
+=== TaxLens pipeline validation: M001 / 2026-07 ===
+reconcile_period: transactions_scanned=23 matched=16 exceptions=8
+  (ambiguous=2, no_match=2, review_required=3, cash_discrepancies=1)
+[PASS] x 30 (all 23 truth-set transactions, both tax classifications,
+  invoice detection, 3 tax-readiness checks, both export checks, case creation)
+ALL PIPELINE VALIDATIONS PASSED
+
+156 passed, 1 pre-existing failure (test_agents.py, not P5 — see above), in 4.2s
+```
+
+- Verified `reconcile_period` idempotency directly: ran it twice against
+  the same reconciled data — identical `exception_ids`, no new
+  `payment_allocations`/`exceptions` rows on the second run.
+- Verified backup/restore: backed up, deleted all 8 exception rows
+  directly via SQL (simulating demo-run corruption), restored, confirmed
+  `payment_allocations`/`exceptions`/`sales` counts matched the backup
+  exactly (24/8/30).
+- Verified the SePay fallback script in both modes against a live
+  `uvicorn` instance: `--reference PAY-31AAAA` correctly looked up the
+  real payment_intent (amount 450,000, sale `ORDER-1843`) and got `200
+  {"success": true}`; `--amount 5000000 --note "ck cho em" --sender
+  "NGUYEN VAN A"` (freeform mode) also got `200`.
+- Ran the full test suite twice in a row without reseeding between runs
+  to check for state-corruption on repeat execution — stable both times
+  (156 passed, same 1 pre-existing failure).
 
 ## Session history
 
@@ -1121,4 +1328,76 @@ be rerun in the normal backend database environment before final merge.
 **Status:** P4 Sprint 2 endpoint code has been integrated onto current main
 without rolling back P1/P2/P5. Remaining confidence gate is normal Postgres
 backend verification for seed-backed API/tool suites.
+
+### 2026-07-18 — P5 Sprint 3: end-to-end pipeline validation
+
+- Read the current work-split doc fresh (it had been restructured since
+  Sprint 2) and surveyed the codebase before starting: P1's Sprint 2
+  reconciliation integration (`reconcile_period`,
+  `reconcile_cash_session`) and P2's agent-tool wiring
+  (`app/agents/specialists.py`, `executor.py`) had both landed on `main`,
+  but neither is actually called by anything running — both
+  `POST /reconciliation/start` and `POST /agents/run` dispatch no-op
+  background tasks, and the specialist `reconciliation_node` always emits
+  one hardcoded `PENDING_REVIEW` exception instead of using the real
+  matching path. P1's own Sprint 2 log entry had already flagged the
+  broader shared-DB test suite as unverified and deferred it — this
+  sprint's core job was exactly that verification.
+- Fixed a one-line dataclass bug in `app/agents/runner.py` that blocked
+  `pytest tests` from collecting at all (not my file, but blocked
+  everyone — see "Created and updated files" above for the exact issue).
+- Ran `reconcile_period` against the seeded `M001` data for the first time
+  ever via a throwaway probe script and hit an immediate hard crash: a
+  cash discrepancy with no `discrepancy_reason` aborts the *entire*
+  period's reconciliation, not just its own exception, because
+  `reconcile_cash_session`'s error isn't caught. Traced it to my own
+  Sprint 1 seed data (`discrepancy_reason=None`, deliberately, to match
+  "system detects it, human explains later") conflicting with P1's
+  function requiring the reason up front. Fixed on my side with an
+  honest placeholder string.
+- Fixing that revealed a second, deeper bug: the cash discrepancy came
+  out wrong (not -120,000) because `reconcile_cash_session` sums cash
+  sales from `payment_allocations` rows with `bank_transaction_id IS
+  NULL`, not from `Sale.payment_status` — which is what my seed data set
+  directly with zero corresponding allocation rows. Fixed by inserting a
+  `PaymentAllocation` row per cash sale with `created_at` pinned to the
+  sale's own timestamp (the allocation-window check would otherwise use
+  real wall-clock seeding time, landing outside the cash session's July
+  2026 window).
+- With the pipeline actually running end-to-end, found that my 3 "fuzzy
+  match" transactions from Sprint 1 scored only 60 under P1's real
+  weights — below the 75 human-review threshold — and fell through to an
+  orphaned `NO_MATCH` instead of a reviewable candidate. Concluded this
+  is correct, conservative engine behavior, not a bug to route around;
+  fixed the scenario itself (known sender, tighter timing) so it lands
+  where it was always supposed to: `MATCH_REVIEW`.
+- `validate_pipeline.py` then caught a real bug in my own Sprint 2 code:
+  `classify_revenue_category` misclassified the "nhap hang 20/10"
+  purchase transaction as `internal_transfer` because the no-sender
+  fallback was checked before the purchase-keyword check. The Sprint 2
+  test suite never caught this because it hand-supplied a sender name
+  instead of exercising the adapter's real (marker-less, so `None`)
+  parse of that exact note.
+- Documented the real, observed truth set (16 matched, 8 exceptions
+  across 5 types — not the early planning docs' "25/5" headline, written
+  before this exception-type taxonomy existed) rather than reshaping seed
+  data to force a number, since the actual auto-reconciliation-rate gap
+  (69.6%, target ≥80%) is explicitly P1's own stated Sprint 3 tuning task.
+- Built `validate_pipeline.py`, `backup_demo.py`/`restore_demo.py` (real
+  `pg_dump -Fc`/`pg_restore`, not a hand-rolled exporter), and
+  `simulate_sepay_webhook.py` (manual fallback, tested in both modes
+  against a live server), plus `tests/test_end_to_end.py`.
+- Adding a test that mutates the shared session-scoped seeded DB
+  surfaced 4 pre-existing tests whose assertions silently assumed
+  "nothing has reconciled yet" — fixed each to assert the invariant
+  that's actually true regardless of execution order, keeping the one
+  exact-value fixture pin in the test that's genuinely guaranteed to run
+  first.
+- Verified everything together: full pipeline validation (30/30 checks),
+  backup/restore cycle (simulated corruption, confirmed exact restore),
+  reconciliation idempotency, both fallback-script modes against a live
+  server, and the full test suite run twice in a row without reseeding.
+  156 passed both times (1 pre-existing, not-mine failure in
+  `test_agents.py`, left alone).
+- Not committed — left for the user to review.
 

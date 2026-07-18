@@ -298,10 +298,19 @@ EXACT_MATCH_SALES = [
 ]
 REFUNDED_SALE_ID = "ORDER-1850"
 
+# Sender is deliberately the same "NGUYEN VAN A" as the ORDER-1842 exact
+# match (a regular customer who doesn't always use the QR reference) so
+# these score the known-sender bonus. Without it, an exact-amount transfer
+# arriving within a minute but with no reference and no identifier only
+# reaches score 70 under app.services.matching's weights — short of the
+# 75 HUMAN_CONFIRM threshold, so it would fall through to an unlinked
+# NO_MATCH instead of a reviewable candidate. That's correct, conservative
+# engine behavior (P1 owns tuning it) — this is a seed-data fix, not a
+# workaround for a bug.
 FUZZY_MATCH_SALES = [
-    ("ORDER-1857", 10, 9, 15, [(None, "Combo chăm sóc tóc", 1, Decimal("620000"))], "TRAN THI BICH", "chuyen khoan tien cat toc hom nay"),
-    ("ORDER-1858", 10, 15, 0, [(None, "Combo trang điểm + gội đầu", 1, Decimal("275000"))], "LE VAN NAM", "ck tien lam dep"),
-    ("ORDER-1859", 11, 10, 45, [(None, "Combo chăm sóc da + nail", 1, Decimal("430000"))], "PHAM THI HANH", "thanh toan dich vu salon"),
+    ("ORDER-1857", 10, 9, 15, [(None, "Combo chăm sóc tóc", 1, Decimal("620000"))], "NGUYEN VAN A", "chuyen khoan tien cat toc hom nay"),
+    ("ORDER-1858", 10, 15, 0, [(None, "Combo trang điểm + gội đầu", 1, Decimal("275000"))], "NGUYEN VAN A", "ck tien lam dep"),
+    ("ORDER-1859", 11, 10, 45, [(None, "Combo chăm sóc da + nail", 1, Decimal("430000"))], "NGUYEN VAN A", "thanh toan dich vu salon"),
 ]
 
 AMBIGUOUS_AMOUNT = Decimal("85000")
@@ -408,7 +417,9 @@ async def seed_sales_and_bank_transactions(db) -> dict[str, Sale]:
         sale = await _create_sale(db, sale_id, created_at=created_at, lines=lines)
         sales[sale_id] = sale
 
-        tx_time = created_at + timedelta(minutes=2)
+        # Under 1 minute: scores the <1min time tier (+20, not +10) —
+        # combined with the known-sender bonus this reaches HUMAN_CONFIRM.
+        tx_time = created_at + timedelta(seconds=45)
         await _insert_bank_tx(
             db,
             sepay_id=sepay_id,
@@ -470,11 +481,29 @@ async def seed_sales_and_bank_transactions(db) -> dict[str, Sale]:
     )
 
     # --- Cash sales ---
+    # app.services.cash_reconciliation.reconcile_cash_session computes
+    # "cash sales" by summing payment_allocations rows with
+    # bank_transaction_id IS NULL for the store, within the cash session's
+    # opened_at/closed_at window (by allocation created_at) — not by reading
+    # Sale.payment_status directly. A cash sale must therefore also get a
+    # PaymentAllocation row, with created_at pinned to the sale's own
+    # timestamp (not the real seeding time) so it falls inside that window.
     for sale_id, day, hour, minute, lines in CASH_SALES:
         created_at = _dt(day, hour, minute)
         sale = await _create_sale(db, sale_id, created_at=created_at, lines=lines)
         sale.payment_status = "PAID"
         sales[sale_id] = sale
+        db.add(
+            PaymentAllocation(
+                bank_transaction_id=None,
+                payment_intent_id=None,
+                sale_id=sale_id,
+                amount=sale.net_amount,
+                allocation_type="PAYMENT",
+                match_method="MANUAL",
+                created_at=created_at + timedelta(minutes=1),
+            )
+        )
 
     # --- Plain unpaid sales (no transaction at all yet) ---
     for sale_id, day, hour, minute, lines in PLAIN_UNPAID_SALES:
@@ -511,7 +540,12 @@ async def seed_cash_session(db) -> None:
         counted_cash=counted_cash,
         cash_expenses=cash_expenses,
         discrepancy=discrepancy,
-        discrepancy_reason=None,
+        # app.services.cash_reconciliation.reconcile_cash_session hard-rejects
+        # a non-zero discrepancy with no reason (DISCREPANCY_REASON_REQUIRED),
+        # so this can't be left null even though the *cause* is genuinely
+        # unknown at seed time — the placeholder says exactly that; a human
+        # still has to investigate and resolve the CASH_DISCREPANCY exception.
+        discrepancy_reason="Chưa xác định nguyên nhân — cần nhân viên xác nhận",
         status="RECONCILED",
         opened_at=_dt(13, 8, 0),
         closed_at=_dt(13, 20, 0),

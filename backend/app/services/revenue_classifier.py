@@ -81,10 +81,20 @@ def classify_revenue(
     reasoning: list[str] = []
     score = BASE_SCORE
 
+    # Specific keyword phrases are stronger, more specific evidence than the
+    # mere absence of a parseable sender name, so they're checked first — a
+    # supplier note with no extractable sender name ("NGUYEN SUPPLIER nhap
+    # hang 20/10" doesn't match any sender/note split marker) must still
+    # classify as purchase_payment, not fall into the generic "no sender"
+    # internal_transfer bucket.
     if _matches_any(folded_note, LOAN_KEYWORDS):
         classification = "loan"
         score += LOAN_KEYWORD_SCORE
         reasoning.append("Nội dung chuyển khoản có từ khóa liên quan đến vay/trả nợ")
+    elif _matches_any(folded_note, PURCHASE_KEYWORDS):
+        classification = "purchase_payment"
+        score += PURCHASE_KEYWORD_SCORE
+        reasoning.append("Nội dung chuyển khoản có từ khóa liên quan đến nhập hàng/mua hàng")
     elif _matches_any(folded_note, PERSONAL_KEYWORDS) or not sender_name:
         classification = "internal_transfer"
         score += PERSONAL_KEYWORD_SCORE
@@ -92,10 +102,6 @@ def classify_revenue(
             reasoning.append("Nội dung chuyển khoản mang tính cá nhân, không phải giao dịch kinh doanh")
         else:
             reasoning.append("Không xác định được tên người gửi từ nội dung chuyển khoản")
-    elif _matches_any(folded_note, PURCHASE_KEYWORDS):
-        classification = "purchase_payment"
-        score += PURCHASE_KEYWORD_SCORE
-        reasoning.append("Nội dung chuyển khoản có từ khóa liên quan đến nhập hàng/mua hàng")
     elif amount_matches_outstanding_sale:
         classification = "revenue"
         score += AMOUNT_MATCHES_SALE_SCORE
