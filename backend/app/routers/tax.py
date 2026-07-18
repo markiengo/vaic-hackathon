@@ -93,8 +93,17 @@ async def export_draft(
                 {"pending_exceptions": pending_count},
             )
 
+    # Use rule version stored in the reconciliation case (if any) so ERR-TAX-003 fires even
+    # when the rule has already expired — retrieve_tax_rules() filters expired rules, but
+    # check_required_fields(rule_version=...) fetches by exact version without that filter.
+    case_rule_version: str | None = next(
+        (c.tax_rule_version for c in cases if c.tax_rule_version), None
+    )
+
     try:
-        fields_result = await check_required_fields(db, body.merchant_id, body.period)
+        fields_result = await check_required_fields(
+            db, body.merchant_id, body.period, rule_version=case_rule_version
+        )
     except ValueError:
         raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
 
