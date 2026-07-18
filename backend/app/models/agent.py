@@ -13,6 +13,7 @@ class AgentRun(Base):
     merchant_id = Column(String(20), ForeignKey("merchants.id", ondelete="RESTRICT"), nullable=False)
     user_id = Column(String(20), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     request_text = Column(Text, nullable=False)
+    period = Column(Text, nullable=True)
     plan = Column(JSONB, nullable=True)
     status = Column(String(30), default="PENDING", nullable=False)
     started_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
