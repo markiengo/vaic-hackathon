@@ -18,7 +18,7 @@ from app.schemas.agent import AgentRunRequest, AgentRunResponse
 
 @dataclass
 class AgentRunner:
-    workflow: Any = agent_workflow
+    workflow: Any = field(default_factory=lambda: agent_workflow)
     recorder: AgentRunRecorder = field(default_factory=InMemoryAgentRunRecorder)
     concurrency_limiter: InMemoryConcurrencyLimiter = field(default_factory=InMemoryConcurrencyLimiter)
     default_budget: AgentRunBudget = field(default_factory=AgentRunBudget)
