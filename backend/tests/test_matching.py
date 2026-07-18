@@ -162,8 +162,8 @@ def test_unique_amount_and_time_only_requires_human_confirmation_at_score_70():
 
 
 def test_note_signal_can_request_review_but_cannot_unlock_auto_match():
-    candidate_sale = sale(identifiers=("TABLE-7",), minutes=-2)
-    tx = transaction(raw_note="payment TABLE-7")
+    candidate_sale = sale(minutes=-10)
+    tx = transaction(raw_note="payment")
     candidates = candidate_match(
         tx,
         [candidate_sale],
@@ -173,6 +173,22 @@ def test_note_signal_can_request_review_but_cannot_unlock_auto_match():
     assert candidates[0].deterministic_score == 90
     assert candidates[0].display_score == 95
     assert candidates[0].action == MatchAction.HUMAN_CONFIRM
+
+
+def test_trusted_sender_calibration_reaches_auto_threshold_without_weakening_gates():
+    candidate_sale = sale(minutes=-2)
+
+    untrusted = candidate_match(transaction(), [candidate_sale])
+    trusted = candidate_match(
+        transaction(),
+        [candidate_sale],
+        known_sender_names=["Nguyen Van A"],
+    )
+
+    assert untrusted[0].deterministic_score == 60
+    assert untrusted[0].action == MatchAction.UNMATCHED
+    assert trusted[0].deterministic_score == 95
+    assert trusted[0].action == MatchAction.AUTO_MATCH
 
 
 def test_strong_deterministic_evidence_auto_matches():
@@ -205,7 +221,7 @@ def test_duplicate_exact_amount_without_identifier_is_mandatory_human_review():
         transaction(),
         [sale("ORDER-A"), sale("ORDER-B")],
     )
-    assert candidates[0].deterministic_score == 40
+    assert candidates[0].deterministic_score == 35
     assert candidates[0].action == MatchAction.HUMAN_CONFIRM
     assert "UNRESOLVED_DUPLICATE_AMOUNT" in candidates[0].reason_codes
 
@@ -221,7 +237,7 @@ def test_unique_identifier_resolves_duplicate_penalty_for_one_candidate():
     )
     assert candidates[0].sale_id == "ORDER-A"
     assert candidates[0].deterministic_score == 100
-    assert candidates[1].deterministic_score == 50
+    assert candidates[1].deterministic_score == 70
     assert candidates[0].action == MatchAction.AUTO_MATCH
 
 
