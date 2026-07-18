@@ -1,11 +1,12 @@
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.queue import run_agent_workflow
 from app.core.security import TaxLensError, get_current_user
 from app.models.agent import AgentRun
 from app.models.merchant import Merchant
@@ -154,14 +155,6 @@ async def dashboard(
     }
 
 
-# TODO [P0-ARCHITECTURE]: Chờ quyết định (a)/(b) — xem tóm tắt gửi leader/P2/P3.
-# Hiện tại placeholder này không tạo AgentRun, không trigger WS agent-trace.
-# KHÔNG tự implement cho tới khi có quyết định kiến trúc.
-async def _run_reconciliation(merchant_id: str, case_id: str, period: str) -> None:
-    """Background task: placeholder that agent layer will replace (TODO: P2/P1)."""
-    pass
-
-
 @router.post("/{merchant_id}/reconcile", status_code=202, response_model=ReconcileResponse)
 async def trigger_reconcile(
     merchant_id: str,
@@ -175,24 +168,27 @@ async def trigger_reconcile(
     if merchant is None:
         raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
 
-    # ERR-RECON-001: case for this merchant+period must not already exist
-    existing = await db.scalar(
-        select(ReconciliationCase).where(
-            ReconciliationCase.merchant_id == merchant_id,
-            ReconciliationCase.period == body.period,
-        )
-    )
-    if existing is not None:
-        raise TaxLensError(
-            "ERR-RECON-001",
-            409,
-            f"Case đối soát cho kỳ {body.period} đã tồn tại (case_id={existing.id})",
-        )
-
+    # ERR-GEN-001: period must have ended before reconciliation is possible
     year, month = (int(p) for p in body.period.split("-"))
     period_end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
     if date.today() < period_end:
         raise TaxLensError("ERR-GEN-001", 400, f"Kỳ {body.period} chưa kết thúc — không thể đối soát")
+
+    # ERR-RECON-001: check active AgentRun (NOT ReconciliationCase) for same merchant+period.
+    # A case existing doesn't mean a run is active — must check AgentRun status.
+    existing_run = await db.scalar(
+        select(AgentRun).where(
+            AgentRun.merchant_id == merchant_id,
+            AgentRun.period == body.period,
+            AgentRun.status.not_in(["COMPLETED", "FAILED"]),
+        )
+    )
+    if existing_run is not None:
+        raise TaxLensError(
+            "ERR-RECON-001",
+            409,
+            f"Đang có agent run active cho kỳ {body.period} (run_id={existing_run.id})",
+        )
 
     # ERR-RECON-002: no transactions found for this period
     period_start = date(year, month, 1)
@@ -210,6 +206,7 @@ async def trigger_reconcile(
             f"Không tìm thấy giao dịch nào cho merchant {merchant_id} kỳ {body.period}",
         )
 
+    # Create ReconciliationCase (kept — needed as FK parent for ExceptionRecord)
     case_id = f"CASE-{uuid.uuid4().hex[:10].upper()}"
     case = ReconciliationCase(
         id=case_id,
@@ -219,8 +216,29 @@ async def trigger_reconcile(
         priority="MEDIUM",
     )
     db.add(case)
+
+    # Create AgentRun — this is the ID returned to the client
+    run_id = f"RUN-{uuid.uuid4().hex[:10].upper()}"
+    agent_run = AgentRun(
+        id=run_id,
+        case_id=case_id,
+        merchant_id=merchant_id,
+        user_id=str(_user.id),
+        period=body.period,
+        request_text=f"Reconcile {merchant_id} kỳ {body.period}",
+        status="PLANNING",
+        started_at=datetime.now(timezone.utc),
+    )
+    db.add(agent_run)
     await db.commit()
 
-    background_tasks.add_task(_run_reconciliation, merchant_id, case_id, body.period)
+    background_tasks.add_task(
+        run_agent_workflow,
+        run_id=run_id,
+        case_id=case_id,
+        merchant_id=merchant_id,
+        period=body.period,
+        request_text=agent_run.request_text,
+    )
 
-    return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})
+    return ReconcileResponse(run_id=run_id, status="PLANNING", plan={"steps": []})
