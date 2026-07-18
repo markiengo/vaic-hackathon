@@ -1,4 +1,5 @@
-import { JetBrains_Mono, Momo_Trust_Display, Newsreader } from "next/font/google";
+import { JetBrains_Mono, Newsreader } from "next/font/google";
+import localFont from "next/font/local";
 
 const display = Newsreader({
   subsets: ["latin", "vietnamese"],
@@ -6,9 +7,9 @@ const display = Newsreader({
   display: "swap",
 });
 
-const ui = Momo_Trust_Display({
+const ui = localFont({
+  src: "./fonts/momo-trust-display.ttf",
   weight: "400",
-  subsets: ["latin", "vietnamese"],
   variable: "--font-ui",
   display: "swap",
   adjustFontFallback: false,

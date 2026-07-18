@@ -1922,3 +1922,40 @@ the deferred pitch decision remain unchanged; live rehearsal remains blocked.
 
 **Status:** Final executable diff hygiene complete; ready for push verification.
 
+### 2026-07-18 — P3: Self-host Momo font and diagnose hydration noise
+
+**Changed:**
+
+- Replaced the `next/font/google` loader for Momo Trust Display with the same
+  official font file served locally through `next/font/local`. Newsreader and
+  JetBrains Mono remain unchanged.
+- Updated the reviewed desktop transactions snapshot for the small rasterization
+  difference between Google's served subset and the official full TTF.
+
+**Reasoning:**
+
+- Next 16 repeatedly warned that it could not calculate fallback override
+  metrics for Momo Trust Display even with fallback adjustment disabled. Local
+  font loading preserves the locked design typeface, removes the noisy warning,
+  avoids a runtime request for this UI font and keeps the build deterministic.
+- The reported hydration attributes (`bis_skin_checked`, `bis_register` and
+  `__processed_*`) are injected by a browser security/traffic extension before
+  React hydrates. They are absent in Playwright and production builds. TaxLens
+  does not suppress real descendant hydration errors or mutate the DOM to fight
+  an external extension; localhost should be tested with that extension disabled
+  or in a clean Incognito profile.
+
+**Verification:**
+
+- `npm run lint` — pass.
+- `npm run typecheck` — pass.
+- `npm run build` — 27 routes pass with no Momo fallback warning.
+- Reviewed the new desktop transactions screenshot; layout, hierarchy and
+  responsive bounds remain correct.
+- Targeted desktop ledger visual test — 2/2 pass.
+- `npm run test:e2e` on isolated port 3316 — 33/33 pass across desktop,
+  compact and mobile.
+
+**Status:** Font warning fixed and browser-extension hydration noise isolated;
+P3 remains ready to merge after protecting the dirty main worktree.
+
