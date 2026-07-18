@@ -1574,3 +1574,95 @@ weakening or bypassing P1's ledger invariants.
 financial logic and its P5/P4 integration paths. No known application test,
 lint, build, dependency, or health-smoke failure remains in this branch.
 
+### 2026-07-18 — P2 Sprint 3: Vietnamese NLP, inline business guidance, evaluation gates
+
+**Changed:**
+
+- `backend/app/services/vietnamese_nlp.py` (206 lines): NFC normalization,
+  abbreviation expansion ("ck"→"chuyển khoản", "tt"→"thanh toán", etc.),
+  diacritic restoration ("toc"→"tóc"), transaction type classification with
+  confidence scores.
+- `backend/app/agents/prompts.py`: Inline business guidance injected into all 4
+  agent prompts (planner, reconciliation, tax, merchant ops). Each gets
+  domain-specific context (Vietnamese note clues, confidence thresholds,
+  message drafting rules).
+- `backend/app/agents/specialists.py`: Reconciliation node now calls
+  `interpret_transaction_note()` and passes the expanded note to
+  `score_match_candidates` instead of raw text. `note_interpretation` added to
+  graph state and output.
+- `backend/app/agents/evaluation.py` (172 lines): Sprint 4 quality gates —
+  structured output validation against Pydantic schemas, message quality scoring
+  (Vietnamese markers + action markers + context), confidence calibration
+  (≥80% agreement, 0 overconfident errors), hallucination rate (<5%), latency
+  check.
+- `backend/app/agents/__init__.py`: Updated exports for new evaluation module.
+- `backend/app/agents/graph.py`: Added note_interpretation to graph state.
+- `backend/tests/test_vietnamese_nlp.py` (4 tests, 50 note cases): NFC,
+  abbreviation, diacritic, classification coverage.
+- `backend/tests/test_agent_evaluation.py` (6 tests): Schema validation,
+  message quality, confidence calibration, hallucination, latency.
+- `backend/tests/test_agents.py`: Updated to verify note interpretation flows
+  through the agent graph.
+
+**Reasoning:**
+
+- NLP is deterministic (regex + dictionary, no ML dependency) to keep the
+  hackathon MVP reliable and avoid model hosting complexity.
+- Note interpretation is injected at the reconciliation node boundary rather
+  than inside the matching service, preserving P1's clean domain interface.
+- Evaluation module is structured for Sprint 4 reuse — quality gates are
+  independent and composable.
+
+**Verification:**
+
+- `pytest tests/test_vietnamese_nlp.py -v` — 4/4 pass, 50-case accuracy ≥85%.
+- `pytest tests/test_agent_evaluation.py -v` — 6/6 pass.
+- `pytest tests/test_agents.py -v` — all pass, note interpretation verified in
+  graph output.
+
+**Status:** P2 Sprint 3 complete. NLP, prompt guidance, and evaluation gates
+delivered. No `log.md` entry was written by P2 — this entry was added by P3
+(team lead) during merge integration.
+
+### 2026-07-18 — P4 Sprint 3: Endpoint fixes, ERR-TAX-003 dead code path, integration tests
+
+**Changed:**
+
+- `backend/app/routers/reconciliation.py`: POST /reconcile endpoints now return
+  HTTP 202 instead of 200, matching spec API-RECON-POST-001 for async
+  acceptance.
+- `backend/app/routers/tax.py`: Fixed ERR-TAX-003 dead code path — now uses
+  `case.tax_rule_version` to detect expired rules instead of the unreachable
+  branch.
+- `backend/app/routers/merchants.py`: Expanded merchant management endpoints
+  (+112 lines).
+- `backend/app/routers/pos.py`: Minor endpoint fixes.
+- `backend/app/routers/audit.py`: Minor fixes.
+- `backend/app/routers/transactions.py`: Enhanced transaction query endpoints.
+- `backend/app/core/security.py`: Minor fix.
+- `backend/app/schemas/reconciliation.py`: Added schema field for async
+  response.
+- `backend/tests/test_integration.py` (845 lines, 37 test cases): Covers 22/28
+  error codes — comprehensive integration test suite.
+
+**Reasoning:**
+
+- 202 vs 200 for async reconcile: spec explicitly states 202 Accepted for
+  endpoints that dispatch background processing.
+- ERR-TAX-003 fix: the original code path was unreachable because it checked a
+  condition that could never be true given the query logic. Using
+  `tax_rule_version` from the case record is the correct domain approach.
+- Integration tests cover error codes systematically to catch regressions in
+  Sprint 4.
+
+**Verification:**
+
+- `pytest tests/test_integration.py -v` — 37 test cases covering 22/28 error
+  codes.
+- Manual smoke test of POST /reconcile — returns 202 as expected.
+- ERR-TAX-003 path verified with expired tax rule fixture.
+
+**Status:** P4 Sprint 3 complete. Endpoint spec compliance, dead code fix, and
+integration test suite delivered. No `log.md` entry was written by P4 — this
+entry was added by P3 (team lead) during merge integration.
+
