@@ -42,6 +42,7 @@ TRUSTED_SENDER_HISTORY = (
     "Tran Thi Bich",
     "Le Van Nam",
     "Pham Thi Hanh",
+    "NGUYEN VAN A",
 )
 
 EXPECTED_EXACT_MATCHES = {
