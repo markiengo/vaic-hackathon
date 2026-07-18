@@ -1,0 +1,83 @@
+services:
+  - type: web
+    name: taxlens
+    runtime: docker
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    plan: starter
+
+    # Render calls this endpoint to decide when the service is healthy.
+    # /api/health is a tiny Next.js route that returns {"ok":true}.
+    healthCheckPath: /api/health
+
+    # Runs AFTER build, BEFORE start — automatically applies DB migrations
+    # on every deploy. Safe: alembic is idempotent on already-applied migrations.
+    preDeployCommand: "cd /app/backend && alembic upgrade head"
+
+    envVars:
+      # ── Non-sensitive: hardcoded here ────────────────────────────────────
+      - key: ENVIRONMENT
+        value: production
+
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_EXPIRE_MINUTES
+        value: "15"
+      - key: JWT_REFRESH_EXPIRE_DAYS
+        value: "7"
+
+      - key: LLM_PROVIDER
+        value: deepseek
+      - key: LLM_MODEL_PLANNER
+        value: deepseek-chat
+      - key: LLM_MODEL_SPECIALIST
+        value: deepseek-chat
+
+      # Mock service URLs — FastAPI on :8001 doesn't have /mock/* routes,
+      # so these calls will 404 gracefully; real adapters not needed for demo.
+      - key: INVOICE_API_URL
+        value: http://127.0.0.1:8001/mock/invoice
+      - key: CASE_API_URL
+        value: http://127.0.0.1:8001/mock/case
+
+      # Browser never reaches FastAPI directly (Next.js proxies all requests),
+      # so CORS settings don't affect functionality. Set to * for /docs access.
+      - key: CORS_ORIGINS
+        value: "*"
+
+      # ── Secrets: sync:false → Render prompts you for values on Dashboard ─
+      # DATABASE_URL: Supabase direct connection string.
+      # Format: postgresql+asyncpg://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
+      # DO NOT use the pgBouncer transaction-pooler URL (port 6543) — asyncpg
+      # prepared statements are incompatible with PgBouncer transaction mode.
+      - key: DATABASE_URL
+        sync: false
+
+      # REDIS_URL: Use Upstash Redis free tier (https://upstash.com).
+      # Format: rediss://default:[PASSWORD]@[HOST].upstash.io:6379
+      - key: REDIS_URL
+        sync: false
+
+      # JWT_SECRET: generate with: openssl rand -hex 32
+      - key: JWT_SECRET
+        sync: false
+
+      # SePay — enter placeholder values if not using live SePay for the demo.
+      # SEPAY_API_URL can be: https://my.sepay.vn/userapi (not a secret)
+      # SEPAY_API_TOKEN and SEPAY_WEBHOOK_API_KEY: use "demo-placeholder" if not live
+      - key: SEPAY_API_URL
+        sync: false
+      - key: SEPAY_API_TOKEN
+        sync: false
+      - key: SEPAY_WEBHOOK_API_KEY
+        sync: false
+
+      # LLM keys: LLM_API_KEY (required by config.py) and DEEPSEEK_API_KEY
+      # (read directly by P2 agent code) should be the same DeepSeek API key.
+      # If using OpenRouter instead: set OPENROUTER_API_KEY and leave DEEPSEEK_API_KEY empty.
+      - key: LLM_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
