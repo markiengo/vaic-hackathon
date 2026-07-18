@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TaxLens - Agent Runs</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:opsz,wght@6..72,400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-container": "#7a9b99",
+                        "surface-container-high": "#e4e7ff",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#dde1ff",
+                        "on-surface": "#0c1842",
+                        "inverse-surface": "#232e58",
+                        "primary-fixed": "#ffdbce",
+                        "surface-bright": "#fbf8ff",
+                        "surface": "#FFFFFF",
+                        "text-tertiary": "#858B9D",
+                        "on-tertiary-fixed-variant": "#2c4c4b",
+                        "on-secondary-fixed-variant": "#283f98",
+                        "inverse-primary": "#ffb599",
+                        "on-background": "#0c1842",
+                        "surface-container-highest": "#dde1ff",
+                        "surface-tint": "#a63b00",
+                        "on-primary-fixed-variant": "#7f2b00",
+                        "on-secondary-container": "#1a328d",
+                        "primary": "#a63b00",
+                        "on-surface-variant": "#594239",
+                        "tertiary-fixed": "#c6e9e7",
+                        "background": "#FCFBF8",
+                        "surface-container": "#ecedff",
+                        "error": "#ba1a1a",
+                        "text-secondary": "#5D647A",
+                        "outline": "#8c7167",
+                        "on-tertiary-fixed": "#00201f",
+                        "border": "#E5E7EE",
+                        "on-primary-container": "#541a00",
+                        "border-strong": "#CDD1DD",
+                        "mango": "#F59A1E",
+                        "on-error-container": "#93000a",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#113231",
+                        "secondary": "#4257b2",
+                        "outline-variant": "#e0c0b4",
+                        "on-primary-fixed": "#370e00",
+                        "on-secondary-fixed": "#001355",
+                        "secondary-container": "#8ca0ff",
+                        "surface-variant": "#dde1ff",
+                        "surface-container-low": "#f3f2ff",
+                        "surface-dim": "#d1d8ff",
+                        "tertiary-fixed-dim": "#abcdcb",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-hover": "#1F327F",
+                        "on-tertiary": "#ffffff",
+                        "primary-hover": "#DD5C24",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#446463",
+                        "primary-container": "#f36b2e",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#ffb599",
+                        "secondary-fixed-dim": "#b8c3ff",
+                        "inverse-on-surface": "#efefff"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "stack-lg": "1.5rem",
+                        "stack-sm": "0.5rem",
+                        "margin-page": "2rem",
+                        "gutter": "1.5rem",
+                        "stack-md": "1rem"
+                    },
+                    fontFamily: {
+                        "h2": ["Newsreader"],
+                        "body": ["Plus Jakarta Sans"],
+                        "small": ["Plus Jakarta Sans"],
+                        "h4": ["Plus Jakarta Sans"],
+                        "h1": ["Newsreader"],
+                        "caption": ["Plus Jakarta Sans"],
+                        "button": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"],
+                        "display": ["Newsreader"],
+                        "h3": ["Newsreader"],
+                        "technical": ["JetBrains Mono"]
+                    },
+                    fontSize: {
+                        "h2": ["36px", { lineHeight: "1.15", letterSpacing: "-0.02em", fontWeight: "600" }],
+                        "body": ["16px", { lineHeight: "1.55", fontWeight: "400" }],
+                        "small": ["14px", { lineHeight: "1.50", fontWeight: "400" }],
+                        "h4": ["22px", { lineHeight: "1.30", fontWeight: "600" }],
+                        "h1": ["48px", { lineHeight: "1.10", letterSpacing: "-0.03em", fontWeight: "700" }],
+                        "caption": ["12px", { lineHeight: "1.45", fontWeight: "400" }],
+                        "button": ["14px", { lineHeight: "1.20", fontWeight: "600" }],
+                        "label": ["13px", { lineHeight: "1.30", fontWeight: "500" }],
+                        "display": ["64px", { lineHeight: "1.05", letterSpacing: "-0.04em", fontWeight: "700" }],
+                        "h3": ["28px", { lineHeight: "1.20", letterSpacing: "-0.02em", fontWeight: "600" }],
+                        "technical": ["12px", { lineHeight: "1.50", fontWeight: "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #CDD1DD;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen flex antialiased">
+<!-- SideNavBar (Shared Component) -->
+<nav class="w-[240px] h-screen fixed left-0 top-0 border-r border-border dark:border-outline-variant bg-surface dark:bg-inverse-surface flex flex-col h-full py-margin-page z-50">
+<!-- Brand -->
+<div class="px-6 mb-8">
+<h1 class="font-display text-h3 font-bold text-primary dark:text-primary-fixed">TaxLens</h1>
+</div>
+<!-- Avatar Section -->
+<div class="px-6 mb-6 flex items-center gap-3">
+<img alt="Linh Nguyễn" class="w-10 h-10 rounded-full object-cover border border-border" data-alt="A professional headshot of Linh Nguyễn, an operations manager, smiling gently. The lighting is soft and studio-quality, set against a light, neutral background, reflecting a trustworthy and competent persona." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOZSnJaST6urMmWmy-XO-8CQf2CSyTX3k8LO_jTjOFafw0qz0dQeT0PI0aet96OgKHyinS0CwGU775viBKghf3Y2C1AD5OsNjHTtcB6AOfKIpFOpl_Fcu0tN83nqqH_7Z4xApG9dGwd01uqGDdOd5w4FO1cWKQGMfk0LLzSOiCV9EQWYReipGOH1T-ENHtkWbxr25siFhr-ZwPSOoaJAs5UoowPpD9LBtW7vJUXRTl72QQo854hj6QEg"/>
+<div>
+<div class="font-label text-label text-on-surface">Linh Nguyễn</div>
+<div class="font-caption text-caption text-text-secondary">SHB Operations</div>
+</div>
+</div>
+<!-- Navigation Links -->
+<div class="flex-1 flex flex-col gap-1 px-2">
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 cursor-pointer active:scale-95 transition-transform rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-label text-label">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 cursor-pointer active:scale-95 transition-transform rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">storefront</span>
+<span class="font-label text-label">Merchant</span>
+</a>
+<a class="flex items-center justify-between px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 cursor-pointer active:scale-95 transition-transform rounded-DEFAULT" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">assignment</span>
+<span class="font-label text-label">Cases</span>
+</div>
+<span class="bg-surface-container-high text-on-surface-variant text-[10px] font-bold px-1.5 py-0.5 rounded-full">12</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center justify-between px-4 py-3 text-primary dark:text-primary-fixed font-bold border-r-2 border-primary dark:border-primary-fixed bg-surface-container-low dark:bg-surface-container-highest cursor-pointer active:scale-95 transition-transform rounded-DEFAULT" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl text-primary" style="font-variation-settings: 'FILL' 1;">memory</span>
+<span class="font-label text-label">Agent runs</span>
+</div>
+<span class="bg-primary-container text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">3</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 cursor-pointer active:scale-95 transition-transform rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">rule</span>
+<span class="font-label text-label">Audit</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 cursor-pointer active:scale-95 transition-transform rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">verified_user</span>
+<span class="font-label text-label">Compliance</span>
+</a>
+</div>
+<!-- Footer Links -->
+<div class="mt-auto px-2 flex flex-col gap-1 border-t border-border pt-4">
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 cursor-pointer active:scale-95 transition-transform rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="font-label text-label">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 cursor-pointer active:scale-95 transition-transform rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">help</span>
+<span class="font-label text-label">Support</span>
+</a>
+</div>
+</nav>
+<!-- TopAppBar (Shared Component) -->
+<header class="flex justify-between items-center pl-[264px] pr-margin-page w-full h-16 fixed top-0 z-40 border-b border-border dark:border-outline-variant bg-surface dark:bg-inverse-surface">
+<!-- Search & Navigation -->
+<div class="flex items-center gap-8 flex-1">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-sm">search</span>
+<input class="w-full pl-9 pr-3 py-1.5 bg-background border border-border rounded-full text-small font-small focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary text-on-surface transition-all" placeholder="Search..." type="text"/>
+</div>
+<nav class="hidden md:flex items-center h-full gap-6">
+<a class="text-on-surface-variant dark:text-surface-variant hover:text-primary-hover dark:hover:text-primary-fixed-dim transition-colors font-label text-label h-16 flex items-center" href="#">Period Selection</a>
+</nav>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button class="text-text-secondary hover:text-primary transition-colors duration-200 Active: opacity-80 p-2 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="text-text-secondary hover:text-primary transition-colors duration-200 Active: opacity-80 p-2 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-xl">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[240px] pt-16 w-full flex flex-col h-screen overflow-hidden bg-background">
+<!-- Page Header -->
+<div class="px-margin-page py-6 border-b border-border bg-surface shrink-0">
+<div class="flex justify-between items-start">
+<div>
+<h1 class="font-h2 text-h2 text-on-surface mb-1">Agent runs</h1>
+<p class="font-small text-small text-text-secondary mb-3">Theo dõi kế hoạch, tiến trình và kết quả của các quy trình do TaxLens thực hiện.</p>
+<div class="flex items-center gap-2 font-caption text-caption text-text-tertiary">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary"></span> 4 runs đang chạy</span>
+<span>·</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-mango"></span> 3 chờ xác nhận</span>
+<span>·</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-error"></span> 2 thất bại</span>
+<span>·</span>
+<span>Cập nhật lúc 10:42</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 border border-primary-container text-primary-container rounded font-button text-button hover:bg-primary-fixed transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Xuất danh sách
+                    </button>
+<button class="px-4 py-2 border border-primary-container text-primary-container rounded font-button text-button hover:bg-primary-fixed transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+                        Làm mới
+                    </button>
+<button class="px-4 py-2 bg-primary-container text-on-primary rounded font-button text-button hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        Chạy kiểm tra mới
+                    </button>
+</div>
+</div>
+</div>
+<!-- Workspace Layout -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Run Queue (Left Panel) -->
+<div class="w-[320px] shrink-0 border-r border-border bg-surface flex flex-col">
+<!-- Filters & Search -->
+<div class="p-4 border-b border-border shrink-0">
+<div class="relative mb-3">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-sm">search</span>
+<input class="w-full pl-9 pr-3 py-1.5 bg-background border border-border rounded text-small font-small focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary text-on-surface" placeholder="Tìm run hoặc merchant" type="text"/>
+</div>
+<div class="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
+<button class="px-3 py-1 bg-surface-container-high text-on-surface font-label text-label rounded-full whitespace-nowrap">Nguồn <span class="material-symbols-outlined text-[14px] align-middle ml-1">arrow_drop_down</span></button>
+<button class="px-3 py-1 bg-surface-container-high text-on-surface font-label text-label rounded-full whitespace-nowrap">Trạng thái <span class="material-symbols-outlined text-[14px] align-middle ml-1">arrow_drop_down</span></button>
+</div>
+</div>
+<!-- Tabs -->
+<div class="flex overflow-x-auto border-b border-border shrink-0 custom-scrollbar bg-surface-bright">
+<button class="px-4 py-3 font-label text-label text-primary border-b-2 border-primary whitespace-nowrap">Cần chú ý (5)</button>
+<button class="px-4 py-3 font-label text-label text-text-secondary hover:text-on-surface whitespace-nowrap">Đang chạy (4)</button>
+<button class="px-4 py-3 font-label text-label text-text-secondary hover:text-on-surface whitespace-nowrap">Chờ xác nhận (3)</button>
+<button class="px-4 py-3 font-label text-label text-text-secondary hover:text-on-surface whitespace-nowrap">Thất bại (2)</button>
+<button class="px-4 py-3 font-label text-label text-text-secondary hover:text-on-surface whitespace-nowrap">Hoàn tất (94)</button>
+<button class="px-4 py-3 font-label text-label text-text-secondary hover:text-on-surface whitespace-nowrap">Tất cả (103)</button>
+</div>
+<!-- List -->
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<!-- Selected Item -->
+<div class="p-4 border-b border-border bg-surface-container-low cursor-pointer border-l-4 border-l-primary relative">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical text-technical text-on-surface-variant font-medium">RUN-8912</span>
+<span class="bg-surface-container-highest text-on-surface-variant px-2 py-0.5 rounded font-caption text-[10px] uppercase font-bold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-mango"></span> Chờ SHB phê duyệt</span>
+</div>
+<h3 class="font-label text-label text-on-surface mb-2 leading-tight">Salon Hương <span class="text-text-tertiary font-normal">· Kiểm tra dữ liệu tháng 7</span></h3>
+<div class="font-caption text-caption text-text-secondary flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">progress_activity</span>
+                            Hoàn tất 4/5 bước · 18s
+                        </div>
+<div class="font-technical text-[10px] text-text-tertiary">
+                            Case: <a class="text-secondary hover:underline" href="#">CASE-1428</a>
+</div>
+</div>
+<!-- Failed Item -->
+<div class="p-4 border-b border-border hover:bg-background cursor-pointer transition-colors">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical text-technical text-text-secondary font-medium">RUN-8911</span>
+<span class="bg-error-container text-on-error-container px-2 py-0.5 rounded font-caption text-[10px] uppercase font-bold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-error"></span> Thất bại</span>
+</div>
+<h3 class="font-label text-label text-on-surface mb-2 leading-tight">Nhã thuốc Minh Anh <span class="text-text-tertiary font-normal">· Đối soát và kiểm tra hóa đơn</span></h3>
+<div class="font-caption text-caption text-text-secondary flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">error</span>
+                            Invoice Connector · 34s
+                        </div>
+<div class="font-technical text-[10px] text-text-tertiary">
+                            Case: <a class="text-secondary hover:underline" href="#">CASE-1425</a>
+</div>
+</div>
+<!-- Standard Item -->
+<div class="p-4 border-b border-border hover:bg-background cursor-pointer transition-colors opacity-75">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical text-technical text-text-secondary font-medium">RUN-8910</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded font-caption text-[10px] uppercase font-bold flex items-center gap-1">Hoàn tất</span>
+</div>
+<h3 class="font-label text-label text-on-surface mb-2 leading-tight">Cửa hàng Điện máy Xanh <span class="text-text-tertiary font-normal">· Tổng hợp báo cáo quý 2</span></h3>
+<div class="font-caption text-caption text-text-secondary flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                            Hoàn tất 5/5 bước · 1m 12s
+                        </div>
+<div class="font-technical text-[10px] text-text-tertiary">
+                            Case: <a class="text-secondary hover:underline" href="#">CASE-1422</a>
+</div>
+</div>
+</div>
+</div>
+<!-- Run Workspace (Right Panel) -->
+<div class="flex-1 flex flex-col bg-background relative overflow-hidden">
+<div class="flex-1 overflow-y-auto p-margin-page custom-scrollbar pb-32">
+<!-- Header -->
+<div class="bg-surface border border-border rounded-lg p-6 mb-6 shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<span class="font-technical text-technical text-text-secondary bg-surface-container px-2 py-1 rounded">RUN-8912</span>
+<span class="bg-surface-container-highest text-on-surface-variant px-2 py-1 rounded font-caption text-[11px] uppercase font-bold flex items-center gap-1.5 border border-outline-variant"><span class="w-2 h-2 rounded-full bg-mango"></span> Chờ SHB phê duyệt</span>
+</div>
+<h2 class="font-h3 text-h3 text-on-surface">Salon Hương - Kiểm tra dữ liệu tháng 7</h2>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 border border-border text-on-surface rounded font-button text-button hover:bg-surface-container-low transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">storefront</span>
+                                    Xem merchant
+                                </button>
+<button class="px-3 py-1.5 border border-border text-on-surface rounded font-button text-button hover:bg-surface-container-low transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">assignment</span>
+                                    Mở case
+                                </button>
+<button class="px-4 py-1.5 bg-primary-container text-on-primary rounded font-button text-button hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                                    Phê duyệt bước tiếp theo
+                                </button>
+</div>
+</div>
+<!-- Metadata Grid -->
+<div class="grid grid-cols-4 gap-6 pt-4 border-t border-border">
+<div>
+<div class="font-caption text-caption text-text-tertiary mb-1">Merchant ID</div>
+<div class="font-technical text-technical text-on-surface">MER-001248</div>
+</div>
+<div>
+<div class="font-caption text-caption text-text-tertiary mb-1">Nguồn</div>
+<div class="font-small text-small text-on-surface flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-secondary">smart_toy</span> Trợ lý TaxLens</div>
+</div>
+<div>
+<div class="font-caption text-caption text-text-tertiary mb-1">Thời gian thực thi</div>
+<div class="font-small text-small text-on-surface">Bắt đầu 10:24 (18 giây)</div>
+</div>
+<div>
+<div class="font-caption text-caption text-text-tertiary mb-1">Liên kết</div>
+<div class="font-small text-small text-on-surface">Kỳ: Tháng 7/2026 · <a class="text-secondary hover:underline font-technical text-technical" href="#">CASE-1428</a></div>
+</div>
+</div>
+</div>
+<!-- Progress Strip -->
+<div class="bg-surface border border-border rounded-lg p-4 mb-6 shadow-sm overflow-hidden">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2 text-text-secondary">
+<span class="material-symbols-outlined text-[18px]">play_circle</span>
+<span class="font-label text-caption">Bắt đầu <span class="font-technical">(10:24:02)</span></span>
+</div>
+<div class="h-[1px] flex-1 bg-border mx-4"></div>
+<div class="flex items-center gap-2 text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined text-[18px] text-tertiary">task_alt</span>
+<span class="font-label text-caption">Planner <span class="text-text-tertiary font-normal">(Hoàn tất)</span></span>
+</div>
+<div class="h-[1px] flex-1 bg-border mx-4"></div>
+<div class="flex items-center gap-2 text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined text-[18px] text-tertiary">task_alt</span>
+<span class="font-label text-caption">Specialist agents <span class="text-text-tertiary font-normal">(Hoàn tất)</span></span>
+</div>
+<div class="h-[1px] flex-1 bg-border mx-4"></div>
+<div class="flex items-center gap-2 text-primary font-bold bg-primary-fixed px-3 py-1 rounded-full border border-primary/20">
+<span class="material-symbols-outlined text-[18px]">person</span>
+<span class="font-label text-caption">Human approval <span class="font-normal opacity-80">(Đang chờ)</span></span>
+</div>
+<div class="h-[1px] flex-1 bg-border mx-4"></div>
+<div class="flex items-center gap-2 text-text-tertiary opacity-50">
+<span class="material-symbols-outlined text-[18px]">stop_circle</span>
+<span class="font-label text-caption">Kết thúc</span>
+</div>
+</div>
+</div>
+<!-- Main Workspace Tabs -->
+<div class="flex border-b border-border mb-6">
+<button class="px-6 py-3 font-label text-label text-primary border-b-2 border-primary">Tổng quan</button>
+<button class="px-6 py-3 font-label text-label text-text-secondary hover:text-on-surface">Kế hoạch &amp; bước (5)</button>
+<button class="px-6 py-3 font-label text-label text-text-secondary hover:text-on-surface">Công cụ &amp; đầu ra (6)</button>
+<button class="px-6 py-3 font-label text-label text-text-secondary hover:text-on-surface">Sự kiện</button>
+</div>
+<!-- Tab 1: Tổng quan Content -->
+<div class="space-y-6">
+<!-- Yêu cầu khởi tạo -->
+<div class="bg-surface border border-border rounded-lg p-5">
+<h3 class="font-h4 text-h4 text-on-surface mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">record_voice_over</span>
+                                Yêu cầu khởi tạo
+                            </h3>
+<div class="bg-surface-container-low p-4 rounded border border-border text-on-surface font-body text-body italic">
+                                "Kiểm tra tháng 7 giúp chị và cho chị biết còn vấn đề gì."
+                            </div>
+<div class="mt-2 font-caption text-caption text-text-secondary">Nguồn: Trợ lý TaxLens - Merchant Workspace</div>
+</div>
+<!-- Kết quả hiện tại -->
+<div class="bg-surface border border-border rounded-lg p-5">
+<h3 class="font-h4 text-h4 text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">analytics</span>
+                                Kết quả hiện tại
+                            </h3>
+<div class="flex items-center gap-6 p-4 bg-surface-bright rounded border border-border">
+<div class="flex-1">
+<div class="font-display text-h2 text-on-surface leading-none mb-1">30</div>
+<div class="font-caption text-caption text-text-secondary uppercase tracking-wide">Giao dịch</div>
+</div>
+<div class="w-px h-10 bg-border"></div>
+<div class="flex-1">
+<div class="font-display text-h2 text-tertiary leading-none mb-1">25</div>
+<div class="font-caption text-caption text-text-secondary uppercase tracking-wide">Tự động khớp</div>
+</div>
+<div class="w-px h-10 bg-border"></div>
+<div class="flex-1">
+<div class="font-display text-h2 text-mango leading-none mb-1">3</div>
+<div class="font-caption text-caption text-text-secondary uppercase tracking-wide">Cần phân loại</div>
+</div>
+<div class="w-px h-10 bg-border"></div>
+<div class="flex-1">
+<div class="font-display text-h2 text-error leading-none mb-1">2</div>
+<div class="font-caption text-caption text-text-secondary uppercase tracking-wide">Thiếu hóa đơn</div>
+</div>
+<div class="w-px h-10 bg-border"></div>
+<div class="flex-1 flex flex-col items-end">
+<div class="font-display text-h3 text-on-surface mb-1">92%</div>
+<div class="font-caption text-[11px] font-bold text-error bg-error-container px-2 py-0.5 rounded">CHƯA SẴN SÀNG</div>
+</div>
+</div>
+</div>
+<!-- Quyết định cần SHB phê duyệt (Mist-tinted panel) -->
+<div class="bg-background border-2 border-outline-variant rounded-lg p-6 shadow-sm relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-[120px]">policy</span>
+</div>
+<div class="relative z-10">
+<h3 class="font-h3 text-h3 text-on-surface mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">front_hand</span>
+                                    Quyết định cần SHB phê duyệt
+                                </h3>
+<p class="font-body text-body text-on-surface-variant mb-6">Agent đã hoàn thành việc kiểm tra và phát hiện thiếu sót. Cần quyết định hành động tiếp theo đối với merchant.</p>
+<div class="bg-surface p-5 rounded border border-border mb-6">
+<div class="font-label text-label text-text-secondary uppercase mb-2 tracking-wider">Đề xuất hành động</div>
+<div class="font-h4 text-h4 text-on-surface mb-4">Gửi yêu cầu merchant xác nhận và bổ sung chứng từ</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-bright p-3 rounded border border-border">
+<div class="font-caption text-caption text-text-tertiary mb-1">Lý do (Rationale)</div>
+<div class="font-small text-small text-on-surface">Còn 2 giao dịch thiếu hóa đơn đầu vào, 3 giao dịch cần phân loại mục đích sử dụng. Việc tự động quyết định có rủi ro sai sót thuế.</div>
+</div>
+<div class="bg-surface-bright p-3 rounded border border-border">
+<div class="font-caption text-caption text-text-tertiary mb-1">Đánh giá tác động</div>
+<div class="font-small text-small text-on-surface flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-mango">warning</span> Tạm dừng quy trình hoàn thuế cho đến khi bổ sung đủ.</div>
+</div>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2.5 bg-primary-container text-on-primary rounded font-button text-button hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">thumb_up</span>
+                                        Phê duyệt và tiếp tục
+                                    </button>
+<button class="px-4 py-2.5 border border-border bg-surface text-on-surface rounded font-button text-button hover:bg-surface-container-low transition-colors">
+                                        Chỉnh đề xuất
+                                    </button>
+<button class="px-4 py-2.5 border border-error text-error bg-surface rounded font-button text-button hover:bg-error-container transition-colors ml-auto">
+                                        Từ chối bước này
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Action Footer -->
+<div class="absolute bottom-0 left-0 w-full bg-surface border-t border-border p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(25,36,78,0.05)] z-20">
+<div class="flex gap-3">
+<button class="px-3 py-2 border border-border text-on-surface rounded font-button text-button hover:bg-surface-container-low transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">storefront</span>
+                            Xem merchant
+                        </button>
+<button class="px-3 py-2 border border-border text-on-surface rounded font-button text-button hover:bg-surface-container-low transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">assignment</span>
+                            Mở case
+                        </button>
+</div>
+<button class="px-6 py-2.5 bg-primary-container text-on-primary rounded font-button text-button hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2 text-lg">
+<span class="material-symbols-outlined">check_circle</span>
+                        Phê duyệt bước tiếp theo
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

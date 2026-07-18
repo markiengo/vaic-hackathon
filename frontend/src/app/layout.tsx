@@ -1,21 +1,20 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { Providers } from '@/components/Providers';
+import type { Metadata } from "next";
+import { Providers } from "@/components/Providers";
+import { fontVariables } from "./fonts";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'TaxLens — Merchant TaxOps',
-  description: 'TaxLens — Nền tảng đối soát và quản lý thuế cho merchant',
+  title: {
+    default: "TaxLens",
+    template: "%s | TaxLens",
+  },
+  description: "Dòng tiền khớp. Sổ sách sạch. Vận hành nhẹ.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="vi">
-      <head>
-        {/* Material Symbols is an icon font used across the app-router UI. */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
-      </head>
-      <body className="font-body text-text-primary antialiased bg-background">
+    <html lang="vi" suppressHydrationWarning className={fontVariables}>
+      <body>
         <Providers>{children}</Providers>
       </body>
     </html>

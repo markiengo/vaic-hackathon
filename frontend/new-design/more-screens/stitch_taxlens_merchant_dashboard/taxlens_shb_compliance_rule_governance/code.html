@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TaxLens - SHB Operations Compliance</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#541a00",
+                        "inverse-primary": "#ffb599",
+                        "on-tertiary-fixed-variant": "#2c4c4b",
+                        "inverse-on-surface": "#efefff",
+                        "tertiary-fixed": "#c6e9e7",
+                        "surface-container": "#ecedff",
+                        "primary-container": "#f36b2e",
+                        "text-secondary": "#5D647A",
+                        "mango": "#F59A1E",
+                        "secondary-hover": "#1F327F",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#a63b00",
+                        "surface-dim": "#d1d8ff",
+                        "secondary-fixed": "#dde1ff",
+                        "primary-fixed": "#ffdbce",
+                        "surface": "#FFFFFF",
+                        "on-tertiary-fixed": "#00201f",
+                        "surface-container-highest": "#dde1ff",
+                        "primary-fixed-dim": "#ffb599",
+                        "primary": "#a63b00",
+                        "primary-hover": "#DD5C24",
+                        "on-surface-variant": "#594239",
+                        "on-secondary-fixed-variant": "#283f98",
+                        "surface-container-lowest": "#ffffff",
+                        "on-background": "#0c1842",
+                        "tertiary-container": "#7a9b99",
+                        "outline-variant": "#e0c0b4",
+                        "on-primary-fixed-variant": "#7f2b00",
+                        "surface-container-high": "#e4e7ff",
+                        "on-surface": "#0c1842",
+                        "on-secondary-fixed": "#001355",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f3f2ff",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "background": "#FCFBF8",
+                        "outline": "#8c7167",
+                        "secondary": "#4257b2",
+                        "on-primary-fixed": "#370e00",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#1a328d",
+                        "border": "#E5E7EE",
+                        "text-tertiary": "#858B9D",
+                        "border-strong": "#CDD1DD",
+                        "secondary-fixed-dim": "#b8c3ff",
+                        "secondary-container": "#8ca0ff",
+                        "on-tertiary-container": "#113231",
+                        "tertiary-fixed-dim": "#abcdcb",
+                        "surface-bright": "#fbf8ff",
+                        "tertiary": "#446463",
+                        "inverse-surface": "#232e58",
+                        "surface-variant": "#dde1ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "1rem",
+                        "stack-sm": "0.5rem",
+                        "stack-lg": "1.5rem",
+                        "margin-page": "2rem",
+                        "gutter": "1.5rem"
+                    },
+                    "fontFamily": {
+                        "technical": ["JetBrains Mono"],
+                        "label": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "button": ["Plus Jakarta Sans"],
+                        "h1": ["Newsreader"],
+                        "caption": ["Plus Jakarta Sans"],
+                        "h2": ["Newsreader"],
+                        "small": ["Plus Jakarta Sans"],
+                        "h4": ["Plus Jakarta Sans"],
+                        "h3": ["Newsreader"],
+                        "display": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "technical": ["12px", { "lineHeight": "1.50", "fontWeight": "400" }],
+                        "label": ["13px", { "lineHeight": "1.30", "fontWeight": "500" }],
+                        "body": ["16px", { "lineHeight": "1.55", "fontWeight": "400" }],
+                        "button": ["14px", { "lineHeight": "1.20", "fontWeight": "600" }],
+                        "h1": ["48px", { "lineHeight": "1.10", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+                        "caption": ["12px", { "lineHeight": "1.45", "fontWeight": "400" }],
+                        "h2": ["36px", { "lineHeight": "1.15", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "small": ["14px", { "lineHeight": "1.50", "fontWeight": "400" }],
+                        "h4": ["22px", { "lineHeight": "1.30", "fontWeight": "600" }],
+                        "h3": ["28px", { "lineHeight": "1.20", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "display": ["64px", { "lineHeight": "1.05", "letterSpacing": "-0.04em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        /* Lucide icon base styling (simulated with Material Symbols for compatibility) */
+        .lucide-icon {
+            font-size: 20px;
+            font-weight: 300;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased flex h-screen overflow-hidden">
+<!-- Sidebar Component (Injected from JSON) -->
+<aside class="w-[240px] h-screen fixed left-0 top-0 border-r border-border dark:border-outline-variant bg-surface dark:bg-inverse-surface flex flex-col h-full py-margin-page z-50">
+<!-- Brand / Header -->
+<div class="px-6 pb-6 border-b border-border mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-lg overflow-hidden relative">
+<img alt="Linh Nguyễn" class="w-full h-full object-cover" data-alt="Professional corporate headshot of Linh Nguyễn, SHB Operations, bright modern lighting, high resolution, soft background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyYPJHclTVc5KP4KvTe6f1X21vlssKvjkEQOHSF_9d31wmGokW4wf83gi730VHn-nhkQv_jTmLLwfb2E6L2Q_Coa_4S2BwKqgbFfynnBI_OA36PLNXcMMjo-jrizwXPlfjZXVBcpYc5r4VGfohWfBJILnm2Qme5jRYGtlDTAU4QQay7oRl0WWguDsIyscKjcV_JY5uHyv7jmuBIglOOZaSNuDaiaKSHj5cvqE7-UfDQwO3r_F-SM8RPg"/>
+</div>
+<div>
+<h2 class="font-h3 text-h3 font-bold text-primary dark:text-primary-fixed text-lg">Linh Nguyễn</h2>
+<p class="font-label text-label text-text-secondary">SHB Operations</p>
+</div>
+</div>
+<button class="mt-4 w-full bg-primary-container text-on-primary-container hover:bg-primary-hover hover:text-white transition-colors duration-150 py-2 rounded-lg font-button text-button flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+                New Operation
+            </button>
+</div>
+<!-- Navigation Links -->
+<nav class="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-1 px-2">
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 rounded-lg cursor-pointer active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined lucide-icon" data-icon="dashboard">dashboard</span>
+<span class="font-label text-label">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 rounded-lg cursor-pointer active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined lucide-icon" data-icon="storefront">storefront</span>
+<span class="font-label text-label">Merchant</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 rounded-lg cursor-pointer active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined lucide-icon" data-icon="assignment">assignment</span>
+<span class="font-label text-label">Cases</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 rounded-lg cursor-pointer active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined lucide-icon" data-icon="memory">memory</span>
+<span class="font-label text-label">Agent runs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 rounded-lg cursor-pointer active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined lucide-icon" data-icon="rule">rule</span>
+<span class="font-label text-label">Audit</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-4 py-3 text-primary dark:text-primary-fixed font-bold border-r-2 border-primary dark:border-primary-fixed bg-surface-container-low rounded-l-lg cursor-pointer active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined lucide-icon icon-fill" data-icon="verified_user">verified_user</span>
+<span class="font-label text-label">Compliance</span>
+</a>
+</nav>
+<!-- Footer Links -->
+<div class="mt-auto px-2 pt-4 border-t border-border flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 rounded-lg cursor-pointer active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined lucide-icon" data-icon="settings">settings</span>
+<span class="font-label text-label">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-150 rounded-lg cursor-pointer active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined lucide-icon" data-icon="help">help</span>
+<span class="font-label text-label">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main App Container -->
+<main class="ml-[240px] flex-1 flex flex-col h-full overflow-hidden bg-background">
+<!-- TopAppBar Component (Injected from JSON) -->
+<header class="docked full-width top-0 h-16 border-b border-border dark:border-outline-variant bg-surface dark:bg-inverse-surface flex justify-between items-center px-6 w-full z-40 sticky">
+<div class="flex items-center gap-6">
+<span class="font-display text-h4 font-bold text-primary dark:text-primary-fixed">TaxLens</span>
+<nav class="hidden md:flex items-center gap-6 border-l border-border pl-6 h-8">
+<a class="text-on-surface-variant dark:text-surface-variant font-label text-label hover:text-primary-hover dark:hover:text-primary-fixed-dim transition-colors Active: opacity-80 transition-opacity duration-200" href="#">Period Selection</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-border cursor-pointer">
+<img alt="Linh Nguyễn Profile" class="w-full h-full object-cover" data-alt="Linh Nguyễn Profile Avatar, small circular corporate headshot." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjLtE0eku60RcbxXciIm3hcuLGwuxl2I0p7d_mJQcylWuaBCuk8CJlnGDO1xAI4MFgSY-Gkqf9DjkfOvUBxo7UiSxTBl-jQHCjHgZnGmDOfKW8RMfhyU-Fb4x_r3bRW9IcPcU31kH1QUMqaaaEkhxLciCW0pjN4K1mrhb3OwfUhACPES-MB50GnLFAyYvc8cTyWd3lue1TqCA77Y7Mb6RZ-qojQ-sOWHRW5RTJVcCSQaaV61SzVMy7KA"/>
+</div>
+</div>
+</header>
+<!-- Master-Detail Split View -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Queue (Master) -->
+<section class="w-[360px] min-w-[360px] border-r border-border bg-surface flex flex-col h-full z-10">
+<!-- Queue Header -->
+<div class="p-4 border-b border-border">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-h4 text-h4 text-on-surface">Rule Versions</h3>
+<button class="text-secondary hover:text-secondary-hover">
+<span class="material-symbols-outlined" style="font-size: 20px;">filter_list</span>
+</button>
+</div>
+<!-- Queue Tabs -->
+<div class="flex overflow-x-auto scrollbar-hide gap-4 border-b border-border">
+<button class="font-label text-label text-primary font-bold border-b-2 border-primary pb-2 whitespace-nowrap">Đang hiệu lực</button>
+<button class="font-label text-label text-text-secondary hover:text-on-surface pb-2 whitespace-nowrap">Chờ phê duyệt</button>
+<button class="font-label text-label text-text-secondary hover:text-on-surface pb-2 whitespace-nowrap">Bản nháp</button>
+<button class="font-label text-label text-text-secondary hover:text-on-surface pb-2 whitespace-nowrap">Đã thay thế</button>
+</div>
+</div>
+<!-- Queue List -->
+<div class="flex-1 overflow-y-auto p-2 space-y-1">
+<!-- Active Item -->
+<div class="p-3 bg-surface-container-low border border-primary/20 rounded-lg cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical text-technical text-primary font-medium">RULE-2026.07</span>
+<span class="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-tertiary-container/10 text-tertiary">
+<span class="material-symbols-outlined" style="font-size: 12px;">check_circle</span> Active
+                            </span>
+</div>
+<h4 class="font-label text-label text-on-surface mb-2">Bộ quy tắc sẵn sàng thuế tháng 7/2026</h4>
+<div class="flex justify-between items-center text-text-secondary font-caption text-caption">
+<span>Eff: 01/07/2026</span>
+<span>248 Rpts</span>
+</div>
+</div>
+<!-- Inactive Items -->
+<div class="p-3 border border-transparent hover:bg-surface-container-lowest hover:border-border rounded-lg cursor-pointer transition-colors">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical text-technical text-text-secondary">RULE-2026.06</span>
+<span class="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-border text-text-secondary">
+<span class="material-symbols-outlined" style="font-size: 12px;">history</span> Superseded
+                            </span>
+</div>
+<h4 class="font-label text-label text-on-surface mb-2">Bộ quy tắc sẵn sàng thuế tháng 6/2026</h4>
+<div class="flex justify-between items-center text-text-secondary font-caption text-caption">
+<span>Eff: 01/06/2026</span>
+<span>242 Rpts</span>
+</div>
+</div>
+<div class="p-3 border border-transparent hover:bg-surface-container-lowest hover:border-border rounded-lg cursor-pointer transition-colors">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical text-technical text-text-secondary">RULE-2026.05</span>
+<span class="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-border text-text-secondary">
+<span class="material-symbols-outlined" style="font-size: 12px;">history</span> Superseded
+                            </span>
+</div>
+<h4 class="font-label text-label text-on-surface mb-2">Bộ quy tắc sẵn sàng thuế tháng 5/2026</h4>
+<div class="flex justify-between items-center text-text-secondary font-caption text-caption">
+<span>Eff: 01/05/2026</span>
+<span>235 Rpts</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Workspace (Detail) -->
+<section class="flex-1 flex flex-col h-full overflow-hidden bg-background relative">
+<!-- Workspace Header -->
+<div class="bg-surface border-b border-border px-8 py-6">
+<div class="flex items-center gap-2 mb-2">
+<span class="font-technical text-technical text-text-secondary bg-surface-container px-2 py-1 rounded">RULE-2026.07</span>
+<span class="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-tertiary-container/30 text-tertiary">
+<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span> Active
+                        </span>
+</div>
+<h1 class="font-h1 text-h1 text-on-surface mb-4">Bộ quy tắc sẵn sàng thuế tháng 7/2026</h1>
+<div class="flex flex-wrap gap-6 mt-4">
+<div class="flex flex-col gap-1">
+<span class="font-caption text-caption text-text-tertiary uppercase tracking-wider">Effective Date</span>
+<span class="font-body text-body text-on-surface">01/07/2026</span>
+</div>
+<div class="w-px h-10 bg-border"></div>
+<div class="flex flex-col gap-1">
+<span class="font-caption text-caption text-text-tertiary uppercase tracking-wider">Approver</span>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-xs font-bold">HN</div>
+<span class="font-body text-body text-on-surface">Hà Nguyễn</span>
+</div>
+</div>
+<div class="w-px h-10 bg-border"></div>
+<div class="flex flex-col gap-1">
+<span class="font-caption text-caption text-text-tertiary uppercase tracking-wider">Impact Scope</span>
+<span class="font-body text-body text-on-surface font-medium">248 Reports</span>
+</div>
+</div>
+<!-- Workspace Tabs -->
+<div class="flex gap-6 mt-8 border-b border-border">
+<button class="tab-btn font-label text-label text-primary font-bold border-b-2 border-primary pb-3 px-1" data-target="tab-overview">Tổng quan</button>
+<button class="tab-btn font-label text-label text-text-secondary hover:text-on-surface pb-3 px-1 transition-colors" data-target="tab-criteria">Tiêu chí (5)</button>
+<button class="tab-btn font-label text-label text-text-secondary hover:text-on-surface pb-3 px-1 transition-colors" data-target="tab-sources">Nguồn</button>
+<button class="tab-btn font-label text-label text-text-secondary hover:text-on-surface pb-3 px-1 transition-colors" data-target="tab-reports">Reports sử dụng</button>
+<button class="tab-btn font-label text-label text-text-secondary hover:text-on-surface pb-3 px-1 transition-colors" data-target="tab-history">Lịch sử &amp; phê duyệt</button>
+</div>
+</div>
+<!-- Workspace Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-8 pb-24">
+<!-- Tab 1: Overview -->
+<div class="tab-content active space-y-6 max-w-4xl" id="tab-overview">
+<!-- Status Panel Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-surface border border-border p-5 rounded-xl shadow-sm flex flex-col justify-center items-center text-center">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed/30 flex items-center justify-center text-tertiary mb-3">
+<span class="material-symbols-outlined" style="font-size: 24px;">verified</span>
+</div>
+<h4 class="font-h4 text-h4 text-on-surface mb-1">Active</h4>
+<p class="font-small text-small text-text-secondary">Current Production Rule</p>
+</div>
+<div class="bg-surface border border-border p-5 rounded-xl shadow-sm flex flex-col justify-center items-center text-center">
+<div class="w-12 h-12 rounded-full bg-secondary-fixed/50 flex items-center justify-center text-secondary mb-3">
+<span class="material-symbols-outlined" style="font-size: 24px;">gavel</span>
+</div>
+<h4 class="font-h4 text-h4 text-on-surface mb-1">4/4 Sources</h4>
+<p class="font-small text-small text-text-secondary">Legally Verified</p>
+</div>
+<div class="bg-surface border border-border p-5 rounded-xl shadow-sm flex flex-col justify-center items-center text-center">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface mb-3">
+<span class="material-symbols-outlined" style="font-size: 24px;">dataset</span>
+</div>
+<h4 class="font-h4 text-h4 text-on-surface mb-1">248 Reports</h4>
+<p class="font-small text-small text-text-secondary">Fully Reproducible</p>
+</div>
+</div>
+<!-- High Level Criteria Summary -->
+<div class="bg-surface border border-border rounded-xl overflow-hidden shadow-sm mt-8">
+<div class="px-6 py-4 border-b border-border bg-surface-bright">
+<h3 class="font-h3 text-h3 text-on-surface">Criteria Summary</h3>
+</div>
+<div class="p-6">
+<p class="font-body text-body text-text-secondary mb-6 max-w-3xl">
+                                    This rule version standardizes deterministic rules across primary tax reporting streams. It ensures 100% classification of cash closure and missing invoice anomalies before report generation.
+                                </p>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex items-center gap-3 p-3 border border-border rounded-lg">
+<div class="w-2 h-10 bg-primary rounded-full"></div>
+<div>
+<div class="font-label text-label text-on-surface">Bank Reconciliation</div>
+<div class="font-technical text-technical text-text-secondary">Confidence: &gt;95%</div>
+</div>
+</div>
+<div class="flex items-center gap-3 p-3 border border-border rounded-lg">
+<div class="w-2 h-10 bg-tertiary rounded-full"></div>
+<div>
+<div class="font-label text-label text-on-surface">Cash Closure Open</div>
+<div class="font-technical text-technical text-text-secondary">Target: 0 Open</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tab 2: Criteria -->
+<div class="tab-content space-y-6 max-w-4xl" id="tab-criteria">
+<h3 class="font-h3 text-h3 text-on-surface mb-4">Deterministic Rules</h3>
+<div class="space-y-4">
+<!-- Rule Card 1 -->
+<div class="bg-surface border border-border rounded-xl p-5 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">account_balance</span>
+<h4 class="font-h4 text-h4 text-on-surface">Bank Recon Coverage</h4>
+</div>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed font-technical text-technical px-2 py-1 rounded">REQ-01</span>
+</div>
+<p class="font-body text-body text-text-secondary mb-4">Automated matching threshold for bank reconciliation data must exceed baseline confidence.</p>
+<div class="flex items-center justify-between border-t border-border pt-3">
+<span class="font-label text-label text-text-secondary">Target Metric</span>
+<span class="font-h3 text-h3 text-primary">95%</span>
+</div>
+</div>
+<!-- Rule Card 2 -->
+<div class="bg-surface border border-border rounded-xl p-5 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">payments</span>
+<h4 class="font-h4 text-h4 text-on-surface">Cash Closure Anomalies</h4>
+</div>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed font-technical text-technical px-2 py-1 rounded">REQ-02</span>
+</div>
+<p class="font-body text-body text-text-secondary mb-4">All cash closure records must be finalized before tax computation runs.</p>
+<div class="flex items-center justify-between border-t border-border pt-3">
+<span class="font-label text-label text-text-secondary">Allowed Open Items</span>
+<span class="font-h3 text-h3 text-tertiary">0</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tab 3: Sources -->
+<div class="tab-content space-y-6 max-w-4xl" id="tab-sources">
+<h3 class="font-h3 text-h3 text-on-surface mb-4">Legal Policy Sources</h3>
+<div class="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-bright border-b border-border font-label text-label text-text-secondary">
+<tr>
+<th class="py-3 px-4">Authority (Cơ quan có thẩm quyền)</th>
+<th class="py-3 px-4">Reference No.</th>
+<th class="py-3 px-4">Date Issued</th>
+<th class="py-3 px-4">Status</th>
+</tr>
+</thead>
+<tbody class="font-body text-body text-on-surface divide-y divide-border">
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-4 px-4 font-medium">Bộ Tài chính (MOF)</td>
+<td class="py-4 px-4 font-technical text-technical">TT-78/2021/TT-BTC</td>
+<td class="py-4 px-4 text-text-secondary">17/09/2021</td>
+<td class="py-4 px-4">
+<span class="flex items-center gap-1 text-xs font-medium px-2 py-1 w-max rounded-full bg-tertiary-fixed/30 text-tertiary">
+<span class="material-symbols-outlined" style="font-size: 14px;">verified</span> Verified
+                                            </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-4 px-4 font-medium">Tổng cục Thuế (GDT)</td>
+<td class="py-4 px-4 font-technical text-technical">CV-1234/TCT-CS</td>
+<td class="py-4 px-4 text-text-secondary">15/05/2026</td>
+<td class="py-4 px-4">
+<span class="flex items-center gap-1 text-xs font-medium px-2 py-1 w-max rounded-full bg-tertiary-fixed/30 text-tertiary">
+<span class="material-symbols-outlined" style="font-size: 14px;">verified</span> Verified
+                                            </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Tab 4: Reports -->
+<div class="tab-content space-y-6 max-w-5xl" id="tab-reports">
+<div class="flex justify-between items-end mb-4">
+<h3 class="font-h3 text-h3 text-on-surface">Impacted Reports</h3>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" style="font-size: 20px;">search</span>
+<input class="pl-10 pr-4 py-2 border border-border rounded-lg bg-surface font-body text-body w-64 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Search reports..." type="text"/>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-3">
+<!-- Report Row -->
+<div class="bg-surface border border-border rounded-lg p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<div class="font-label text-label text-on-surface mb-1">Báo cáo Tình hình sử dụng Hóa đơn</div>
+<div class="font-technical text-technical text-text-secondary">RPT-202607-HUONG • Monthly • Region: North</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs font-medium px-2 py-1 rounded bg-surface-container-high text-on-surface">Ready</span>
+<button class="bg-surface border border-secondary text-secondary hover:bg-secondary-fixed hover:text-secondary-hover px-4 py-2 rounded-md font-button text-button transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-size: 18px;">sync</span>
+                                        Tái tạo
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Tab 5: History -->
+<div class="tab-content space-y-6 max-w-3xl" id="tab-history">
+<h3 class="font-h3 text-h3 text-on-surface mb-6">Approval Timeline</h3>
+<div class="relative pl-6 space-y-8 before:absolute before:inset-0 before:ml-8 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-border before:to-transparent">
+<!-- Timeline Item: Effective -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+<div class="flex items-center justify-center w-6 h-6 rounded-full border-2 border-surface bg-tertiary text-white absolute left-[-11px] z-10">
+<span class="material-symbols-outlined" style="font-size: 14px;">check</span>
+</div>
+<div class="w-[calc(100%-2rem)] bg-surface border border-primary/20 rounded-xl p-4 shadow-sm ml-6 relative before:absolute before:w-3 before:h-3 before:bg-surface before:border-l before:border-b before:border-primary/20 before:-left-1.5 before:top-1/2 before:-translate-y-1/2 before:rotate-45">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label text-label text-on-surface font-bold">Effective</span>
+<span class="font-caption text-caption text-text-secondary">01/07/2026 00:00</span>
+</div>
+<p class="font-body text-body text-text-secondary">Rule version active in production environment.</p>
+</div>
+</div>
+<!-- Timeline Item: Approved -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
+<div class="flex items-center justify-center w-6 h-6 rounded-full border-2 border-surface bg-surface-container-high text-text-secondary absolute left-[-11px] z-10">
+<div class="w-2 h-2 rounded-full bg-text-secondary"></div>
+</div>
+<div class="w-[calc(100%-2rem)] bg-surface border border-border rounded-xl p-4 ml-6 relative before:absolute before:w-3 before:h-3 before:bg-surface before:border-l before:border-b before:border-border before:-left-1.5 before:top-1/2 before:-translate-y-1/2 before:rotate-45">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label text-label text-on-surface">Approved by Hà Nguyễn</span>
+<span class="font-caption text-caption text-text-secondary">28/06/2026 14:30</span>
+</div>
+<p class="font-body text-body text-text-secondary">Final review complete. Approved for deployment.</p>
+</div>
+</div>
+<!-- Timeline Item: Draft -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
+<div class="flex items-center justify-center w-6 h-6 rounded-full border-2 border-surface bg-surface-container-high text-text-secondary absolute left-[-11px] z-10">
+<div class="w-2 h-2 rounded-full bg-text-secondary"></div>
+</div>
+<div class="w-[calc(100%-2rem)] bg-surface border border-border rounded-xl p-4 ml-6 relative before:absolute before:w-3 before:h-3 before:bg-surface before:border-l before:border-b before:border-border before:-left-1.5 before:top-1/2 before:-translate-y-1/2 before:rotate-45">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label text-label text-on-surface">Draft Created</span>
+<span class="font-caption text-caption text-text-secondary">15/06/2026 09:15</span>
+</div>
+<p class="font-body text-body text-text-secondary">Initial criteria defined based on new legal circulars.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Action Footer -->
+<div class="absolute bottom-0 left-0 w-full bg-surface border-t border-border px-8 py-4 flex justify-end z-20 shadow-[0_-4px_6px_-1px_rgba(25,36,78,0.05)]">
+<button class="bg-primary-container text-on-primary-container hover:bg-primary-hover hover:text-white px-6 py-2.5 rounded-lg font-button text-button transition-colors duration-150 shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span>
+                        Tạo phiên bản kế tiếp
+                    </button>
+</div>
+</section>
+</div>
+</main>
+<script>
+        // Simple Tab Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove active states
+                    tabBtns.forEach(b => {
+                        b.classList.remove('text-primary', 'font-bold', 'border-primary');
+                        b.classList.add('text-text-secondary', 'border-transparent');
+                    });
+                    tabContents.forEach(c => c.classList.remove('active'));
+
+                    // Add active state to clicked
+                    btn.classList.add('text-primary', 'font-bold', 'border-primary');
+                    btn.classList.remove('text-text-secondary', 'border-transparent');
+                    
+                    const targetId = btn.getAttribute('data-target');
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+        });
+    </script>
+</body></html>

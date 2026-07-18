@@ -1666,3 +1666,80 @@ delivered. No `log.md` entry was written by P2 — this entry was added by P3
 integration test suite delivered. No `log.md` entry was written by P4 — this
 entry was added by P3 (team lead) during merge integration.
 
+### 2026-07-18 — P3 Sprint 4: Frontend product integration on current main
+
+**Changed:**
+
+- Created the clean delivery branch `p3-frontend-design-consistency-final` from
+  integrated `origin/main@13a3b74` and selectively ported only P3-owned
+  `frontend/**` work. The old 44-commit mixed-role branch was not merged or
+  rebased, preventing stale P1/P2/P4/P5 implementations from replacing the
+  current shared code.
+- Replaced the starter frontend with the complete TaxLens Next.js product:
+  secure same-origin session gateway, seven-screen merchant workspace, SHB
+  operations workspace, public confirmation, settings/import, sales/QR/cash,
+  assistant evidence, responsive navigation, dark mode, accessible primitives,
+  loading/empty/error states, and API/SSE/WebSocket client contracts.
+- Preserved the supplied Stitch HTML/screens and brand assets as design
+  references while implementing the approved TaxLens visual system as reusable
+  React components. Removed Material Symbols from the app layout and retained
+  the locked Momo Trust Display, Newsreader, JetBrains Mono, navy, cream, and
+  orange identity.
+- Fixed the Playwright release harness to exercise a production server instead
+  of a hot-reload development server. The test build alone disables Next
+  standalone output; deploy builds remain standalone. Dev-only showcase routes
+  are exposed only when `PLAYWRIGHT_TEST=1`.
+- Updated the compact transactions visual baseline after production rendering
+  correctly wrapped filter controls instead of clipping them.
+- Added `docs/demo-script.md` with exactly six scenes, an 8:30 runbook, expected
+  outcomes, presenter cues, recovery paths, rehearsal records, and claim
+  guardrails. The pitch deck was explicitly deferred by the product owner and
+  was not created or modified.
+- Ported `docs/04-delivery/03-design.md`, the frontend build state/acceptance
+  documents, and `frontend-design-consistency-cf1ebe.md`. Changes to the
+  original plan are additive/minor: current evidence, fresh-branch state, P3
+  scope guard, owner blockers, and dependency risk are recorded without
+  rewriting the 14-stage plan.
+
+**Reasoning:**
+
+- Current `main` already contains the teammates' Sprint 3 work. A whole-branch
+  merge would conflict with and potentially regress calibrated matching,
+  Vietnamese agent logic, backend security/routes, and the data pipeline, so
+  P3's frontend was ported as a role-owned tree onto a fresh base.
+- Production-mode browser tests are more representative and deterministic than
+  Next development mode. The earlier dev run showed Fast Refresh navigation
+  races; the production harness removes that false failure class while keeping
+  deployment configuration unchanged.
+- Integrated-main contract review found missing or incompatible runtime
+  contracts for invoices, full tax readiness, agent streaming/approvals,
+  realtime payment allocation, portfolio ops, and settings integrations. Those
+  belong to P1/P2/P4/P5, so P3 records exact blockers rather than duplicating or
+  overwriting teammate code.
+- `npm audit` reports two moderate entries for one transitive PostCSS advisory
+  pinned by the latest stable Next 16. There is no patched stable Next 16;
+  npm's suggested Next 9 downgrade and preview/canary adoption would create more
+  release risk. The current risk is accepted conditionally because no dynamic
+  or user-controlled CSS processing path exists.
+
+**Verification:**
+
+- `npm ci` — 499 packages installed from the committed lockfile.
+- `npm run lint` — pass.
+- `npm run typecheck` — pass.
+- `npm test -- --run` — 13 files, 41/41 tests pass.
+- `npm run build` — pass; all 27 app routes compile and prerender as expected.
+- `npm run test:e2e` with isolated production server — 33/33 tests pass across
+  desktop, compact, and mobile. Coverage includes accessibility, keyboard,
+  responsive overflow, visual snapshots, ledger, readiness, sales, settings,
+  assistant, SHB ops, and public confirmation.
+- `npm ci --dry-run --ignore-scripts` — manifest and lockfile are consistent.
+- `git diff --check` over executable frontend and P3-owned docs — pass. The raw
+  Stitch reference HTML/design files retain eight pre-existing trailing-space
+  lines intentionally so the supplied reference assets remain byte-for-byte.
+
+**Status:** P3-owned frontend product and deterministic browser gate are
+complete. Live six-scene rehearsal is pending because integrated-main backend
+contracts and demo data are owned by other Sprint 4 roles. No backend, matching,
+agent-core, infrastructure, seed, reset, or data-pipeline file was modified.
+
