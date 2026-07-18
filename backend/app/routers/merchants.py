@@ -161,7 +161,7 @@ async def _run_reconciliation(merchant_id: str, case_id: str, period: str) -> No
     pass
 
 
-@router.post("/{merchant_id}/reconcile", response_model=ReconcileResponse)
+@router.post("/{merchant_id}/reconcile", status_code=202, response_model=ReconcileResponse)
 async def trigger_reconcile(
     merchant_id: str,
     body: ReconcileRequest,

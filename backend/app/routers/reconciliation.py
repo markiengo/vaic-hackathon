@@ -68,7 +68,7 @@ async def list_exceptions(
     ]
 
 
-@router.post("/start", response_model=ReconcileResponse)
+@router.post("/start", status_code=202, response_model=ReconcileResponse)
 async def start_reconciliation(
     body: ReconciliationStartRequest,
     background_tasks: BackgroundTasks,

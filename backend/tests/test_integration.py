@@ -335,7 +335,7 @@ async def test_err_recon_001_already_running(api_client):
     client, tok, _, __ = api_client
     payload = {"merchant_id": "M-TEST-001", "period": "2020-01"}
     first = await client.post("/api/v1/reconciliation/start", json=payload, headers=_auth(tok))
-    assert first.status_code == 200  # created
+    assert first.status_code == 202  # spec: async kick-off returns 202
     second = await client.post("/api/v1/reconciliation/start", json=payload, headers=_auth(tok))
     assert second.status_code == 409
     assert second.json()["error"]["code"] == "ERR-RECON-001"
@@ -466,19 +466,19 @@ async def test_err_tax_002_no_revenue_data(api_client):
     assert resp.json()["error"]["code"] == "ERR-TAX-002"
 
 
-async def test_err_tax_003_rule_expired(api_client, monkeypatch):
-    """ERR-TAX-003: export blocked when the matched rule version is expired.
+async def test_err_tax_003_rule_expired(api_client):
+    """ERR-TAX-003: export blocked when the tax rule version tagged in the reconciliation
+    case has expired.
 
-    The standard retrieve_tax_rules() filters out expired rules, so we monkeypatch
-    check_required_fields to return an expired rule version, then verify the
-    export_draft handler raises ERR-TAX-003 when rv_row.effective_to < today.
+    Flow (no monkeypatch): case.tax_rule_version → export_draft passes it explicitly to
+    check_required_fields(rule_version=...) → bypasses retrieve_tax_rules effective_to
+    filter → rule_version="TEST-EXPIRED-v1" → ERR-TAX-003.
     """
     from app.models.tax import TaxRuleVersion
-    from app.services.tax_rules import FieldCheck, RequiredFieldsResult
 
     client, tok, _, db = api_client
 
-    # Seed an expired rule version in the DB
+    # Seed an expired rule version
     db.add(TaxRuleVersion(
         version="TEST-EXPIRED-v1",
         effective_from=date(2020, 1, 1),
@@ -488,20 +488,19 @@ async def test_err_tax_003_rule_expired(api_client, monkeypatch):
         legal_source="Test expired rule",
         approval_status="APPROVED",
     ))
+    await db.flush()
+
+    # Seed a case that references the expired rule (no PENDING exceptions)
+    db.add(ReconciliationCase(
+        id="CASE-EXPIRED-001",
+        merchant_id="M-TEST-001",
+        period="2020-01",
+        status="OPEN",
+        priority="MEDIUM",
+        human_approvals=[],
+        tax_rule_version="TEST-EXPIRED-v1",
+    ))
     await db.commit()
-
-    # Monkeypatch check_required_fields so export_draft gets rule_version="TEST-EXPIRED-v1"
-    async def _mock_check(session, merchant_id, period, **kw):
-        return RequiredFieldsResult(
-            merchant_id=merchant_id,
-            period=period,
-            rule_version="TEST-EXPIRED-v1",
-            checks=(FieldCheck("revenue_total", Decimal("100"), ">0", True),),
-            missing_invoice_sales=(),
-            all_pass=True,
-        )
-
-    monkeypatch.setattr("app.routers.tax.check_required_fields", _mock_check)
 
     resp = await client.post(
         "/api/v1/tax/export",
@@ -782,7 +781,7 @@ async def test_flow_reconcile_returns_plan_placeholder(api_client):
         json={"period": "2020-01"},
         headers=_auth(tok),
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 202  # spec API-RECON-POST-001: async kick-off → 202
     body = resp.json()
     assert "run_id" in body
     assert body["status"] == "PLANNING"
