@@ -3,10 +3,11 @@ import { TaxLensLogo } from "@/components/brand/TaxLensLogo";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
+  { href: "#van-de", label: "Vấn đề" },
+  { href: "#doi-soat", label: "Đối soát" },
+  { href: "#ngoai-le", label: "Ngoại lệ" },
+  { href: "#shb-operations", label: "SHB Operations" },
   { href: "#neng-tang", label: "Nền tảng" },
-  { href: "#gia-tri-shb", label: "Giá trị cho SHB" },
-  { href: "#cach-van-hanh", label: "Cách vận hành" },
-  { href: "#an-toan", label: "An toàn & kiểm soát" },
   { href: "#demo", label: "Demo" },
 ];
 

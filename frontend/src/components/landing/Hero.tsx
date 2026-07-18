@@ -14,13 +14,13 @@ export function Hero() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:py-24">
         {/* Left: copy */}
         <div className="relative">
-          <Reveal as="p" className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-            AI TaxOps cho hệ sinh thái merchant
+          <Reveal as="p" className="text-sm font-semibold uppercase tracking-[0.18em] text-secondary">
+            TaxOps cho khách hàng kinh doanh
           </Reveal>
           <Reveal as="h1" delay={80} id="hero-heading" className="font-display mt-5 text-[clamp(2.25rem,5.5vw,3.75rem)] leading-[1.05] tracking-[-0.03em] text-text [text-wrap:balance]">
             Dữ liệu rời rạc. Hồ sơ tài chính có thể kiểm tra.
           </Reveal>
-          <Reveal as="p" delay={160} className="font-body mt-7 max-w-xl text-lg leading-8 text-text-secondary [text-wrap:pretty]">
+          <Reveal as="p" delay={160} className="mt-7 max-w-xl text-lg leading-8 text-text-secondary [text-wrap:pretty]">
             TaxLens kết nối giao dịch, đơn hàng, tiền mặt và hóa đơn thành một lớp dữ liệu thống nhất. AI xử lý ngoại lệ. Con người phê duyệt.
           </Reveal>
           <Reveal delay={240} className="mt-9 flex flex-wrap items-center gap-3">
@@ -32,7 +32,7 @@ export function Hero() {
               <ArrowRight size={18} />
             </Link>
             <Link
-              href="#cach-van-hanh"
+              href="#doi-soat"
               className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-border bg-surface px-6 text-[15px] font-semibold text-text transition-all hover:border-text/20 hover:bg-neutral-soft active:scale-[0.98]"
             >
               <PlayCircle size={18} />
@@ -41,12 +41,12 @@ export function Hero() {
           </Reveal>
           <Reveal delay={320} className="mt-8 flex items-center gap-4 text-xs text-text-tertiary">
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-primary" />
-              Human-in-the-loop
+              <span className="size-2 rounded-full bg-secondary" />
+              Phê duyệt của con người
             </span>
             <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-mango" />
-              Audit-ready
+              Sẵn sàng truy vết
             </span>
           </Reveal>
         </div>

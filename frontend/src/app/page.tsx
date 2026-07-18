@@ -1,12 +1,13 @@
 import { LandingNav } from "@/components/landing/LandingNav";
 import { Hero } from "@/components/landing/Hero";
-import { StatStrip } from "@/components/landing/StatStrip";
-import { Pillars } from "@/components/landing/Pillars";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { SHBValue } from "@/components/landing/SHBValue";
-import { CapabilitySplit } from "@/components/landing/CapabilitySplit";
-import { SafetyGovernance } from "@/components/landing/SafetyGovernance";
-import { FinalCTA } from "@/components/landing/FinalCTA";
+import { MerchantDayStory } from "@/components/landing/MerchantDayStory";
+import { RecordConnectionVisual } from "@/components/landing/RecordConnectionVisual";
+import { ExceptionResolutionStory } from "@/components/landing/ExceptionResolutionStory";
+import { MerchantToSHBHandoff } from "@/components/landing/MerchantToSHBHandoff";
+import { OperationsPortfolioPreview } from "@/components/landing/OperationsPortfolioPreview";
+import { AuditTimelinePreview } from "@/components/landing/AuditTimelinePreview";
+import { PlatformShowcaseTabs } from "@/components/landing/PlatformShowcaseTabs";
+import { FinalDemoStoryCTA } from "@/components/landing/FinalDemoStoryCTA";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export default function Home() {
@@ -15,13 +16,14 @@ export default function Home() {
       <LandingNav />
       <main>
         <Hero />
-        <StatStrip />
-        <Pillars />
-        <HowItWorks />
-        <SHBValue />
-        <CapabilitySplit />
-        <SafetyGovernance />
-        <FinalCTA />
+        <MerchantDayStory />
+        <RecordConnectionVisual />
+        <ExceptionResolutionStory />
+        <MerchantToSHBHandoff />
+        <OperationsPortfolioPreview />
+        <AuditTimelinePreview />
+        <PlatformShowcaseTabs />
+        <FinalDemoStoryCTA />
       </main>
       <LandingFooter />
     </>
