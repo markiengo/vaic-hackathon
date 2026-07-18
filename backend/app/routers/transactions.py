@@ -17,15 +17,13 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 async def list_transactions(
     merchant_id: str = Query(...),
     period: str = Query(..., description="YYYY-MM"),
+    status: str | None = Query(None, description="Filter: matched|unmatched|pending|all"),
     db: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
-) -> list[dict]:
+) -> dict:
     year, month = period.split("-")
     period_start = date(int(year), int(month), 1)
-    if int(month) == 12:
-        period_end = date(int(year) + 1, 1, 1)
-    else:
-        period_end = date(int(year), int(month) + 1, 1)
+    period_end = date(int(year) + 1, 1, 1) if int(month) == 12 else date(int(year), int(month) + 1, 1)
 
     result = await db.execute(
         select(BankTransaction)
@@ -37,7 +35,7 @@ async def list_transactions(
         .order_by(BankTransaction.transaction_date.desc())
     )
     rows = result.scalars().all()
-    return [
+    transactions = [
         {
             "id": r.id,
             "merchant_id": r.merchant_id,
@@ -50,6 +48,18 @@ async def list_transactions(
             "payment_code": r.payment_code,
             "source": r.source,
             "transaction_date": r.transaction_date.isoformat() if r.transaction_date else None,
+            # TODO [P1]: match_status, matched_sale_id, ai_interpretation populated by matching engine
+            "match_status": None,
+            "matched_sale_id": None,
+            "ai_interpretation": None,
         }
         for r in rows
     ]
+    # Filter by match_status (Python-level until P1 wires match_status to DB column)
+    if status and status != "all":
+        if status == "matched":
+            transactions = [t for t in transactions if t["match_status"] is not None]
+        elif status in ("unmatched", "pending"):
+            transactions = [t for t in transactions if t["match_status"] is None]
+
+    return {"transactions": transactions, "total": len(transactions)}

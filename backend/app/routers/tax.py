@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+import json
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import TaxLensError, get_current_user
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
+from app.models.tax import TaxRuleVersion
 from app.schemas.agent import TaxChecklistItem
 from app.services.export import collect_draft_export_data, to_csv_text, to_json_dict
 from app.services.tax_rules import check_required_fields
@@ -91,18 +93,39 @@ async def export_draft(
                 {"pending_exceptions": pending_count},
             )
 
+    # Use rule version stored in the reconciliation case (if any) so ERR-TAX-003 fires even
+    # when the rule has already expired — retrieve_tax_rules() filters expired rules, but
+    # check_required_fields(rule_version=...) fetches by exact version without that filter.
+    case_rule_version: str | None = next(
+        (c.tax_rule_version for c in cases if c.tax_rule_version), None
+    )
+
     try:
-        fields_result = await check_required_fields(db, body.merchant_id, body.period)
+        fields_result = await check_required_fields(
+            db, body.merchant_id, body.period, rule_version=case_rule_version
+        )
     except ValueError:
         raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
 
     rule_version = fields_result.rule_version or "unknown"
 
-    # ERR-TAX-003: no revenue data for period
+    # ERR-TAX-003: rule version đã hết hạn (effective_to < today)
+    if rule_version != "unknown":
+        rv_row = await db.scalar(
+            select(TaxRuleVersion).where(TaxRuleVersion.version == rule_version)
+        )
+        if rv_row and rv_row.effective_to and rv_row.effective_to < date.today():
+            raise TaxLensError(
+                "ERR-TAX-003",
+                422,
+                f"Rule version {rule_version} đã hết hạn kể từ {rv_row.effective_to}",
+            )
+
+    # ERR-TAX-002: no revenue data for period (blocked export)
     if not any(c.field == "revenue_total" and c.passed for c in fields_result.checks):
         raise TaxLensError(
-            "ERR-TAX-003",
-            422,
+            "ERR-TAX-002",
+            400,
             "Không có dữ liệu doanh thu cho kỳ này — không thể xuất",
         )
 
@@ -110,12 +133,11 @@ async def export_draft(
 
     if body.format == "csv":
         return Response(
-            content=to_csv_text(data),
-            media_type="text/csv",
+            content="﻿" + to_csv_text(data),
+            media_type="text/csv; charset=utf-8-sig",
             headers={"Content-Disposition": f'attachment; filename="export_{body.merchant_id}_{body.period}.csv"'},
         )
 
-    import json
     return Response(
         content=json.dumps(to_json_dict(data), ensure_ascii=False, indent=2),
         media_type="application/json",

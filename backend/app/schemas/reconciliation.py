@@ -13,6 +13,8 @@ class ExceptionResolveResponse(BaseModel):
     status: str
     decision: str
     classification: str | None
+    resolved_by: str | None
+    resolved_at: str | None
 
 
 class ReconcileRequest(BaseModel):
@@ -23,6 +25,7 @@ class ReconcileRequest(BaseModel):
 class ReconcileResponse(BaseModel):
     run_id: str
     status: str
+    plan: dict | None = None  # TODO [P2]: populated by LangGraph planner when agent runs
 
 
 class CaseCreateRequest(BaseModel):

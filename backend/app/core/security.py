@@ -97,7 +97,7 @@ def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     except ExpiredSignatureError:
-        raise TaxLensError("ERR-AUTH-001", 401, "Token đã hết hạn")
+        raise TaxLensError("ERR-AUTH-002", 401, "Token đã hết hạn")
     except JWTError:
         raise TaxLensError("ERR-AUTH-001", 401, "Token không hợp lệ")
 

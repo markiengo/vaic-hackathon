@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import TaxLensError, get_current_user
+from app.models.agent import AgentRun
 from app.models.merchant import Merchant
-from app.models.reconciliation import ReconciliationCase
+from app.models.reconciliation import ExceptionRecord, ReconciliationCase
 from app.models.transaction import BankTransaction
 from app.models.sale import Sale
 from app.models.invoice import Invoice
@@ -48,10 +49,7 @@ async def dashboard(
 ) -> dict:
     year, month = period.split("-")
     period_start = date(int(year), int(month), 1)
-    if int(month) == 12:
-        period_end = date(int(year) + 1, 1, 1)
-    else:
-        period_end = date(int(year), int(month) + 1, 1)
+    period_end = date(int(year) + 1, 1, 1) if int(month) == 12 else date(int(year), int(month) + 1, 1)
 
     tx_count = await db.scalar(
         select(func.count(BankTransaction.id)).where(
@@ -77,27 +75,93 @@ async def dashboard(
 
     total = (tx_count or 0) + (sale_count or 0)
     matched = min(tx_count or 0, invoice_count or 0)
-    pending = max((sale_count or 0) - (invoice_count or 0), 0)
-    exceptions = max(pending, 0)
-    rate = round((matched / total * 100), 1) if total > 0 else 0
+    missing_invoice_count = max((sale_count or 0) - (invoice_count or 0), 0)
+    # #19: decimal 0-1 per spec (spec: 0.83 not 83.0)
+    # NOTE: P3 dashboard.tsx uses `rate / 100` — P3 must update to `rate * 270` after this change
+    rate = round(matched / total, 2) if total > 0 else 0.0
+
+    # Exception counts from actual ExceptionRecord rows for this merchant+period
+    case_result = await db.execute(
+        select(ReconciliationCase).where(
+            ReconciliationCase.merchant_id == merchant_id,
+            ReconciliationCase.period == period,
+        )
+    )
+    cases = case_result.scalars().all()
+    case_ids = [c.id for c in cases]
+    tax_rule_version = cases[0].tax_rule_version if cases else None
+
+    exception_count = 0
+    unclassified_count = 0
+    if case_ids:
+        exception_count = await db.scalar(
+            select(func.count(ExceptionRecord.id)).where(
+                ExceptionRecord.case_id.in_(case_ids),
+                ExceptionRecord.status == "PENDING",
+            )
+        ) or 0
+        unclassified_count = await db.scalar(
+            select(func.count(ExceptionRecord.id)).where(
+                ExceptionRecord.case_id.in_(case_ids),
+                ExceptionRecord.status == "PENDING",
+                ExceptionRecord.human_decision.is_(None),
+            )
+        ) or 0
+
+    # Proxy for open_exceptions when no reconciliation case exists yet
+    legacy_exception_proxy = missing_invoice_count
+    open_ex = exception_count if case_ids else legacy_exception_proxy
+
+    # TODO [P0-ARCHITECTURE]: active_agents reflects AgentRun rows only.
+    # Until reconcile→AgentRun wire is resolved, this will always be [] for users who
+    # trigger reconciliation via POST /merchants/{id}/reconcile (no AgentRun created).
+    active_runs_result = await db.execute(
+        select(AgentRun).where(
+            AgentRun.merchant_id == merchant_id,
+            AgentRun.status.in_(["PLANNING", "EXECUTING"]),
+        )
+    )
+    active_agents = [
+        {"run_id": r.id, "status": r.status, "request": (r.request_text or "")[:50]}
+        for r in active_runs_result.scalars().all()
+    ]
 
     return {
+        # Legacy fields — preserved for P3 backward compat
         "total_transactions": total,
         "reconciliation_rate": rate,
-        "open_exceptions": exceptions,
-        "tax_ready": exceptions == 0,
+        "open_exceptions": open_ex,
+        "tax_ready": open_ex == 0 and missing_invoice_count == 0,
         "matched": matched,
-        "pending": pending,
-        "exceptions": exceptions,
+        "pending": missing_invoice_count,
+        "exceptions": open_ex,
+        # Enrichment fields (#6)
+        "merchant_id": merchant_id,
+        "period": period,
+        "exception_count": exception_count,
+        "missing_invoice_count": missing_invoice_count,
+        "unclassified_count": unclassified_count,
+        "tax_readiness": {
+            "bank_reconciliation": rate >= 0.95,
+            "cash_session_closure": True,  # no merchant→CashSession path; defaults True
+            "unclassified_transactions": unclassified_count == 0,
+            "missing_invoices": missing_invoice_count == 0,
+            "rule_version": tax_rule_version or "unknown",
+            "ready": open_ex == 0 and missing_invoice_count == 0,
+        },
+        "active_agents": active_agents,
     }
 
 
+# TODO [P0-ARCHITECTURE]: Chờ quyết định (a)/(b) — xem tóm tắt gửi leader/P2/P3.
+# Hiện tại placeholder này không tạo AgentRun, không trigger WS agent-trace.
+# KHÔNG tự implement cho tới khi có quyết định kiến trúc.
 async def _run_reconciliation(merchant_id: str, case_id: str, period: str) -> None:
     """Background task: placeholder that agent layer will replace (TODO: P2/P1)."""
     pass
 
 
-@router.post("/{merchant_id}/reconcile", response_model=ReconcileResponse)
+@router.post("/{merchant_id}/reconcile", status_code=202, response_model=ReconcileResponse)
 async def trigger_reconcile(
     merchant_id: str,
     body: ReconcileRequest,
@@ -123,17 +187,25 @@ async def trigger_reconcile(
             f"Case đối soát cho kỳ {body.period} đã tồn tại (case_id={existing.id})",
         )
 
-    # ERR-RECON-002: requested period must have ended (period is YYYY-MM)
     year, month = (int(p) for p in body.period.split("-"))
-    if month == 12:
-        period_end = date(year + 1, 1, 1)
-    else:
-        period_end = date(year, month + 1, 1)
+    period_end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
     if date.today() < period_end:
+        raise TaxLensError("ERR-GEN-001", 400, f"Kỳ {body.period} chưa kết thúc — không thể đối soát")
+
+    # ERR-RECON-002: no transactions found for this period
+    period_start = date(year, month, 1)
+    tx_count = await db.scalar(
+        select(func.count(BankTransaction.id)).where(
+            BankTransaction.merchant_id == merchant_id,
+            BankTransaction.transaction_date >= period_start,
+            BankTransaction.transaction_date < period_end,
+        )
+    )
+    if not tx_count:
         raise TaxLensError(
             "ERR-RECON-002",
             422,
-            f"Kỳ {body.period} chưa kết thúc — không thể đối soát",
+            f"Không tìm thấy giao dịch nào cho merchant {merchant_id} kỳ {body.period}",
         )
 
     case_id = f"CASE-{uuid.uuid4().hex[:10].upper()}"
@@ -149,4 +221,4 @@ async def trigger_reconcile(
 
     background_tasks.add_task(_run_reconciliation, merchant_id, case_id, body.period)
 
-    return ReconcileResponse(run_id=case_id, status="QUEUED")
+    return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})
