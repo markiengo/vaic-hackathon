@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** Tech Lead
 > **Applies to:** Reconciliation matching engine
-> **Implementation state:** Implemented — `backend/app/services/matching.py` with 12 tests
-> **Last verified against code:** 2026-07-17
+> **Implementation state:** Implemented — Sprint 3 calibrated matching plus seed truth-set evaluation
+> **Last verified against code:** 2026-07-18
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -106,8 +106,10 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
          score += 20
    
    d. Sender name familiarity
-      if transaction.sender_name in merchant.customer_history:
-         score += 10
+      if transaction.sender_name is present in independently verified history:
+         score += 35
+      The current transaction cannot establish its own sender history.
+      The caller must supply trusted history from an earlier, independent source.
    
    e. Note content signal
       if AI interpretation của note relates đến candidate product/service:
@@ -118,7 +120,7 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
    f. Multiple same-amount penalty
       count_same_amount = count unpaid sales cùng amount
       if count_same_amount > 1 AND candidate không có unique differentiating identifier:
-         score -= 30
+         score -= 35
    
    g. Already-used transaction
       if transaction đã allocated:
@@ -163,8 +165,18 @@ Algorithm là core difficulty của product: match bank transfer Việt Nam (v�
       Even if one candidate scores ≥95, force HUMAN_CONFIRM
 
    Nếu đúng một candidate có strict differentiating identifier, không áp dụng
-   duplicate penalty cho candidate đó; các candidate còn lại vẫn bị trừ 30.
+   duplicate penalty cho candidate đó; các candidate còn lại vẫn bị trừ 35.
 ```
+
+### Sprint 3 calibration rationale
+
+- Giữ nguyên `AUTO_MATCH >=95`; không hạ threshold để đạt KPI.
+- Exact amount `+50` + time dưới 5 phút `+10` + trusted sender `+35` = `95`.
+- Amount + time không có trusted sender vẫn chỉ đạt `60` hoặc `70`, nên không
+  thể tự động ghi nhận tài chính.
+- Duplicate penalty `-35` bảo đảm candidate cùng số tiền nhưng không có
+  identifier nằm dưới human threshold, kể cả khi sender đã được biết.
+- External note signal vẫn không được tính vào auto-match threshold.
 
 ## Đảm bảo determinism
 
@@ -207,7 +219,7 @@ Xem `04-delivery/02-testing-spec.md` § Test data và fixtures strategy cho comp
 ```json
 [
   {
-    "transaction_id": "SHB-902194810",
+    "transaction_id": "SEPAY-902194810",
     "raw_note": "PAY-A8F21X",
     "amount": 350000,
     "expected_match": "ORDER-1842",
@@ -215,7 +227,7 @@ Xem `04-delivery/02-testing-spec.md` § Test data và fixtures strategy cho comp
     "expected_confidence": 1.0
   },
   {
-    "transaction_id": "SHB-902194815",
+    "transaction_id": "SEPAY-902194815",
     "raw_note": "ck cho em",
     "amount": 5000000,
     "expected_match": null,
@@ -225,7 +237,7 @@ Xem `04-delivery/02-testing-spec.md` § Test data và fixtures strategy cho comp
     "expected_confidence": 0.82
   },
   {
-    "transaction_id": "SHB-902194820",
+    "transaction_id": "SEPAY-902194820",
     "raw_note": "",
     "amount": 85000,
     "expected_match": null,
@@ -251,4 +263,4 @@ Xem `04-delivery/02-testing-spec.md` § Test data và fixtures strategy cho comp
 
 ---
 
-*Last updated: 2026-07-17*
+*Last updated: 2026-07-18*

@@ -48,8 +48,8 @@ through the provided port.
   - within-tolerance non-exact amount: `+35`
   - time under 1/5/30 minutes: `+20/+10/+5`
   - strict candidate-owned identifier: `+20`
-  - normalized known sender: `+10`
-  - unresolved same-amount duplicate: `-30`
+  - independently verified known sender: `+35`
+  - unresolved same-amount duplicate: `-35`
 - An external note signal contributes `0–5` to ranking and human-review
   decisions only. It cannot unlock an automatic financial write.
 - `AUTO_MATCH` requires exact amount, deterministic score at least 95, no
@@ -87,6 +87,57 @@ through the provided port.
 - `AllocationPlanWriter` is the persistence boundary. P4's SQLAlchemy layer is
   responsible for models, migrations, row locking, revalidation, and
   transactional writes.
+
+### P1 Sprint 3 — Matching calibration and seed truth set
+
+Status: P1-owned matching work implemented and verified on 2026-07-18. Full
+cash-seed validation has one open P5 data-contract handoff documented below.
+
+- The auto threshold remains `95`; human threshold remains `75`. P1 did not
+  lower either safety gate to reach the demo KPI.
+- Known sender weight is calibrated from `+10` to `+35`, but the sender list is
+  now an explicit trust boundary. It must come from history independently
+  established before the transaction being scored. Copying the current
+  transaction's sender into `known_sender_names` is invalid self-corroboration.
+- Duplicate-amount penalty is calibrated from `-30` to `-35`. This keeps the
+  non-identified rival below 75 even when the transaction sender is trusted,
+  while ties and unresolved duplicate groups remain mandatory human review.
+- The calibrated fuzzy auto-match path therefore requires three deterministic
+  signals: exact amount `+50`, time under five minutes `+10`, and independently
+  trusted sender `+35`. Amount plus time alone remains `60`/`70` and cannot
+  authorize a financial write. External note signal remains ranking/review only.
+- `reconcile_period()` accepts an explicit `matching_config` and documents the
+  trusted-sender boundary. Existing callers remain source-compatible because
+  the calibrated default is used when no config is passed.
+- `backend/tests/test_truth_set.py` imports P5's canonical seed builders into
+  P1's isolated in-memory database and declares the expected result for every
+  one of the 23 bank transactions and all 30 sales.
+- Seed results: 19/23 bank transactions auto-reconciled (`82.61%`), 4 bank
+  exceptions, 0 false matches, 25 `PAID` sales, 1 `REFUNDED` sale, and 4
+  `UNPAID` sales. The refund creates a `-180,000` `REFUND` allocation against
+  `ORDER-1850`. Re-running produces exactly 19 allocations and 4 exceptions.
+- The two 85,000 VND transfers remain `AMBIGUOUS_MATCH`; the 5,000,000 VND
+  owner transfer and 2,300,000 VND supplier transfer remain `NO_MATCH`.
+- The truth-set run includes a hard `<5s` latency assertion and passes locally.
+
+#### Team integration contract
+
+- **P2/P5 sender history:** pass only independently verified prior sender names
+  to P1. NLP/note interpretation may rank or escalate but must never be converted
+  into trusted sender history or an auto-match score.
+- **P4/P2 reconciliation caller:** call `reconcile_period(...,
+  known_sender_names=trusted_history)`. Do not build that list from the same
+  transaction batch being reconciled. Commit/rollback ownership remains with
+  the caller as in Sprint 2.
+- **P5 seed data handoff:** the current seed marks eight cash sales `PAID` but
+  creates no cash `payment_allocations`; its cash session also has a non-zero
+  discrepancy with no `discrepancy_reason`. P1 deliberately does not infer cash
+  collections from sale status because that can double-count money. P5 should
+  add cash allocation ledger rows and a discrepancy reason before the full raw
+  seed can produce the fifth `CASH_DISCREPANCY` exception end-to-end.
+- **P5 public scoring tool:** it may expose ranked candidates, but any future
+  write path must call P1 persistence and revalidation rather than persisting a
+  displayed score directly.
 
 ### P4 — Backend infrastructure
 
@@ -1400,4 +1451,126 @@ backend verification for seed-backed API/tool suites.
   156 passed both times (1 pre-existing, not-mine failure in
   `test_agents.py`, left alone).
 - Not committed — left for the user to review.
+
+### 2026-07-18 — P1 Sprint 3 matching calibration and truth-set integration
+
+**Changed:**
+
+- Fast-forwarded local `main` to `origin/main@60cdc9b` and created the fresh
+  branch `p1-sprint3-matching-truth-set`; no Sprint 2 branch was merged into it.
+- `backend/app/services/matching.py`: calibrated trusted sender from `+10` to
+  `+35` and duplicate penalty from `-30` to `-35`; documented that sender
+  history is caller-supplied trusted evidence, not a value copied from the
+  transaction under evaluation.
+- `backend/app/services/reconciliation.py`: added optional `matching_config` to
+  `reconcile_period()` and passed it to candidate matching, preserving all
+  existing callers through the default.
+- `backend/tests/test_matching.py` and
+  `backend/tests/test_reconciliation_integration.py`: updated expected factor
+  values and added a calibration case proving trusted history reaches 95 while
+  the same amount/time evidence without history remains unmatched.
+- `backend/tests/test_truth_set.py`: added an isolated, reproducible evaluation
+  over P5's 23 canonical bank transactions and 30 sales, with explicit expected
+  IDs, exact/fuzzy/refund allocations, exception classes, status counts,
+  idempotence, false-match, and `<5s` latency assertions.
+- `docs/05-domain/02-algorithm.md`: synchronized the normative scoring weights,
+  sender trust boundary, calibration rationale, and canonical `SEPAY-*` IDs.
+- `docs/05-domain/03-evaluation.md`: documented every seeded bank transaction's
+  expected outcome and the exact KPI calculations.
+
+**Reasoning:**
+
+- Lowering the auto threshold or allowing note/NLP score into the threshold was
+  rejected because either choice would weaken the false-match policy agreed in
+  Sprint 1. Three deterministic signals are required for the calibrated fuzzy
+  path: exact amount, under-five-minute timing, and independent sender history.
+- Raising only sender weight made a non-identified duplicate rival land exactly
+  at 75, which would correctly block auto-match but also prevent a truly unique
+  identifier from resolving its duplicate group. Raising duplicate penalty to
+  35 keeps that rival at 70 and preserves both safety rules.
+- P1 imports P5 seed builders in the test rather than copying their fixtures, so
+  future seed-ID or amount drift fails visibly. P1 does not modify P5's seed file.
+- Cash is intentionally excluded from the raw-seed matching fixture because the
+  current P5 seed lacks cash allocation ledger rows and discrepancy reason. P1
+  keeps allocation ledger as source of truth instead of deriving money from a
+  status flag and risking double-counting.
+
+**Verification:**
+
+- P1 focused suite with isolated fixtures:
+  `python -m pytest tests/test_matching.py tests/test_allocation.py
+  tests/test_cash_reconciliation.py tests/test_reconciliation_integration.py
+  tests/test_truth_set.py -q -p no:cacheprovider --noconftest` — `51 passed`.
+- Sprint 3 truth set alone — `3 passed`; assertions verify `19/23 = 82.61%`
+  bank auto-reconciliation, 0 false matches, refund allocation correctness,
+  25/30 `PAID` sales, idempotence, and latency below 5 seconds.
+- `python -m pyflakes` over all changed Python files — passed.
+- Broader local SQLite regression, excluding environment-incompatible tests —
+  `142 passed, 1 deselected`. The local interpreter lacks installed `langgraph`
+  and `python-jose` despite both being declared in requirements; one existing P5
+  public scorer test also relies on PostgreSQL returning timezone-aware
+  timestamps whereas SQLite returns naive values. These are not P1 regressions.
+
+**Status:** P1 Sprint 3 matching calibration and bank truth set are complete.
+The remaining full-seed cash handoff is documented for P5 and does not require
+weakening or bypassing P1's ledger invariants.
+
+### 2026-07-18 — Full-system regression and cross-role integration fixes
+
+**Changed:**
+
+- `backend/app/tools/__init__.py`: normalized ORM sale timestamps to UTC at the
+  P5 tool → P1 matching-domain boundary. PostgreSQL supplies timezone-aware
+  values, while SQLite and some legacy/import adapters can return naive values;
+  the adapter now restores the canonical UTC interpretation before P1 scoring.
+- `backend/requirements-dev.txt`: made standalone development ranges compatible
+  with the runtime pins and declared the previously missing `asyncpg`,
+  `passlib[bcrypt]`, and `pytest-cov` dependencies.
+- `frontend/package-lock.json`: synchronized the lockfile with `package.json`,
+  allowing a clean `npm ci` instead of failing on a missing transitive
+  `es-abstract` package and a stale `lucide-react` entry.
+- `frontend/.eslintrc.json`: added the non-interactive Next.js Core Web Vitals
+  lint configuration required by CI.
+- `frontend/src/app/layout.tsx`: documented and locally suppressed the
+  app-router font rule for the intentionally shared Material Symbols icon font.
+
+**Reasoning:**
+
+- P1 domain models deliberately reject naive datetimes because timezone guesses
+  inside financial matching can alter candidate ordering. Timestamp repair
+  belongs at the persistence/tool adapter boundary, where UTC is the documented
+  database meaning; P1's invariant remains strict.
+- The previous dev requirements could not be installed together with runtime
+  requirements because their lower bounds excluded the pinned versions, and a
+  fresh environment could not import webhook/security or PostgreSQL modules.
+- Frontend source compiled, but the stale lockfile made reproducible installation
+  fail and the missing ESLint config opened an interactive prompt. Both are CI
+  integration defects, so they were fixed without changing product behavior.
+
+**Verification:**
+
+- `python -m pip check` — no broken requirements.
+- Full backend suite against a generated SQLite test schema — `154 passed`.
+- P1 matching/allocation/reconciliation/truth-set suite — `51 passed`.
+- Targeted `pyflakes` over the P1 services and P5 adapter — passed.
+- FastAPI smoke check — `/health` returned HTTP 200; 43 routes registered.
+- Clean frontend install — `npm ci` passed (417 packages).
+- Frontend lint — no warnings or errors.
+- Frontend production build — passed; TypeScript validation and all 12 routes
+  completed successfully.
+
+**Environment notes:**
+
+- Docker and a local PostgreSQL client/server were unavailable, so the backend
+  integration run used SQLite with test-only SQLAlchemy JSONB/BigInteger dialect
+  adapters. PostgreSQL-specific deployment behavior remains a CI/staging gate.
+- Python 3.14 emitted dependency deprecation warnings from FastAPI, LangGraph,
+  Starlette, and `pytest-asyncio`; none were application failures.
+- Next.js 14.2.5 still reports its upstream security advisory during install.
+  Upgrading Next.js should be handled by P3/tech lead as a dedicated dependency
+  change with UI regression testing, rather than silently bundled into P1 work.
+
+**Status:** Full locally executable regression is green, including all P1
+financial logic and its P5/P4 integration paths. No known application test,
+lint, build, dependency, or health-smoke failure remains in this branch.
 

@@ -576,8 +576,15 @@ async def reconcile_period(
     merchant_id: str,
     period: str,
     known_sender_names: Iterable[str] = (),
+    matching_config: MatchingConfig = DEFAULT_MATCHING_CONFIG,
 ) -> PeriodReconciliationSummary:
-    """Reconcile one merchant period without committing the DB transaction."""
+    """Reconcile one merchant period without committing the DB transaction.
+
+    Sender names must be independently established history; the current
+    period's transaction rows must not be recycled as their own trust signal.
+    ``matching_config`` is explicit so calibration can be reproduced in truth
+    set tests without changing persistence behavior.
+    """
 
     from app.models.cash import CashSession
     from app.models.merchant import Store
@@ -641,6 +648,7 @@ async def reconcile_period(
                 context.transaction,
                 context.sales,
                 known_sender_names=known_sender_names,
+                config=matching_config,
             )
         if candidates and candidates[0].action == MatchAction.AUTO_MATCH:
             await persist_match_decision(session, candidates[0], transaction_row.id)
