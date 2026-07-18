@@ -31,9 +31,10 @@ const demoAccounts = [
   },
 ] as const;
 
-export function LoginForm({ initialEmail }: { initialEmail?: string }): React.ReactNode {
+export function LoginForm(): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialEmail = searchParams.get("email") ?? undefined;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [showLoginForm, setShowLoginForm] = useState(false);
