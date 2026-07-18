@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, LoaderCircle } from "lucide-react";
+import { ArrowRight, Building2, ChevronDown, LoaderCircle, Store } from "lucide-react";
 import type { SessionResponse } from "@/lib/auth/contracts";
 
 const DEMO_PASSWORD = "TaxLensDemo!2026";
@@ -12,11 +12,32 @@ interface Credentials {
   password: string;
 }
 
-export function LoginForm(): React.ReactNode {
+const demoAccounts = [
+  {
+    email: "huong.salonhoa@gmail.com",
+    name: "Salon Hương",
+    role: "Chủ salon làm đẹp",
+    description: "Xem trợ lý AI đối soát dòng tiền, tạo đơn và kiểm tra sẵn sàng thuế",
+    icon: Store,
+    accent: "bg-primary/10 text-primary",
+  },
+  {
+    email: "long.ops@shb.com.vn",
+    name: "SHB Operations",
+    role: "Nhân viên ngân hàng",
+    description: "Giám sát danh mục merchant, duyệt case và kiểm toán agent",
+    icon: Building2,
+    accent: "bg-secondary/10 text-secondary",
+  },
+] as const;
+
+export function LoginForm({ initialEmail }: { initialEmail?: string }): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showLoginForm, setShowLoginForm] = useState(false);
+  const [forgotToast, setForgotToast] = useState(false);
 
   async function login(credentials: Credentials): Promise<void> {
     setError(null);
@@ -63,66 +84,109 @@ export function LoginForm(): React.ReactNode {
 
   return (
     <>
-      <form className="mt-8 grid gap-5" onSubmit={submit}>
-        <label className="grid gap-2 text-sm text-text-secondary">
-          Email
-          <input
-            name="email"
-            type="email"
-            autoComplete="username"
-            required
-            className="min-h-12 rounded-lg border bg-background px-4 text-text outline-none transition-shadow focus:border-secondary"
-            placeholder="huong.salonhoa@gmail.com"
-          />
-        </label>
-        <label className="grid gap-2 text-sm text-text-secondary">
-          Mật khẩu
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            minLength={8}
-            className="min-h-12 rounded-lg border bg-background px-4 text-text outline-none transition-shadow focus:border-secondary"
-            placeholder="••••••••"
-          />
-        </label>
-        {error ? (
-          <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
-        <button
-          type="submit"
-          disabled={isPending}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-white transition-[background-color,transform] duration-150 ease-out hover:bg-primary-hover active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
-        >
-          {isPending ? <LoaderCircle aria-hidden className="animate-spin" size={18} /> : <ArrowRight aria-hidden size={18} />}
-          Đăng nhập
-        </button>
-      </form>
+      {error ? (
+        <p role="alert" className="mb-5 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
 
-      <div className="my-7 flex items-center gap-3 text-xs uppercase tracking-[0.14em] text-text-tertiary">
-        <span className="h-px flex-1 bg-border" /> Truy cập demo <span className="h-px flex-1 bg-border" />
+      <div className="grid gap-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+          Truy cập demo ngay
+        </p>
+        {demoAccounts.map((account) => {
+          const Icon = account.icon;
+          return (
+            <button
+              key={account.email}
+              type="button"
+              disabled={isPending}
+              onClick={() => demo(account.email)}
+              className="group flex items-start gap-4 rounded-xl border bg-background p-5 text-left transition-all hover:border-secondary hover:shadow-sm disabled:opacity-60"
+            >
+              <span className={`grid size-12 shrink-0 place-items-center rounded-xl ${account.accent}`}>
+                <Icon aria-hidden size={24} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <strong className="block text-sm font-semibold text-text">{account.name}</strong>
+                <span className="mt-0.5 block text-xs text-text-secondary">{account.role}</span>
+                <span className="mt-2 block text-xs leading-5 text-text-tertiary">{account.description}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-primary-hover">
+                {isPending ? <LoaderCircle aria-hidden className="animate-spin" size={14} /> : <ArrowRight aria-hidden size={14} />}
+                Vào demo
+              </span>
+            </button>
+          );
+        })}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+
+      <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.14em] text-text-tertiary">
+        <span className="h-px flex-1 bg-border" />
         <button
           type="button"
-          disabled={isPending}
-          onClick={() => demo("huong.salonhoa@gmail.com")}
-          className="flex min-h-11 items-center justify-center rounded-lg border bg-background px-4 text-sm text-text hover:border-secondary disabled:opacity-60"
+          onClick={() => setShowLoginForm((prev) => !prev)}
+          className="inline-flex items-center gap-1 text-text-tertiary transition-colors hover:text-text-secondary"
         >
-          Salon Hương
+          Đăng nhập bằng tài khoản thật
+          <ChevronDown aria-hidden size={14} className={`transition-transform ${showLoginForm ? "rotate-180" : ""}`} />
         </button>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => demo("long.ops@shb.com.vn")}
-          className="flex min-h-11 items-center justify-center rounded-lg border bg-background px-4 text-sm text-text hover:border-secondary disabled:opacity-60"
-        >
-          SHB Operations
-        </button>
+        <span className="h-px flex-1 bg-border" />
       </div>
+
+      {showLoginForm && (
+        <form className="grid gap-5" onSubmit={submit}>
+          <label className="grid gap-2.5 text-sm text-text-secondary">
+            Email hoặc số điện thoại
+            <input
+              name="email"
+              type="text"
+              autoComplete="username"
+              required
+              defaultValue={initialEmail}
+              className="min-h-12 rounded-lg border bg-background px-4 text-text outline-none transition-shadow focus:border-secondary"
+              placeholder="huong.salonhoa@gmail.com"
+            />
+          </label>
+          <label className="grid gap-2.5 text-sm text-text-secondary">
+            Mật khẩu
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              minLength={8}
+              className="min-h-12 rounded-lg border bg-background px-4 text-text outline-none transition-shadow focus:border-secondary"
+              placeholder="••••••••"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-white transition-[background-color,transform] duration-150 ease-out hover:bg-primary-hover active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
+          >
+            {isPending ? <LoaderCircle aria-hidden className="animate-spin" size={18} /> : <ArrowRight aria-hidden size={18} />}
+            {isPending ? "Đang đăng nhập..." : "Đăng nhập"}
+          </button>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setForgotToast(true);
+                setTimeout(() => setForgotToast(false), 4000);
+              }}
+              className="text-sm text-secondary transition-colors hover:text-secondary-hover"
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
+          {forgotToast && (
+            <p role="status" className="rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3 text-sm text-secondary">
+              Vui lòng liên hệ hỗ trợ SHB để khôi phục mật khẩu.
+            </p>
+          )}
+        </form>
+      )}
     </>
   );
 }
