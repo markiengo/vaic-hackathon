@@ -1036,3 +1036,35 @@ literal exit criterion or expected behavior:
   to confirm nothing broke.
 - Not committed — left for the user to review.
 
+### 2026-07-18 — P1 Sprint 2 rework verification dependency
+
+**Changed:**
+- `backend/requirements.txt`: Added `aiosqlite==0.22.1`.
+- `backend/requirements-dev.txt`: Added `aiosqlite>=0.20,<1`.
+
+**Reasoning:**
+- The P1 rework branch correctly ports reconciliation and cash-session tests
+  onto current `origin/main` using dedicated in-memory async SQLite fixtures in
+  `backend/tests/p1_db_fixtures.py`.
+- Those fixtures require SQLAlchemy's `sqlite+aiosqlite://` async driver, but
+  the branch did not declare `aiosqlite`, so a fresh test environment failed
+  before reaching the P1 assertions.
+- Added the dependency only to backend requirements; no P4/P5 tool, seed,
+  tax-rule, adapter, WebSocket, docs-structure, or frontend files were changed.
+
+**Verification:**
+- Installed backend dev requirements locally for test execution.
+- With local dummy env vars, ran:
+  `python -m pytest tests/test_cash_reconciliation.py tests/test_reconciliation_integration.py -q`
+  — 18 passed.
+- Attempted broader shared backend smoke tests with SQLite/dummy env:
+  `python -m pytest tests/test_tools.py tests/test_seed_data.py tests/test_tax_rules.py tests/test_sepay_webhook.py tests/test_adapters -q`
+  — blocked before assertions because the shared seed fixture expects the
+  configured database to already have application tables (`no such table:
+  merchants`). This is an environment/schema setup issue for that broad command,
+  not a failure in the P1 SQLite fixture suite.
+
+**Status:** P1 rework branch is structurally clean and P1-focused tests pass
+after declaring the missing async SQLite dependency. Broader shared tests should
+be rerun in the normal backend database environment before final merge.
+
