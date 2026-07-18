@@ -123,17 +123,25 @@ async def trigger_reconcile(
             f"Case đối soát cho kỳ {body.period} đã tồn tại (case_id={existing.id})",
         )
 
-    # ERR-RECON-002: requested period must have ended (period is YYYY-MM)
     year, month = (int(p) for p in body.period.split("-"))
-    if month == 12:
-        period_end = date(year + 1, 1, 1)
-    else:
-        period_end = date(year, month + 1, 1)
+    period_end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
     if date.today() < period_end:
+        raise TaxLensError("ERR-GEN-001", 400, f"Kỳ {body.period} chưa kết thúc — không thể đối soát")
+
+    # ERR-RECON-002: no transactions found for this period
+    period_start = date(year, month, 1)
+    tx_count = await db.scalar(
+        select(func.count(BankTransaction.id)).where(
+            BankTransaction.merchant_id == merchant_id,
+            BankTransaction.transaction_date >= period_start,
+            BankTransaction.transaction_date < period_end,
+        )
+    )
+    if not tx_count:
         raise TaxLensError(
             "ERR-RECON-002",
             422,
-            f"Kỳ {body.period} chưa kết thúc — không thể đối soát",
+            f"Không tìm thấy giao dịch nào cho merchant {merchant_id} kỳ {body.period}",
         )
 
     case_id = f"CASE-{uuid.uuid4().hex[:10].upper()}"
@@ -149,4 +157,4 @@ async def trigger_reconcile(
 
     background_tasks.add_task(_run_reconciliation, merchant_id, case_id, body.period)
 
-    return ReconcileResponse(run_id=case_id, status="QUEUED")
+    return ReconcileResponse(run_id=case_id, status="PLANNING")
