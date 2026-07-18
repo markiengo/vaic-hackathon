@@ -84,11 +84,3 @@ Invoices           ──┘                                          ┌──�
 
 ---
 
-## Deploy
-
-Xem [`DEPLOY.md`](./DEPLOY.md) — hướng dẫn deploy lên Render (single service, không cần 2 URL).
-
-TL;DR: push code → Render detect `render.yaml` → nhập 9 biến secrets trên Dashboard → done.
-
----
-
