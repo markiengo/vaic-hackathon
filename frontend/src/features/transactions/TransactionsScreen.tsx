@@ -118,6 +118,17 @@ export function TransactionsScreen() {
         }
       />
 
+      {/* Summary strip */}
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border bg-surface px-5 py-4 text-sm">
+        <span className="font-semibold text-text">{counts.all} giao dịch</span>
+        <span className="text-text-secondary">·</span>
+        <span className="text-text-secondary">{counts.matched} đã khớp tự động</span>
+        <span className="text-text-secondary">·</span>
+        <span className={cn("font-medium", counts.ambiguous > 0 ? "text-primary" : "text-text-secondary")}>{counts.ambiguous} cần xử lý</span>
+        <span className="text-text-secondary">·</span>
+        <span className={cn("font-medium", counts.missing_invoice > 0 ? "text-primary" : "text-text-secondary")}>{counts.missing_invoice} thiếu hóa đơn</span>
+      </div>
+
       <section
         className="grid min-w-0 gap-5 xl:h-[46rem] xl:grid-cols-[minmax(0,44fr)_minmax(0,56fr)]"
         aria-label="Điều tra giao dịch"
@@ -292,7 +303,7 @@ function TransactionDetail({ transaction, period }: { transaction: BankTransacti
           {needsReview(transaction) ? "Xem và xác nhận" : "Đổi phân loại"}
           <ArrowRight aria-hidden size={16} />
         </Link>
-        <Link href={`/assistant?period=${period}`} className={buttonVariants({ variant: "ghost" })}>Nhờ SHB hỗ trợ</Link>
+        <Link href={`/assistant?period=${period}`} className={buttonVariants({ variant: "ghost" })}>Chuyển cho ngân hàng xử lý</Link>
       </footer>
     </Card>
   );

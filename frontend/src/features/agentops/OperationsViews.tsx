@@ -147,22 +147,44 @@ export function OperationsOverview() {
   }).sort((a, b) => b.open_cases - a.open_cases);
   const operationalColumns: DataTableColumn<(typeof operationalRows)[number]>[] = [
     { key: "merchant", header: "Merchant", primary: true, cell: (row) => <span><span className="block">{row.name}</span><span className="mt-1 block font-mono text-xs font-normal text-text-secondary">{row.id}</span></span> },
-    { key: "readiness", header: "Readiness", cell: (row) => row.readiness == null ? "—" : <Badge tone={row.readiness >= 90 ? "success" : "warning"}>{row.readiness}%</Badge> },
+    { key: "readiness", header: "Sẵn sàng thuế", cell: (row) => row.readiness == null ? "—" : <Badge tone={row.readiness >= 90 ? "success" : "warning"}>{row.readiness}%</Badge> },
     { key: "cases", header: "Case mở", align: "right", cell: (row) => row.open_cases },
     { key: "age", header: "Cũ nhất", hideOnMobile: true, cell: (row) => age(row.oldestCase) },
-    { key: "rm", header: "RM", cell: (row) => row.assignedRm ?? "Chưa gán" },
-    { key: "run", header: "Latest run", hideOnMobile: true, cell: (row) => row.latestRun ? <Link href={`/ops/agent-runs/${row.latestRun.id}`} className="font-mono text-xs text-secondary hover:underline">{row.latestRun.id}</Link> : "—" },
+    { key: "rm", header: "Nhân viên phụ trách", cell: (row) => row.assignedRm ?? "Chưa gán" },
+    { key: "run", header: "Run gần nhất", hideOnMobile: true, cell: (row) => row.latestRun ? <Link href={`/ops/agent-runs/${row.latestRun.id}`} className="font-mono text-xs text-secondary hover:underline">{row.latestRun.id}</Link> : "—" },
   ];
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="SHB merchant operations" title="Bàn điều hành danh mục" description="Triage danh mục theo readiness, case aging, RM ownership và trạng thái workflow cần con người quyết định." updatedAt="vừa xong" />
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard label="Merchant" value={summary.total} detail={`${summary.active} đang hoạt động`} accent="mist" />
-        <KpiCard label="Readiness bình quân" value={averageReadiness === "—" ? averageReadiness : `${averageReadiness}%`} detail={`${scored.length}/${summary.total} đã tính`} />
-        <KpiCard label="Case mở" value={summary.open_cases} detail={oldestCase ? `Cũ nhất ${age(oldestCase.created_at)}` : "Không có backlog"} accent="mango" />
-        <KpiCard label="RM có assignment" value={assignedRms} detail="Theo case đang ghi nhận" />
-        <KpiCard label="Chờ quyết định" value={waiting.length} detail="Không tự động ghi dữ liệu" />
+      <PageHeader eyebrow="SHB merchant operations" title="Bàn điều hành danh mục" description="Giám sát danh mục merchant, can thiệp khi agent cần con người quyết định và kiểm toán toàn bộ thao tác." updatedAt="vừa xong" />
+
+      {/* Role intro strip */}
+      <div className="rounded-xl border bg-accent/30 p-5 sm:p-6">
+        <p className="text-sm leading-6 text-text-secondary">
+          <strong className="text-text">Vai trò của SHB:</strong> Giám sát danh mục merchant, can thiệp khi agent cần con người quyết định, và kiểm toán toàn bộ thao tác ghi dữ liệu.
+        </p>
+      </div>
+
+      {/* 3 story cards */}
+      <section className="grid gap-4 sm:grid-cols-3">
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Danh mục</p>
+          <p className="mt-3 font-display text-3xl text-text">{summary.total}</p>
+          <p className="mt-1 text-sm text-text-secondary">{summary.active} đang hoạt động</p>
+          <Link href="/ops/merchants" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary hover:underline">Xem danh mục<ArrowRight aria-hidden size={14} /></Link>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Cần can thiệp</p>
+          <p className="mt-3 font-display text-3xl text-text">{summary.open_cases + waiting.length}</p>
+          <p className="mt-1 text-sm text-text-secondary">{summary.open_cases} case mở · {waiting.length} run chờ duyệt</p>
+          <Link href="/ops/cases" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary hover:underline">Xem hàng chờ<ArrowRight aria-hidden size={14} /></Link>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Tuân thủ</p>
+          <p className="mt-3 font-display text-3xl text-text">{averageReadiness === "—" ? averageReadiness : `${averageReadiness}%`}</p>
+          <p className="mt-1 text-sm text-text-secondary">Mức sẵn sàng thuế bình quân · {scored.length}/{summary.total} đã tính</p>
+          <Link href="/ops/compliance" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary hover:underline">Xem tuân thủ<ArrowRight aria-hidden size={14} /></Link>
+        </Card>
       </section>
       <section className="grid gap-6 xl:grid-cols-[1.3fr_.7fr]">
         <div>
@@ -170,10 +192,10 @@ export function OperationsOverview() {
           <DataTable caption="Danh mục merchant" columns={operationalColumns} rows={operationalRows.slice(0, 5)} getRowKey={(row) => row.id} empty={<EmptyState title="Chưa có merchant" description="Danh mục sẽ xuất hiện khi dữ liệu được đồng bộ." compact />} />
         </div>
         <Card>
-          <p className="text-sm font-semibold text-warning">Human decision queue</p>
+          <p className="text-sm font-semibold text-warning">Hàng chờ quyết định</p>
           <h2 className="mt-2 font-display text-3xl">{waiting.length} run chờ quyết định</h2>
-          <p className="mt-3 text-sm leading-6 text-text-secondary">Mỗi payload được duyệt riêng. Ops có thể mở trace, kiểm tra bằng chứng rồi mới quyết định.</p>
-          <div className="mt-6 divide-y">{waiting.slice(0, 4).map((run) => <Link key={run.id} href={`/ops/agent-runs/${run.id}`} className="block py-4 first:pt-0"><div className="flex items-center justify-between gap-3"><span className="font-mono text-xs">{run.id}</span><Badge tone="warning">WAITING</Badge></div><p className="mt-2 line-clamp-2 text-sm text-text-secondary">{run.request_text}</p></Link>)}{waiting.length === 0 && <p className="text-sm text-text-secondary">Không có run chờ duyệt.</p>}</div>
+          <p className="mt-3 text-sm leading-6 text-text-secondary">Mỗi thay đổi dữ liệu được duyệt riêng. Ops có thể mở trace, kiểm tra bằng chứng rồi mới quyết định.</p>
+          <div className="mt-6 divide-y">{waiting.slice(0, 4).map((run) => <Link key={run.id} href={`/ops/agent-runs/${run.id}`} className="block py-4 first:pt-0"><div className="flex items-center justify-between gap-3"><span className="font-mono text-xs">{run.id}</span><Badge tone="warning">Chờ quyết định</Badge></div><p className="mt-2 line-clamp-2 text-sm text-text-secondary">{run.request_text}</p></Link>)}{waiting.length === 0 && <p className="text-sm text-text-secondary">Không có run chờ duyệt.</p>}</div>
         </Card>
       </section>
     </div>
@@ -203,7 +225,7 @@ export function MerchantPortfolioView() {
           </div>
           <div className="p-5 sm:p-7">
             {!merchant && <EmptyState title="Chọn merchant" description="Operational profile sẽ xuất hiện tại đây." />}
-            {merchant && <div className="space-y-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-mono text-xs text-text-secondary">{merchant.id}</p><h2 className="mt-1 font-display text-3xl">{merchant.name}</h2><p className="mt-2 text-sm text-text-secondary">{merchant.business_category ?? merchant.business_type}</p></div><Badge tone={statusTone(merchant.status)}>{merchant.status}</Badge></div>{dashboard.isLoading && <LoadingState label="Đang tính merchant health" />}{dashboard.isError && <SectionError title="Không tải được merchant health" error={dashboard.error} retry={() => dashboard.refetch()} />}{dashboard.data && <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><KpiCard label="Health score" value={`${dashboard.data.tax_readiness.score}%`} accent={dashboard.data.tax_readiness.ready ? "mist" : "mango"} /><KpiCard label="Reconciliation" value={`${Math.round(dashboard.data.reconciliation_rate * 100)}%`} detail={`${dashboard.data.reconciled_count}/${dashboard.data.total_transactions} giao dịch`} /><KpiCard label="Case mở" value={merchant.open_cases} detail={`${dashboard.data.exception_count} ngoại lệ`} /><KpiCard label="Agent active" value={merchant.active_runs} /></div><dl className="grid gap-4 border-t pt-5 text-sm sm:grid-cols-2"><div><dt className="text-text-secondary">RM phụ trách</dt><dd className="mt-1 font-medium">{rmIds.join(", ") || "Chưa gán"}</dd></div><div><dt className="text-text-secondary">Rule version</dt><dd className="mt-1 font-mono">{dashboard.data.tax_readiness.rule_version}</dd></div><div><dt className="text-text-secondary">Thiếu hóa đơn</dt><dd className="mt-1 font-medium">{dashboard.data.missing_invoice_count}</dd></div><div><dt className="text-text-secondary">Chưa phân loại</dt><dd className="mt-1 font-medium">{dashboard.data.unclassified_count}</dd></div></dl></>}</div>}
+            {merchant && <div className="space-y-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-mono text-xs text-text-secondary">{merchant.id}</p><h2 className="mt-1 font-display text-3xl">{merchant.name}</h2><p className="mt-2 text-sm text-text-secondary">{merchant.business_category ?? merchant.business_type}</p></div><Badge tone={statusTone(merchant.status)}>{merchant.status}</Badge></div>{dashboard.isLoading && <LoadingState label="Đang tính merchant health" />}{dashboard.isError && <SectionError title="Không tải được merchant health" error={dashboard.error} retry={() => dashboard.refetch()} />}{dashboard.data && <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><KpiCard label="Điểm sức khỏe" value={`${dashboard.data.tax_readiness.score}%`} accent={dashboard.data.tax_readiness.ready ? "mist" : "mango"} /><KpiCard label="Đối soát" value={`${Math.round(dashboard.data.reconciliation_rate * 100)}%`} detail={`${dashboard.data.reconciled_count}/${dashboard.data.total_transactions} giao dịch`} /><KpiCard label="Case mở" value={merchant.open_cases} detail={`${dashboard.data.exception_count} ngoại lệ`} /><KpiCard label="Agent đang chạy" value={merchant.active_runs} /></div><dl className="grid gap-4 border-t pt-5 text-sm sm:grid-cols-2"><div><dt className="text-text-secondary">Nhân viên phụ trách</dt><dd className="mt-1 font-medium">{rmIds.join(", ") || "Chưa gán"}</dd></div><div><dt className="text-text-secondary">Rule version</dt><dd className="mt-1 font-mono">{dashboard.data.tax_readiness.rule_version}</dd></div><div><dt className="text-text-secondary">Thiếu hóa đơn</dt><dd className="mt-1 font-medium">{dashboard.data.missing_invoice_count}</dd></div><div><dt className="text-text-secondary">Chưa phân loại</dt><dd className="mt-1 font-medium">{dashboard.data.unclassified_count}</dd></div></dl></>}</div>}
           </div>
         </section>
       )}

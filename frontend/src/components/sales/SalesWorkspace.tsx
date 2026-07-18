@@ -593,6 +593,12 @@ export function SalesWorkspace() {
         }
       />
 
+      {/* First-visit hint */}
+      <div className="flex items-center gap-2 rounded-xl border bg-accent/30 px-4 py-3 text-sm text-text-secondary">
+        <Sparkles aria-hidden size={16} className="shrink-0 text-secondary" />
+        <span>Mỗi đơn tạo ở đây sẽ tự động đối soát với giao dịch ngân hàng. Chọn sản phẩm, nhập số lượng và chọn cách thanh toán.</span>
+      </div>
+
       {receipt ? (
         <Card variant="information" className="border-success/30">
           <div className="mb-4 flex items-start gap-3">

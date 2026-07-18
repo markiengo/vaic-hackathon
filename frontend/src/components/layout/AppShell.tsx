@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LifeBuoy, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { LifeBuoy, LogOut, Moon, Settings, Sparkles, Sun, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { TaxLensLogo } from "@/components/brand/TaxLensLogo";
@@ -30,13 +30,13 @@ function NavigationLinks({ items }: { items: NavigationItem[] }) {
     const showGroup = item.group && item.group !== items[index - 1]?.group;
     return (
       <div key={item.href} className={showGroup && index > 0 ? "mt-5" : undefined}>
-        {showGroup ? <p className="mb-1 px-3 text-[10px] font-semibold tracking-[0.16em] text-text-tertiary">{item.group}</p> : null}
+        {showGroup ? <p className="mb-1 px-4 text-[10px] font-semibold tracking-[0.16em] text-text-tertiary">{item.group}</p> : null}
         <Link
           href={item.href}
           aria-current={active ? "page" : undefined}
           className={cn(
-            "group flex min-h-11 items-center gap-3 rounded-lg px-3 text-[15px] text-text-secondary transition-[background-color,color,transform] duration-150 ease-out hover:translate-x-0.5 hover:bg-accent/45 hover:text-text",
-            active && "bg-secondary text-white ring-1 ring-inset ring-secondary hover:bg-secondary hover:text-white",
+            "flex items-center gap-3 rounded-xl px-4 py-2.5 text-[14px] whitespace-nowrap text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-text",
+            active && "bg-[#EAF0FF] font-semibold text-secondary border-l-4 border-secondary hover:bg-[#EAF0FF] hover:text-secondary",
           )}
         >
           <Icon aria-hidden size={18} strokeWidth={1.9} />
@@ -95,6 +95,30 @@ function MobileNavigation({ items }: { items: NavigationItem[] }) {
   );
 }
 
+function FirstVisitHint({ operations }: { operations: boolean }) {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+  const href = operations ? "/ops" : "/assistant";
+  const label = operations ? "Bắt đầu từ Tổng quan" : "Bắt đầu từ Trợ lý AI";
+  const desc = operations
+    ? "Xem danh mục merchant và hàng chờ cần quyết định."
+    : "Nhờ AI kiểm tra sổ sách — chỉ ghi dữ liệu sau khi bạn duyệt.";
+  return (
+    <div className="mx-6 mb-2 rounded-xl border border-secondary/20 bg-accent/40 p-3">
+      <div className="flex items-start gap-2">
+        <Sparkles aria-hidden className="mt-0.5 shrink-0 text-secondary" size={15} />
+        <div className="min-w-0 flex-1">
+          <Link href={href} className="block text-xs font-semibold text-secondary hover:underline">{label}</Link>
+          <p className="mt-1 text-[11px] leading-4 text-text-secondary">{desc}</p>
+        </div>
+        <button type="button" onClick={() => setDismissed(true)} className="shrink-0 text-text-tertiary hover:text-text" aria-label="Đóng gợi ý">
+          <X aria-hidden size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
   const router = useRouter();
   const operations = workspace === "operations";
@@ -114,28 +138,26 @@ export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[240px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen flex-col border-r bg-[var(--taxlens-sidebar)] px-4 py-5 md:flex">
-        <TaxLensLogo className="ml-1" />
-        <p className="mt-4 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">
-          {operations ? "SHB Operations" : "Merchant workspace"}
-        </p>
-        <nav aria-label={operations ? "Điều hướng SHB" : "Điều hướng merchant"} className="mt-3 flex flex-1 flex-col gap-1">
+      <aside className="sticky top-0 hidden h-screen flex-col border-r bg-[var(--taxlens-sidebar)] shadow-[4px_0_24px_rgba(25,36,78,0.02)] md:flex">
+        <div className="p-8 pb-6"><TaxLensLogo /></div>
+        <FirstVisitHint operations={operations} />
+        <nav aria-label={operations ? "Điều hướng SHB" : "Điều hướng merchant"} className="flex flex-1 flex-col gap-1 overflow-y-auto px-6 py-2">
           <NavigationLinks items={items} />
         </nav>
-        <div className="border-t pt-4">
-          <Link href={operations ? "/ops/cases" : "/assistant"} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-text-secondary hover:bg-accent/45 hover:text-text">
+        <div className="p-6">
+          <Link href={operations ? "/ops/cases" : "/assistant"} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-text">
             <LifeBuoy aria-hidden size={18} />
             {operations ? "Hỗ trợ nội bộ" : "Hỗ trợ SHB"}
           </Link>
-          <Link href={operations ? "/ops/settings" : "/settings"} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-text-secondary hover:bg-accent/45 hover:text-text">
+          <Link href={operations ? "/ops/settings" : "/settings"} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-text">
             <Settings aria-hidden size={18} />
-            Cài đặt & giao diện
+            Cài đặt
           </Link>
-          <button type="button" onClick={() => void logout()} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-text-secondary hover:bg-accent/45 hover:text-text">
+          <button type="button" onClick={() => void logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-text">
             <LogOut aria-hidden size={18} />
             Đăng xuất
           </button>
-          <div className="mt-3 flex items-center gap-3 rounded-xl border bg-surface-elevated p-3">
+          <div className="mt-4 flex items-center gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm text-on-primary">{operations ? "L" : "H"}</span>
             <span className="min-w-0 flex-1">
               <strong className="block truncate text-sm font-normal text-text">{operations ? "Linh — SHB Ops" : "Nguyễn Thị Hương"}</strong>
@@ -155,7 +177,7 @@ export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
           </div>
           <ThemeButton />
         </header>
-        <main className="mx-auto min-h-screen w-full max-w-[1440px] px-4 pb-24 pt-6 sm:px-6 md:px-8 md:pb-10 md:pt-8 xl:px-11">
+        <main className="mx-auto min-h-screen w-full max-w-[1600px] px-6 py-6 pb-24 md:px-12 md:py-10 md:pb-10">
           {children}
         </main>
       </div>

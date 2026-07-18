@@ -6,12 +6,14 @@ import {
   Bot,
   Check,
   CircleDot,
+  ClipboardList,
   Clock3,
   FileCheck2,
   Play,
   Send,
   ShieldCheck,
   Sparkles,
+  Store,
   Wrench,
   X,
 } from "lucide-react";
@@ -29,10 +31,10 @@ import type { SessionResponse } from "@/lib/auth/contracts";
 
 const PERIOD = "2026-07";
 const SUGGESTIONS = [
-  "Kiểm tra tháng 7 flow giúp chị",
-  "Tổng quan sẵn sàng thuế và việc cần tôi duyệt",
-  "Có bao nhiêu ngoại lệ cần SHB hỗ trợ?",
-];
+  { text: "Kiểm tra tháng 7 flow giúp chị", icon: ClipboardList, title: "Kiểm tra tháng 7", desc: "Tổng quan sổ vận hành và việc cần duyệt" },
+  { text: "Tổng quan sẵn sàng thuế và việc cần tôi duyệt", icon: FileCheck2, title: "Sẵn sàng thuế", desc: "Kiểm tra đủ điều kiện xuất dữ liệu thuế" },
+  { text: "Có bao nhiêu ngoại lệ cần SHB hỗ trợ?", icon: Store, title: "Ngoại lệ cần SHB", desc: "Đếm và phân loại các mục cần ngân hàng hỗ trợ" },
+] as const;
 
 const actionTone: Record<AgentAction["status"], "neutral" | "info" | "success" | "warning" | "danger"> = {
   PROPOSED: "warning",
@@ -147,7 +149,7 @@ function ArtifactPanel({ artifacts }: { artifacts: Record<string, unknown> | nul
 export function AssistantWorkspace() {
   const queryClient = useQueryClient();
   const [merchantId, setMerchantId] = useState<string | null>(null);
-  const [request, setRequest] = useState(SUGGESTIONS[0]);
+  const [request, setRequest] = useState<string>(SUGGESTIONS[0].text);
   const stream = useAgentStream(merchantId, PERIOD);
   const hasApproval = stream.events.some((event) => event.type === "approval_required");
   const actions = useAgentActions(stream.runId ?? undefined, hasApproval);
@@ -184,14 +186,27 @@ export function AssistantWorkspace() {
                 <Button size="lg" className="font-bold hover:bg-primary" onClick={() => stream.send(request)} disabled={!merchantId || stream.isStreaming || !request.trim()}><Send aria-hidden size={18} />{stream.isStreaming ? "Đang kiểm tra" : "Bắt đầu kiểm tra"}</Button>
               </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto p-4 sm:px-8">{SUGGESTIONS.map((suggestion) => <button key={suggestion} type="button" onClick={() => setRequest(suggestion)} className="min-h-10 shrink-0 rounded-full border bg-surface px-4 text-xs font-semibold text-text-secondary hover:border-secondary hover:text-text">{suggestion}</button>)}</div>
+            <div className="grid gap-3 p-4 sm:px-8 sm:grid-cols-3">{SUGGESTIONS.map((suggestion) => { const Icon = suggestion.icon; return <button key={suggestion.text} type="button" onClick={() => setRequest(suggestion.text)} className="group flex flex-col items-start gap-2 rounded-xl border bg-surface p-4 text-left transition-all hover:border-secondary hover:shadow-sm"><span className="grid size-9 place-items-center rounded-lg bg-secondary/10 text-secondary"><Icon aria-hidden size={18} /></span><strong className="text-sm font-semibold text-text">{suggestion.title}</strong><span className="text-xs leading-5 text-text-secondary">{suggestion.desc}</span></button>; })}</div>
           </Card>
 
           <Card aria-live="polite" className="min-h-[24rem]">
             <div className="flex items-center justify-between gap-4 border-b pb-4"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">Hội thoại & tiến độ</p><h2 className="mt-1 font-display text-2xl">Luồng bằng chứng trực tiếp</h2></div>{stream.isStreaming && <span className="inline-flex items-center gap-2 text-xs font-semibold text-secondary"><span className="size-2 animate-pulse rounded-full bg-secondary motion-reduce:animate-none" />Đang chạy</span>}</div>
             <div className="mt-5 space-y-4">
               {stream.requestText && <div className="ml-auto max-w-[85%] rounded-xl bg-background p-4 text-sm leading-6 text-text">{stream.requestText}</div>}
-              {!stream.requestText && <div className="grid min-h-52 place-items-center text-center"><div><Bot aria-hidden className="mx-auto text-secondary" size={28} /><p className="mt-3 text-sm text-text-secondary">Chọn một gợi ý hoặc mô tả mục tiêu để bắt đầu.</p></div></div>}
+              {!stream.requestText && (
+                <div className="grid min-h-52 place-items-center text-center">
+                  <div className="max-w-md">
+                    <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-secondary/10 text-secondary">
+                      <Bot aria-hidden size={32} />
+                    </span>
+                    <h3 className="mt-5 font-display text-2xl text-text">Trợ lý TaxLens sẵn sàng</h3>
+                    <p className="mt-2 text-sm leading-6 text-text-secondary">
+                      Mô tả mục tiêu bằng tiếng Việt. Trợ lý sẽ lập kế hoạch, chạy công cụ và chỉ ghi dữ liệu sau khi bạn duyệt.
+                    </p>
+                    <p className="mt-4 text-xs text-text-tertiary">Chọn một gợi ý ở trên hoặc viết yêu cầu của riêng bạn.</p>
+                  </div>
+                </div>
+              )}
               {stream.events.map((event, index) => <EventBlock key={`${event.type}-${index}`} event={event} />)}
               {stream.error && <ErrorState title="Luồng trợ lý bị gián đoạn" description={stream.error} compact />}
             </div>

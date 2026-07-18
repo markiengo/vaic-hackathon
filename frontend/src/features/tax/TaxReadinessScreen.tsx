@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, Check, Download, LockKeyhole, ShieldCheck, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Download, LockKeyhole, ShieldCheck, X } from "lucide-react";
 import { Area, AreaChart, PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Button, Card, ErrorState, LoadingState, PageHeader, StatusPill, ToastProvider, useToast } from "@/components/ui";
 import { useTaxReadiness } from "@/hooks/useLedger";
@@ -17,6 +17,14 @@ const checkLabels: Record<string, string> = {
   unclassified_transactions: "Phân loại toàn bộ giao dịch",
   missing_invoices: "Độ phủ hóa đơn",
   active_rule_version: "Bộ quy tắc thuế hiệu lực",
+};
+
+const checkExplanations: Record<string, string> = {
+  bank_reconciliation: "Mọi giao dịch đã được nối với đơn hàng hoặc phân loại rõ ràng.",
+  cash_session_closure: "Ca tiền mặt đã được đối chiếu và đóng.",
+  unclassified_transactions: "Không còn giao dịch chưa phân loại trong kỳ.",
+  missing_invoices: "Mọi đơn đã thanh toán đều có bằng chứng hóa đơn.",
+  active_rule_version: "Bộ quy tắc thuế đang dùng là phiên bản mới nhất.",
 };
 
 export function TaxReadinessScreen() { return <ToastProvider><TaxReadinessWorkspace /></ToastProvider>; }
@@ -44,6 +52,18 @@ function TaxReadinessWorkspace() {
   return (
     <div className="space-y-7 animate-[route-in_240ms_ease-out]">
       <PageHeader eyebrow="Kiểm tra quyết định" period={periodLabel} title="Sẵn sàng thuế" description="Một cổng kiểm tra minh bạch trước khi tạo bộ dữ liệu nháp. TaxLens không nộp tờ khai hoặc gửi dữ liệu tới cơ quan thuế." />
+
+      {/* Expandable context */}
+      <details className="rounded-xl border bg-surface p-4">
+        <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-text-secondary">
+          <ChevronDown aria-hidden size={16} className="transition-transform" />
+          Kiểm tra này có nghĩa gì?
+        </summary>
+        <p className="mt-3 text-sm leading-6 text-text-secondary">
+          TaxLens kiểm tra 5 tiêu chí trước khi cho phép xuất dữ liệu. Đây là cổng an toàn — không phải nộp thuế. Mỗi tiêu chí phải đạt để mở khóa xuất.
+        </p>
+      </details>
+
       <section className="grid gap-5 xl:grid-cols-[1.08fr_0.92fr]">
         <Card variant="information" className="grid gap-7 p-7 sm:grid-cols-[auto_1fr] sm:items-center sm:p-9"><ReadinessRing score={report.score} /><div><StatusPill className="bg-surface" status={report.export_allowed ? "Sẵn sàng" : "Chưa sẵn sàng"} /><h2 className="font-display mt-5 text-3xl sm:text-4xl">{report.export_allowed ? "Bộ dữ liệu tháng 7 đã qua mọi cổng kiểm tra." : `Còn ${report.blockers.length} tiêu chí đang chặn bộ xuất.`}</h2><p className="mt-3 text-sm leading-6 text-text">Điểm được tính từ dữ liệu persisted. Việc đạt điểm cao không vượt qua được một tiêu chí bắt buộc đang thất bại.</p></div></Card>
         <Card variant="workspace"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">Trạng thái xuất</p><div className="mt-5 flex items-start gap-3">{report.export_allowed ? <ShieldCheck aria-hidden className="text-success" size={25} /> : <LockKeyhole aria-hidden className="text-warning" size={25} />}<div><h2 className="font-display text-2xl">{report.export_allowed ? "Đã mở khóa" : "Đang khóa an toàn"}</h2><p className="mt-2 text-sm leading-6 text-text-secondary">{report.export_allowed ? "Bạn có thể tải JSON hoặc CSV để kiểm tra và chuyển tiếp có kiểm soát." : "Hoàn tất các blocker bên dưới. TaxLens sẽ tự tính lại sau mỗi quyết định được lưu."}</p></div></div><dl className="mt-7 grid grid-cols-2 gap-4 border-t pt-5"><Fact label="Rule version" value={report.rule_version ?? "Chưa có"} /><Fact label="Hiệu lực" value={report.effective_from ?? "Chưa xác định"} /></dl></Card>
@@ -60,6 +80,7 @@ function ReadinessRing({ score }: { score: number }) {
 }
 
 function CheckRow({ check, index }: { check: ReadinessCheck; index: number }) {
-  return <div className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:px-6"><span className="font-mono grid size-8 place-items-center rounded-full border text-xs">{index}</span><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold">{checkLabels[check.item] ?? check.item}</h3><StatusPill status={check.pass ? "Đạt" : "Cần xử lý"} /></div><p className="mt-2 text-sm text-text-secondary">{check.details ?? `Giá trị ${String(check.value)}, ngưỡng ${String(check.threshold)}`}</p></div>{check.pass ? <Check aria-label="Đạt" className="text-success" size={20} /> : check.action_href ? <Link href={check.action_href} className="inline-flex items-center gap-2 text-sm font-semibold text-secondary hover:underline">Xử lý ngay<ArrowRight aria-hidden size={16} /></Link> : <X aria-label="Chưa đạt" className="text-danger" size={20} />}</div>;
+  const explanation = checkExplanations[check.item];
+  return <div className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:px-6"><span className="font-mono grid size-8 place-items-center rounded-full border text-xs">{index}</span><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold">{checkLabels[check.item] ?? check.item}</h3><StatusPill status={check.pass ? "Đạt" : "Cần xử lý"} /></div>{explanation && <p className="mt-1 text-xs text-text-tertiary">{explanation}</p>}<p className="mt-2 text-sm text-text-secondary">{check.details ?? `Giá trị ${String(check.value)}, ngưỡng ${String(check.threshold)}`}</p></div>{check.pass ? <Check aria-label="Đạt" className="text-success" size={20} /> : check.action_href ? <Link href={check.action_href} className="inline-flex items-center gap-2 text-sm font-semibold text-secondary hover:underline">Xử lý ngay<ArrowRight aria-hidden size={16} /></Link> : <X aria-label="Chưa đạt" className="text-danger" size={20} />}</div>;
 }
 function Fact({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs text-text-secondary">{label}</dt><dd className="mt-1 text-sm font-semibold">{value}</dd></div>; }
