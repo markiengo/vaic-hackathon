@@ -1236,3 +1236,62 @@ backend verification for seed-backed API/tool suites.
 The remaining full-seed cash handoff is documented for P5 and does not require
 weakening or bypassing P1's ledger invariants.
 
+### 2026-07-18 — Full-system regression and cross-role integration fixes
+
+**Changed:**
+
+- `backend/app/tools/__init__.py`: normalized ORM sale timestamps to UTC at the
+  P5 tool → P1 matching-domain boundary. PostgreSQL supplies timezone-aware
+  values, while SQLite and some legacy/import adapters can return naive values;
+  the adapter now restores the canonical UTC interpretation before P1 scoring.
+- `backend/requirements-dev.txt`: made standalone development ranges compatible
+  with the runtime pins and declared the previously missing `asyncpg`,
+  `passlib[bcrypt]`, and `pytest-cov` dependencies.
+- `frontend/package-lock.json`: synchronized the lockfile with `package.json`,
+  allowing a clean `npm ci` instead of failing on a missing transitive
+  `es-abstract` package and a stale `lucide-react` entry.
+- `frontend/.eslintrc.json`: added the non-interactive Next.js Core Web Vitals
+  lint configuration required by CI.
+- `frontend/src/app/layout.tsx`: documented and locally suppressed the
+  app-router font rule for the intentionally shared Material Symbols icon font.
+
+**Reasoning:**
+
+- P1 domain models deliberately reject naive datetimes because timezone guesses
+  inside financial matching can alter candidate ordering. Timestamp repair
+  belongs at the persistence/tool adapter boundary, where UTC is the documented
+  database meaning; P1's invariant remains strict.
+- The previous dev requirements could not be installed together with runtime
+  requirements because their lower bounds excluded the pinned versions, and a
+  fresh environment could not import webhook/security or PostgreSQL modules.
+- Frontend source compiled, but the stale lockfile made reproducible installation
+  fail and the missing ESLint config opened an interactive prompt. Both are CI
+  integration defects, so they were fixed without changing product behavior.
+
+**Verification:**
+
+- `python -m pip check` — no broken requirements.
+- Full backend suite against a generated SQLite test schema — `154 passed`.
+- P1 matching/allocation/reconciliation/truth-set suite — `51 passed`.
+- Targeted `pyflakes` over the P1 services and P5 adapter — passed.
+- FastAPI smoke check — `/health` returned HTTP 200; 43 routes registered.
+- Clean frontend install — `npm ci` passed (417 packages).
+- Frontend lint — no warnings or errors.
+- Frontend production build — passed; TypeScript validation and all 12 routes
+  completed successfully.
+
+**Environment notes:**
+
+- Docker and a local PostgreSQL client/server were unavailable, so the backend
+  integration run used SQLite with test-only SQLAlchemy JSONB/BigInteger dialect
+  adapters. PostgreSQL-specific deployment behavior remains a CI/staging gate.
+- Python 3.14 emitted dependency deprecation warnings from FastAPI, LangGraph,
+  Starlette, and `pytest-asyncio`; none were application failures.
+- Next.js 14.2.5 still reports its upstream security advisory during install.
+  Upgrading Next.js should be handled by P3/tech lead as a dedicated dependency
+  change with UI regression testing, rather than silently bundled into P1 work.
+
+**Status:** Full locally executable regression is green, including all P1
+financial logic and its P5/P4 integration paths. No known application test,
+lint, build, dependency, or health-smoke failure remains in this branch.
+
