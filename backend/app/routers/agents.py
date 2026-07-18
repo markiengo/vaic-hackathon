@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import JSONResponse
@@ -7,8 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.queue import run_agent_workflow
 from app.core.security import TaxLensError, get_current_user
 from app.models.agent import AgentRun, ToolCall
+from app.models.merchant import Merchant
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -22,11 +25,6 @@ class AgentRunStartRequest(BaseModel):
     case_id: str | None = None
 
 
-async def _dispatch_agent_run(run_id: str) -> None:
-    """Background task — placeholder until P2 wires LangGraph workflow."""
-    pass
-
-
 # TODO Q-D: path is /agents/run (singular) per P3's api.ts; API spec §8 uses
 # /agents/run as well. Confirm with P3 before changing — path must not diverge.
 @router.post("/run", status_code=202)
@@ -36,6 +34,10 @@ async def start_agent_run(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> JSONResponse:
+    merchant = await db.get(Merchant, body.merchant_id)
+    if merchant is None:
+        raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
+
     run_id = f"RUN-{uuid.uuid4().hex[:8].upper()}"
     run = AgentRun(
         id=run_id,
@@ -43,12 +45,21 @@ async def start_agent_run(
         user_id=current_user.id,
         request_text=body.request,
         case_id=body.case_id,
+        period=body.period,
         status="PLANNING",
+        started_at=datetime.now(timezone.utc),
     )
     db.add(run)
     await db.commit()
 
-    background_tasks.add_task(_dispatch_agent_run, run_id)
+    background_tasks.add_task(
+        run_agent_workflow,
+        run_id=run_id,
+        case_id=body.case_id or "",
+        merchant_id=body.merchant_id,
+        period=body.period,
+        request_text=body.request,
+    )
 
     return JSONResponse(status_code=202, content={"run_id": run_id, "status": "PLANNING"})
 
