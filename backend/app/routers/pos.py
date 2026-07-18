@@ -227,8 +227,10 @@ async def _close_session(
     session_id: int, counted_cash: Decimal, discrepancy_reason: str | None, db: AsyncSession
 ) -> PosCashSessionCloseResponse:
     session = await db.get(CashSession, session_id)
-    if session is None or session.status != "OPEN":
-        raise TaxLensError("ERR-POS-004", 404, "Ca tiền mặt không tồn tại hoặc đã đóng")
+    if session is None:
+        raise TaxLensError("ERR-POS-004", 404, "Ca tiền mặt không tồn tại")
+    if session.status != "OPEN":
+        raise TaxLensError("ERR-POS-005", 409, "Ca tiền mặt đã đóng")
     expected = session.expected_cash or Decimal("0")
     discrepancy = counted_cash - expected
     session.counted_cash = counted_cash
