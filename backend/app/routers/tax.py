@@ -1,16 +1,25 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from fastapi.responses import Response
+from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import date
 
 from app.core.database import get_db
-from app.models.tax import TaxRuleVersion, TaxClassification
-from app.models.transaction import BankTransaction
-from app.models.sale import Sale
-from app.models.invoice import Invoice
-from app.models.cash import CashSession
+from app.core.security import TaxLensError, get_current_user
+from app.models.reconciliation import ExceptionRecord, ReconciliationCase
+from app.schemas.agent import TaxChecklistItem
+from app.services.export import collect_draft_export_data, to_csv_text, to_json_dict
+from app.services.tax_rules import check_required_fields
 
 router = APIRouter(prefix="/tax", tags=["tax"])
+
+
+class TaxExportRequest(BaseModel):
+    merchant_id: str
+    period: str
+    format: str = "json"  # "json" | "csv"
 
 
 @router.get("/readiness")
@@ -18,70 +27,96 @@ async def tax_readiness(
     merchant_id: str = Query(...),
     period: str = Query(..., description="YYYY-MM"),
     db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ) -> dict:
-    year, month = period.split("-")
-    period_start = date(int(year), int(month), 1)
-    if int(month) == 12:
-        period_end = date(int(year) + 1, 1, 1)
-    else:
-        period_end = date(int(year), int(month) + 1, 1)
+    try:
+        result = await check_required_fields(db, merchant_id, period)
+    except ValueError:
+        raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
 
-    rule_result = await db.execute(
-        select(TaxRuleVersion).order_by(TaxRuleVersion.effective_from.desc()).limit(1)
-    )
-    rule = rule_result.scalars().first()
-
-    tx_count = await db.scalar(
-        select(func.count(BankTransaction.id)).where(
-            BankTransaction.merchant_id == merchant_id,
-            BankTransaction.transaction_date >= period_start,
-            BankTransaction.transaction_date < period_end,
-        )
-    )
-    sale_count = await db.scalar(
-        select(func.count(Sale.id)).where(
-            Sale.merchant_id == merchant_id,
-            Sale.created_at >= period_start,
-            Sale.created_at < period_end,
-        )
-    )
-    invoice_count = await db.scalar(
-        select(func.count(Invoice.id)).where(
-            Invoice.merchant_id == merchant_id,
-            Invoice.invoice_date >= period_start,
-            Invoice.invoice_date < period_end,
-        )
-    )
-    cash_result = await db.execute(
-        select(CashSession).where(
-            CashSession.opened_at >= period_start,
-            CashSession.opened_at < period_end,
-            CashSession.status == "CLOSED",
-        )
-    )
-    cash_sessions = cash_result.scalars().all()
-    cash_ok = all(
-        s.discrepancy is not None and float(s.discrepancy) == 0
-        for s in cash_sessions
-    )
-
-    invoice_coverage = (invoice_count or 0) / (sale_count or 1) if sale_count else 0
-    invoice_ok = invoice_coverage >= 1.0
+    if result.rule_version is None:
+        raise TaxLensError("ERR-TAX-001", 404, "Không tìm thấy tax rule version cho merchant này")
 
     checklist = [
-        {"item": "merchant_name", "label": "Tên merchant", "passed": True, "value": "Salon Hoa", "details": "Khớp với đăng ký kinh doanh"},
-        {"item": "tax_id", "label": "Mã số thuế", "passed": True, "value": "0123456789", "details": "Định dạng hợp lệ"},
-        {"item": "revenue_total", "label": "Tổng doanh thu", "passed": True, "value": f"{(sale_count or 0)} giao dịch", "details": "Tổng từ bán hàng"},
-        {"item": "invoice_count", "label": "Độ phủ hóa đơn", "passed": invoice_ok, "value": f"{invoice_count or 0}/{sale_count or 0} ({invoice_coverage*100:.1f}%)", "details": "Cần xuất bổ sung" if not invoice_ok else "Đủ"},
-        {"item": "cash_revenue", "label": "Doanh thu tiền mặt", "passed": cash_ok, "value": f"{len(cash_sessions)} phiên", "details": "Chênh lệch" if not cash_ok else "Khớp"},
-        {"item": "bank_revenue", "label": "Doanh thu ngân hàng", "passed": True, "value": f"{tx_count or 0} giao dịch", "details": "Đã đối soát"},
+        TaxChecklistItem(
+            name=check.field,
+            value=check.value,
+            threshold=check.threshold,
+            passed=check.passed,
+            details=check.detail,
+        ).model_dump(by_alias=True)
+        for check in result.checks
     ]
-    ready = all(c["passed"] for c in checklist)
 
     return {
-        "rule_version": rule.version if rule else "unknown",
-        "effective_from": rule.effective_from.isoformat() if rule and rule.effective_from else None,
-        "legal_source": rule.legal_source if rule else "",
-        "ready": ready,
+        "merchant_id": merchant_id,
+        "period": period,
+        "rule_version": result.rule_version,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "ready": result.all_pass,
         "checklist": checklist,
     }
+
+
+@router.post("/export")
+async def export_draft(
+    body: TaxExportRequest,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> Response:
+    if body.format not in ("json", "csv"):
+        raise TaxLensError("ERR-GEN-001", 400, "format phải là 'json' hoặc 'csv'")
+
+    # ERR-TAX-002: unresolved exceptions block export
+    case_result = await db.execute(
+        select(ReconciliationCase).where(
+            ReconciliationCase.merchant_id == body.merchant_id,
+            ReconciliationCase.period == body.period,
+        )
+    )
+    cases = case_result.scalars().all()
+    if cases:
+        case_ids = [c.id for c in cases]
+        pending_count = await db.scalar(
+            select(func.count(ExceptionRecord.id)).where(
+                ExceptionRecord.case_id.in_(case_ids),
+                ExceptionRecord.status == "PENDING",
+            )
+        )
+        if pending_count and pending_count > 0:
+            raise TaxLensError(
+                "ERR-TAX-002",
+                400,
+                f"Còn {pending_count} ngoại lệ chưa giải quyết — không thể xuất dữ liệu",
+                {"pending_exceptions": pending_count},
+            )
+
+    try:
+        fields_result = await check_required_fields(db, body.merchant_id, body.period)
+    except ValueError:
+        raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
+
+    rule_version = fields_result.rule_version or "unknown"
+
+    # ERR-TAX-003: no revenue data for period
+    if not any(c.field == "revenue_total" and c.passed for c in fields_result.checks):
+        raise TaxLensError(
+            "ERR-TAX-003",
+            422,
+            "Không có dữ liệu doanh thu cho kỳ này — không thể xuất",
+        )
+
+    data = await collect_draft_export_data(db, body.merchant_id, body.period, rule_version)
+
+    if body.format == "csv":
+        return Response(
+            content=to_csv_text(data),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="export_{body.merchant_id}_{body.period}.csv"'},
+        )
+
+    import json
+    return Response(
+        content=json.dumps(to_json_dict(data), ensure_ascii=False, indent=2),
+        media_type="application/json",
+    )
