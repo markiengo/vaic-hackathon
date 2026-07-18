@@ -110,8 +110,8 @@ async def export_draft(
 
     if body.format == "csv":
         return Response(
-            content=to_csv_text(data),
-            media_type="text/csv",
+            content="﻿" + to_csv_text(data),
+            media_type="text/csv; charset=utf-8-sig",
             headers={"Content-Disposition": f'attachment; filename="export_{body.merchant_id}_{body.period}.csv"'},
         )
 

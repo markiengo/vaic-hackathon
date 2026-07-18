@@ -73,8 +73,8 @@ async def export_audit(
         writer.writeheader()
         writer.writerows(events)
         return Response(
-            content=buf.getvalue(),
-            media_type="text/csv",
+            content="﻿" + buf.getvalue(),
+            media_type="text/csv; charset=utf-8-sig",
             headers={"Content-Disposition": f'attachment; filename="audit_{period or "all"}.csv"'},
         )
 
