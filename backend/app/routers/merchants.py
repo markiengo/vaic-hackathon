@@ -6,7 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import TaxLensError
+from app.core.security import TaxLensError, get_current_user
 from app.models.merchant import Merchant
 from app.models.reconciliation import ReconciliationCase
 from app.models.transaction import BankTransaction
@@ -15,6 +15,29 @@ from app.models.invoice import Invoice
 from app.schemas.reconciliation import ReconcileRequest, ReconcileResponse
 
 router = APIRouter(prefix="/merchants", tags=["merchants"])
+
+
+@router.get("/{merchant_id}")
+async def get_merchant_profile(
+    merchant_id: str,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> dict:
+    merchant = await db.get(Merchant, merchant_id)
+    if merchant is None:
+        raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
+    return {
+        "id": merchant.id,
+        "name": merchant.name,
+        "business_type": merchant.business_type,
+        "business_category": merchant.business_category,
+        "tax_id": merchant.tax_id,
+        "contact_phone": merchant.contact_phone,
+        "contact_email": merchant.contact_email,
+        "status": merchant.status,
+        "created_at": merchant.created_at.isoformat() if merchant.created_at else None,
+        "updated_at": merchant.updated_at.isoformat() if merchant.updated_at else None,
+    }
 
 
 @router.get("/{merchant_id}/dashboard")
