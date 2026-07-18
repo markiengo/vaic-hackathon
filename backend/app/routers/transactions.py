@@ -1,19 +1,24 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import date
 
 from app.core.database import get_db
+from app.core.security import get_current_user
 from app.models.transaction import BankTransaction
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 
+# TODO Q-A1: path is /transactions; API spec §3 uses /merchants/{id}/transactions.
+# Keep current path until P3 alignment confirmed.
 @router.get("")
 async def list_transactions(
     merchant_id: str = Query(...),
     period: str = Query(..., description="YYYY-MM"),
     db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ) -> list[dict]:
     year, month = period.split("-")
     period_start = date(int(year), int(month), 1)

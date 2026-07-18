@@ -1068,3 +1068,57 @@ literal exit criterion or expected behavior:
 after declaring the missing async SQLite dependency. Broader shared tests should
 be rerun in the normal backend database environment before final merge.
 
+### 2026-07-18 — P4 Sprint 2 endpoint integration
+
+**Changed:**
+- Ported the 18 commits from `origin/P4-Sprint2` onto current `origin/main`
+  with `git cherry-pick --no-commit`, preserving newer P1/P2/P5 files from
+  main instead of raw-merging the stale branch.
+- `backend/app/core/security.py`: Added JWT, bcrypt password verification,
+  RBAC helpers, and structured `TaxLensError` support.
+- `backend/app/routers/`: Integrated P4 Sprint 2 route work for auth,
+  merchants, transactions, reconciliation, tax, cases, agents, audit, POS,
+  confirmation, and WebSocket endpoints.
+- `backend/app/schemas/`: Added auth, confirmation, POS, and reconciliation
+  schemas; extended agent tax checklist serialization aliases required by the
+  P4 tax endpoint.
+- `backend/app/core/ws_manager.py` and `backend/app/routers/ws.py`: Added
+  per-run agent-trace WebSocket support while keeping the existing transaction
+  WebSocket.
+- `backend/expected_vars.txt`: Added Sprint 2 backend environment variable
+  checklist from P4.
+
+**Reasoning:**
+- `P4-Sprint2` was based on an older main and `origin/main..origin/P4-Sprint2`
+  appeared to delete P1/P2 reconciliation services and tests. Those deletes
+  were stale-branch artifacts, not desired Sprint 2 changes.
+- Cherry-picking the actual branch commits from the merge base brought in P4's
+  endpoint work without deleting `backend/app/services/reconciliation.py`,
+  `backend/app/services/cash_reconciliation.py`,
+  `backend/app/tools/reconciliation.py`, or the P1/P2 tests already on main.
+- Kept the integration backend-only so P3's active frontend/design WIP in the
+  main checkout remains untouched.
+
+**Verification:**
+- `python -m compileall -q app tests` — passed.
+- Targeted pyflakes on all touched P4 files — passed after removing one unused
+  import from `backend/app/routers/confirm.py`.
+- `git diff --check` — passed.
+- Imported `app.main` with dummy test env vars and confirmed the expected P4
+  routes are mounted, including `/api/v1/auth/login`,
+  `/api/v1/merchants/{merchant_id}`, `/api/v1/reconciliation/start`,
+  `/api/v1/agents/run`, `/api/v1/agents/runs/{run_id}/trace`,
+  `/api/v1/pos/*`, `/api/v1/confirm/{token}`, and
+  `/api/v1/ws/agent-trace/{run_id}`.
+- With local dummy env vars, ran:
+  `python -m pytest tests/test_cash_reconciliation.py tests/test_reconciliation_integration.py -q`
+  — 18 passed.
+- Attempted broader seed-backed tests with SQLite/dummy env. They are blocked
+  by existing Postgres-specific model/schema assumptions (`JSONB` and shared
+  seed fixture requiring pre-created application tables), so they should be
+  rerun in the normal Postgres backend environment.
+
+**Status:** P4 Sprint 2 endpoint code has been integrated onto current main
+without rolling back P1/P2/P5. Remaining confidence gate is normal Postgres
+backend verification for seed-backed API/tool suites.
+

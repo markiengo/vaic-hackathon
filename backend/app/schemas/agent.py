@@ -137,10 +137,18 @@ class ReconciliationSummary(AgentSchema):
 
 
 class TaxChecklistItem(AgentSchema):
-    """Single item in the tax readiness checklist."""
+    """Single item in the tax readiness checklist.
 
-    name: str
-    passed: bool
+    "pass" is a Python keyword so we use serialization_alias.
+    Serialize with model.model_dump(by_alias=True) for JSON output.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    name: str = Field(serialization_alias="item")
+    value: Any = None
+    threshold: Any = None
+    passed: bool = Field(serialization_alias="pass")
     details: str | None = None
 
 
