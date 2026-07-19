@@ -15,6 +15,7 @@ from app.core.ws_manager import ws_manager
 from app.models.agent import AgentRun, ToolCall
 from app.schemas.agent import AgentRunRequest
 from app.agents.runner import AgentRunner
+from app.agents.graph import generate_response
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 logger = logging.getLogger(__name__)
@@ -32,6 +33,13 @@ class AgentRunStartRequest(BaseModel):
 async def _dispatch_agent_run(run_id: str, merchant_id: str, period: str, request_text: str, case_id: str | None) -> None:
     """Background task: run the real LangGraph agent workflow and persist results."""
     try:
+        # Update DB status to EXECUTING immediately so frontend polling sees progress
+        async with AsyncSessionLocal() as session:
+            run = await session.get(AgentRun, run_id)
+            if run is not None:
+                run.status = "EXECUTING"
+                await session.commit()
+
         await ws_manager.push_to_run(run_id, {
             "type": "agent_status",
             "run_id": run_id,
@@ -39,14 +47,17 @@ async def _dispatch_agent_run(run_id: str, merchant_id: str, period: str, reques
         })
 
         runner = AgentRunner()
-        response = await asyncio.to_thread(
-            runner.run,
-            AgentRunRequest(
-                merchant_id=merchant_id,
-                period=period,
-                request_text=request_text,
-                case_id=case_id,
-            )
+        response = await asyncio.wait_for(
+            asyncio.to_thread(
+                runner.run,
+                AgentRunRequest(
+                    merchant_id=merchant_id,
+                    period=period,
+                    request_text=request_text,
+                    case_id=case_id,
+                )
+            ),
+            timeout=120,
         )
 
         async with AsyncSessionLocal() as session:
@@ -57,6 +68,11 @@ async def _dispatch_agent_run(run_id: str, merchant_id: str, period: str, reques
                 run.completed_at = datetime.now(timezone.utc)
                 if response.error:
                     run.error = response.error
+                # Generate conversational response from workflow output
+                run.response_text = generate_response(
+                    request_text=request_text,
+                    workflow_output=response.output,
+                )
                 await session.commit()
 
                 # Persist tool calls
@@ -92,6 +108,17 @@ async def _dispatch_agent_run(run_id: str, merchant_id: str, period: str, reques
             "type": "agent_status",
             "run_id": run_id,
             "status": response.status,
+        })
+
+        # Push the conversational response to the frontend
+        response_text = generate_response(
+            request_text=request_text,
+            workflow_output=response.output,
+        )
+        await ws_manager.push_to_run(run_id, {
+            "type": "agent_response",
+            "run_id": run_id,
+            "response": response_text,
         })
     except Exception as exc:
         logger.exception("Agent run %s failed", run_id)
@@ -155,6 +182,7 @@ async def list_runs(
             "request_text": r.request_text,
             "plan": r.plan,
             "status": r.status,
+            "response_text": r.response_text,
             "started_at": r.started_at.isoformat() if r.started_at else None,
             "completed_at": r.completed_at.isoformat() if r.completed_at else None,
             "error": r.error,
@@ -179,6 +207,7 @@ async def get_run(
         "request_text": run.request_text,
         "plan": run.plan,
         "status": run.status,
+        "response_text": run.response_text,
         "started_at": run.started_at.isoformat() if run.started_at else None,
         "completed_at": run.completed_at.isoformat() if run.completed_at else None,
         "error": run.error,
@@ -201,10 +230,17 @@ async def get_trace(
         .order_by(ToolCall.called_at.asc())
     )
     calls = calls_result.scalars().all()
+    plan = run.plan or {}
+    plan_steps = plan.get("steps", []) if isinstance(plan, dict) else []
+    progress = plan.get("progress", []) if isinstance(plan, dict) else []
+    evidence = plan.get("evidence", {}) if isinstance(plan, dict) else {}
+
     return {
         "run_id": run.id,
         "status": run.status,
-        "plan": run.plan,
+        "plan": plan_steps,
+        "progress": progress,
+        "evidence": evidence,
         "tool_calls": [
             {
                 "agent_name": c.agent_name,
@@ -218,4 +254,5 @@ async def get_trace(
             }
             for c in calls
         ],
+        "actions": [],
     }

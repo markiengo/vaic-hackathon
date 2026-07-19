@@ -36,14 +36,26 @@ export function useAgentStream(merchantId: string | null, period: string) {
     }
   }
 
+  function reset() {
+    abortRef.current?.abort();
+    setEvents([]);
+    setRequestText("");
+    setRunId(null);
+    setError(null);
+    setIsStreaming(false);
+  }
+
   const artifact = [...events].reverse().find((event) => event.type === "artifact");
+  const responseEvent = [...events].reverse().find((event) => event.type === "agent_response");
   return {
     events,
     requestText,
     runId,
     isStreaming,
     error,
+    responseText: responseEvent?.type === "agent_response" ? responseEvent.response : null,
     send,
+    reset,
     artifacts: artifact?.type === "artifact" ? artifact.artifact : null,
     trace: events.filter((event) => ["tool_started", "tool_completed", "approval_required"].includes(event.type)),
   };

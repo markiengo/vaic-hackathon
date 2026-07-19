@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import TaxLensError, get_current_user
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
-from app.schemas.reconciliation import CaseCreateRequest, CaseResponse
+from app.schemas.reconciliation import CaseCreateRequest, CaseResponse, SupportRequest, SupportResponse
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -87,6 +87,13 @@ async def get_case(
     c = await db.get(ReconciliationCase, case_id)
     if c is None:
         raise TaxLensError("ERR-CASE-001", 404, "Case không tồn tại")
+    ex_result = await db.execute(
+        select(ExceptionRecord)
+        .where(ExceptionRecord.case_id == case_id)
+        .order_by(ExceptionRecord.created_at.desc())
+    )
+    exceptions = ex_result.scalars().all()
+
     return {
         "id": c.id,
         "merchant_id": c.merchant_id,
@@ -96,7 +103,21 @@ async def get_case(
         "assigned_rm_id": c.assigned_rm_id,
         "tax_rule_version": c.tax_rule_version,
         "human_approvals": c.human_approvals,
-        "exception_count": await _exception_count(db, c.id),
+        "exception_count": len(exceptions),
+        "exceptions": [
+            {
+                "id": ex.id,
+                "exception_type": ex.exception_type,
+                "status": ex.status,
+                "bank_transaction_id": ex.bank_transaction_id,
+                "sale_id": ex.sale_id,
+                "ai_suggestion": ex.ai_suggestion,
+                "human_decision": ex.human_decision,
+                "created_at": ex.created_at.isoformat() if ex.created_at else None,
+            }
+            for ex in exceptions
+        ],
+        "actions": [],
         "created_at": c.created_at.isoformat() if c.created_at else None,
         "updated_at": c.updated_at.isoformat() if c.updated_at else None,
     }
@@ -200,6 +221,64 @@ async def draft_message_alias(
 class ResolveCaseRequest(BaseModel):
     decision: str = "RESOLVED"
     note: str | None = None
+
+
+_VALID_TOPICS = {"missing_invoice", "unmatched_transaction", "cash_discrepancy", "invoice_issue", "other"}
+
+
+@router.post("/support", status_code=201, response_model=SupportResponse)
+async def create_support_request(
+    body: SupportRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> SupportResponse:
+    """Merchant escalates to SHB — creates a Case visible in the SHB ops queue."""
+    if body.topic not in _VALID_TOPICS:
+        raise TaxLensError(
+            "ERR-GEN-001",
+            400,
+            f"topic phải là một trong: {', '.join(sorted(_VALID_TOPICS))}",
+        )
+
+    case_id = f"CASE-SUP-{body.merchant_id}-{body.period}"
+    existing = await db.get(ReconciliationCase, case_id)
+    if existing is not None:
+        return SupportResponse(
+            case_id=existing.id,
+            status=existing.status,
+            topic=body.topic,
+            created=False,
+        )
+
+    case = ReconciliationCase(
+        id=case_id,
+        merchant_id=body.merchant_id,
+        period=body.period,
+        status="OPEN",
+        priority=body.priority,
+    )
+    db.add(case)
+
+    ex = ExceptionRecord(
+        case_id=case_id,
+        exception_type=body.topic,
+        ai_suggestion={
+            "classification": "needs_shb_review",
+            "reason": body.description,
+            "source": "merchant_escalation",
+            "submitted_by": current_user.id,
+        },
+        status="PENDING",
+    )
+    db.add(ex)
+    await db.commit()
+
+    return SupportResponse(
+        case_id=case_id,
+        status="OPEN",
+        topic=body.topic,
+        created=True,
+    )
 
 
 @router.post("/{case_id}/resolve")

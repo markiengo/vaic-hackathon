@@ -32,6 +32,7 @@ class ReconciliationStartRequest(BaseModel):
 async def list_exceptions(
     merchant_id: str = Query(...),
     period: str = Query(..., description="YYYY-MM"),
+    status: str | None = Query(None, description="Filter by exception status (PENDING, RESOLVED, DISMISSED)"),
     db: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
 ) -> list[dict]:
@@ -45,25 +46,37 @@ async def list_exceptions(
     if not cases:
         return []
     case_ids = [c.id for c in cases]
-    ex_result = await db.execute(
-        select(ExceptionRecord)
+
+    stmt = (
+        select(ExceptionRecord, BankTransaction)
+        .outerjoin(BankTransaction, ExceptionRecord.bank_transaction_id == BankTransaction.id)
         .where(ExceptionRecord.case_id.in_(case_ids))
         .order_by(ExceptionRecord.created_at.desc())
     )
-    exceptions = ex_result.scalars().all()
+    if status:
+        stmt = stmt.where(ExceptionRecord.status == status)
+
+    rows = (await db.execute(stmt)).all()
     return [
         {
             "id": ex.id,
+            "merchant_id": merchant_id,
             "case_id": ex.case_id,
             "bank_transaction_id": ex.bank_transaction_id,
             "sale_id": ex.sale_id,
             "exception_type": ex.exception_type,
+            "amount": float(txn.amount) if txn is not None and txn.amount is not None else None,
+            "sender_name": txn.sender_name if txn is not None else None,
+            "raw_note": txn.raw_note if txn is not None else None,
+            "transaction_date": txn.transaction_date.isoformat() if txn is not None and txn.transaction_date else None,
+            "source": txn.source if txn is not None else None,
+            "reference_number": txn.reference_number if txn is not None else None,
             "ai_suggestion": ex.ai_suggestion,
             "human_decision": ex.human_decision,
             "status": ex.status,
             "created_at": ex.created_at.isoformat() if ex.created_at else None,
         }
-        for ex in exceptions
+        for ex, txn in rows
     ]
 
 

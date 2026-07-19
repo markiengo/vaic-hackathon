@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, LoaderCircle, Store, Building2 } from "lucide-react";
 import Image from "next/image";
@@ -33,37 +33,45 @@ export function AuthForm(): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialEmail = searchParams.get("email") ?? undefined;
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [forgotToast, setForgotToast] = useState(false);
 
   async function login(email: string, password: string): Promise<void> {
     setError(null);
-    const response = await fetch("/api/auth/login", {
-      body: JSON.stringify({ email, password }),
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      method: "POST",
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const response = await fetch("/api/auth/login", {
+        body: JSON.stringify({ email, password }),
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        method: "POST",
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
-      throw new Error(body?.error?.message ?? "Đăng nhập không thành công.");
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as
+          | { error?: { message?: string } }
+          | null;
+        throw new Error(body?.error?.message ?? "Đăng nhập không thành công.");
+      }
+
+      const session = (await response.json()) as SessionResponse;
+      const requestedPath = searchParams.get("next");
+      const safeRequestedPath = requestedPath?.startsWith("/") ? requestedPath : null;
+      const destination = safeRequestedPath ?? (session.user.role === "merchant" ? "/dashboard" : "/ops");
+      router.replace(destination);
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const session = (await response.json()) as SessionResponse;
-    const requestedPath = searchParams.get("next");
-    const safeRequestedPath = requestedPath?.startsWith("/") ? requestedPath : null;
-    const destination = safeRequestedPath ?? (session.user.role === "merchant" ? "/dashboard" : "/ops");
-    startTransition(() => router.replace(destination));
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    setIsPending(true);
     try {
       await login(
         String(formData.get("email") ?? ""),
@@ -71,15 +79,17 @@ export function AuthForm(): React.ReactNode {
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Đăng nhập không thành công.");
+    } finally {
+      setIsPending(false);
     }
   }
 
-  async function demo(email: string): Promise<void> {
-    try {
-      await login(email, DEMO_PASSWORD);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không thể mở dữ liệu demo.");
-    }
+  function demo(email: string): void {
+    const isMerchant = email === "huong.salonhoa@gmail.com";
+    document.cookie = "taxlens_demo=1; path=/; max-age=604800";
+    document.cookie = `taxlens_demo_user=${isMerchant ? "U005" : "U002"}; path=/; max-age=604800`;
+    document.cookie = "taxlens_csrf=demo-csrf; path=/; max-age=604800";
+    router.replace(isMerchant ? "/dashboard" : "/ops");
   }
 
   return (

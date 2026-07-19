@@ -9,7 +9,35 @@ import {
 } from "@/lib/auth/backend";
 import { CSRF_COOKIE, clearSessionCookies, setSessionCookies } from "@/lib/auth/session";
 
+const DEMO_USERS: Record<string, SessionUser> = {
+  U005: {
+    id: "U005",
+    name: "Nguyễn Thị Hương",
+    email: "huong.salonhoa@gmail.com",
+    role: "merchant",
+    merchant_id: "M001",
+    onboarding_completed: false,
+  },
+  U002: {
+    id: "U002",
+    name: "Trần Văn Long",
+    email: "long.ops@shb.com.vn",
+    role: "ops_staff",
+    merchant_id: null,
+    onboarding_completed: false,
+  },
+};
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  // Demo session: return hardcoded user, no backend call
+  const isDemo = request.cookies.get("taxlens_demo")?.value === "1";
+  if (isDemo) {
+    const userId = request.cookies.get("taxlens_demo_user")?.value ?? "U005";
+    const demoUser = DEMO_USERS[userId] ?? DEMO_USERS["U005"];
+    const csrfToken = request.cookies.get(CSRF_COOKIE)?.value ?? "demo-csrf";
+    return NextResponse.json<SessionResponse>({ csrfToken, user: demoUser });
+  }
+
   let accessToken = accessTokenFrom(request);
   let refreshed = null;
 

@@ -41,3 +41,18 @@ class CaseResponse(BaseModel):
     priority: str | None
     created: bool
     exception_count: int
+
+
+class SupportRequest(BaseModel):
+    merchant_id: str
+    period: str
+    topic: str  # e.g. "missing_invoice", "unmatched_transaction", "cash_discrepancy", "other"
+    description: str
+    priority: str = "MEDIUM"  # LOW | MEDIUM | HIGH
+
+
+class SupportResponse(BaseModel):
+    case_id: str
+    status: str
+    topic: str
+    created: bool

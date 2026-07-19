@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.invoice import Invoice
+from app.models.sale import Sale
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -26,35 +27,67 @@ async def list_invoices(
     else:
         period_end = date(int(year), int(month) + 1, 1)
 
-    q = (
-        select(Invoice)
-        .where(
-            Invoice.merchant_id == merchant_id,
-            Invoice.invoice_date >= period_start,
-            Invoice.invoice_date < period_end,
+    # Build invoice coverage: left-join paid sales with their invoices
+    inv_alias = Invoice.__table__.alias("inv")
+    stmt = (
+        select(
+            Sale.id.label("sale_id"),
+            Sale.net_amount.label("amount"),
+            Sale.payment_status.label("payment_status"),
+            Sale.invoice_status.label("sale_invoice_status"),
+            Sale.created_at.label("created_at"),
+            inv_alias.c.id.label("invoice_id"),
+            inv_alias.c.invoice_number.label("invoice_number"),
+            inv_alias.c.source.label("provider"),
+            inv_alias.c.invoice_date.label("issued_at"),
+            inv_alias.c.status.label("invoice_status"),
         )
-        .order_by(Invoice.invoice_date.desc())
+        .outerjoin(inv_alias, inv_alias.c.sale_id == Sale.id)
+        .where(
+            Sale.merchant_id == merchant_id,
+            Sale.created_at >= period_start,
+            Sale.created_at < period_end,
+            Sale.payment_status == "PAID",
+        )
+        .order_by(Sale.created_at.desc())
     )
-    if status:
-        q = q.where(Invoice.status == status)
 
-    result = await db.execute(q)
-    invoices = result.scalars().all()
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    records = []
+    for row in rows:
+        has_invoice = row.invoice_id is not None
+        readiness_blocker = not has_invoice
+        rec = {
+            "sale_id": row.sale_id,
+            "amount": float(row.amount) if row.amount else 0,
+            "payment_status": row.payment_status or "PAID",
+            "invoice_status": "linked" if has_invoice else "missing",
+            "invoice_id": row.invoice_id,
+            "invoice_number": row.invoice_number,
+            "provider": row.provider,
+            "issued_at": row.issued_at.isoformat() if row.issued_at else None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "readiness_blocker": readiness_blocker,
+        }
+        records.append(rec)
+
+    missing_count = sum(1 for r in records if r["readiness_blocker"])
+
+    # Apply status filter after coverage computation
+    if status == "missing":
+        filtered = [r for r in records if r["readiness_blocker"]]
+    elif status == "linked":
+        filtered = [r for r in records if not r["readiness_blocker"]]
+    else:
+        filtered = records
+
     return {
-        "invoices": [
-            {
-                "id": inv.id,
-                "sale_id": inv.sale_id,
-                "merchant_id": inv.merchant_id,
-                "invoice_number": inv.invoice_number,
-                "amount": float(inv.amount) if inv.amount else 0,
-                "invoice_date": inv.invoice_date.isoformat() if inv.invoice_date else None,
-                "status": inv.status,
-                "source": inv.source,
-                "source_id": inv.source_id,
-                "ingested_at": inv.ingested_at.isoformat() if inv.ingested_at else None,
-            }
-            for inv in invoices
-        ],
-        "total": len(invoices),
+        "merchant_id": merchant_id,
+        "period": period,
+        "missing_count": missing_count,
+        "total": len(records),
+        "items": filtered,
+        "records": filtered,
     }

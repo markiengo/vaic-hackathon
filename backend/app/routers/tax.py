@@ -13,7 +13,7 @@ from app.models.reconciliation import ExceptionRecord, ReconciliationCase
 from app.models.tax import TaxRuleVersion
 from app.schemas.agent import TaxChecklistItem
 from app.services.export import collect_draft_export_data, to_csv_text, to_json_dict
-from app.services.tax_rules import check_required_fields
+from app.services.tax_rules import check_required_fields, validate_rule_version
 
 router = APIRouter(prefix="/tax", tags=["tax"])
 
@@ -39,6 +39,16 @@ async def tax_readiness(
     if result.rule_version is None:
         raise TaxLensError("ERR-TAX-001", 404, "Không tìm thấy tax rule version cho merchant này")
 
+    # Get rule version details for effective_from
+    rv_row = await db.scalar(
+        select(TaxRuleVersion).where(TaxRuleVersion.version == result.rule_version)
+    )
+    effective_from = rv_row.effective_from.isoformat() if rv_row and rv_row.effective_from else None
+    legal_source = rv_row.legal_source if rv_row else None
+
+    # Validate rule version
+    validation = await validate_rule_version(db, result.rule_version)
+
     checklist = [
         TaxChecklistItem(
             name=check.field,
@@ -50,13 +60,50 @@ async def tax_readiness(
         for check in result.checks
     ]
 
+    passed_count = sum(1 for c in result.checks if c.passed)
+    total_count = len(result.checks)
+    blockers = [c for c in checklist if not c.get("pass", False)]
+    score = round((passed_count / total_count) * 100) if total_count else 0
+    ready = result.all_pass and validation.valid
+
+    # Check for pending exceptions that block export
+    case_result = await db.execute(
+        select(ReconciliationCase).where(
+            ReconciliationCase.merchant_id == merchant_id,
+            ReconciliationCase.period == period,
+        )
+    )
+    cases = case_result.scalars().all()
+    has_pending_exceptions = False
+    if cases:
+        case_ids = [c.id for c in cases]
+        pending_count = await db.scalar(
+            select(func.count(ExceptionRecord.id)).where(
+                ExceptionRecord.case_id.in_(case_ids),
+                ExceptionRecord.status == "PENDING",
+            )
+        )
+        has_pending_exceptions = bool(pending_count and pending_count > 0)
+
+    export_allowed = ready and not has_pending_exceptions
+
     return {
         "merchant_id": merchant_id,
         "period": period,
+        "score": score,
         "rule_version": result.rule_version,
+        "effective_from": effective_from,
+        "legal_source": legal_source,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "ready": result.all_pass,
+        "ready": ready,
+        "export_allowed": export_allowed,
+        "passed_count": passed_count,
+        "total_count": total_count,
+        "blocking_count": len(blockers),
         "checklist": checklist,
+        "checks": checklist,
+        "blockers": blockers,
+        "missing_invoice_sales": list(result.missing_invoice_sales),
     }
 
 

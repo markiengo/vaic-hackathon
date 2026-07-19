@@ -3,6 +3,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignCase,
+  createSupportRequest,
   decideAgentAction,
   draftCaseMessage,
   executeAgentAction,
@@ -165,4 +166,15 @@ export function useAuditEvents() {
 
 export function useComplianceRules() {
   return useQuery({ queryKey: agentOpsKeys.compliance, queryFn: getComplianceRules });
+}
+
+export function useSupportRequest() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: createSupportRequest,
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: agentOpsKeys.cases });
+      client.invalidateQueries({ queryKey: ["merchant-support-cases"] });
+    },
+  });
 }

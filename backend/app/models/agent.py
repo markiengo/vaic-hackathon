@@ -18,6 +18,7 @@ class AgentRun(Base):
     started_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     completed_at = Column(TIMESTAMP(timezone=True), nullable=True)
     error = Column(Text, nullable=True)
+    response_text = Column(Text, nullable=True)
 
 
 class ToolCall(Base):

@@ -6,6 +6,7 @@ export type AgentStreamEvent =
   | { type: "tool_completed"; tool: string; output: Record<string, unknown>; duration_ms: number }
   | { type: "approval_required"; action_id: string; summary: string; impact: string }
   | { type: "action_completed"; action_id: string; output: unknown }
+  | { type: "agent_response"; response: string }
   | { type: "artifact"; artifact: Record<string, unknown> }
   | { type: "error"; message: string }
   | { type: "done"; run_id: string };
@@ -17,6 +18,12 @@ function readCookie(name: string): string | null {
   return item ? decodeURIComponent(item.slice(prefix.length)) : null;
 }
 
+function isDemoMode(): boolean {
+  return readCookie("taxlens_demo") === "1";
+}
+
+const DEMO_BACKEND_URL = "http://127.0.0.1:8000/api/v1";
+
 export async function* streamAgentRun(
   merchantId: string,
   requestText: string,
@@ -26,17 +33,17 @@ export async function* streamAgentRun(
   const headers = new Headers({ accept: "text/event-stream", "content-type": "application/json" });
   const csrf = readCookie("taxlens_csrf");
   if (csrf) headers.set("x-csrf-token", csrf);
-  const response = await fetch("/api/backend/agents/runs/stream", {
-    method: "POST",
-    credentials: "same-origin",
-    headers,
-    signal,
-    body: JSON.stringify({ merchant_id: merchantId, request_text: requestText, period }),
-  });
-  if (response.status === 404 || response.status === 405) {
-    const fallback = await fetch("/api/backend/agents/run", {
+
+  // Demo mode: call backend directly, no auth needed
+  const demo = isDemoMode();
+  const baseUrl = demo ? DEMO_BACKEND_URL : "";
+
+  const fallbackUrl = demo ? `${baseUrl}/agents/run` : "/api/backend/agents/run";
+
+  {
+    const fallback = await fetch(fallbackUrl, {
       method: "POST",
-      credentials: "same-origin",
+      credentials: demo ? undefined : "same-origin",
       headers: new Headers(headers),
       signal,
       body: JSON.stringify({ merchant_id: merchantId, request: requestText, period }),
@@ -51,38 +58,69 @@ export async function* streamAgentRun(
     };
     yield { type: "run_started", run_id: accepted.run_id };
     if (accepted.plan?.steps?.length) yield { type: "plan", steps: accepted.plan.steps };
-    const status = accepted.status ?? "PLANNING";
     yield {
       type: "progress_summary",
       agent: "supervisor",
-      status,
-      message: status === "PLANNING"
-        ? "Yêu cầu đã được nhận và đang chờ backend thực thi kế hoạch."
-        : `Backend đã nhận yêu cầu với trạng thái ${status}.`,
+      status: "PLANNING",
+      message: "TaxLens đang phân tích yêu cầu và lên kế hoạch xử lý.",
     };
-    if (["COMPLETED", "DONE"].includes(status)) yield { type: "done", run_id: accepted.run_id };
-    return;
-  }
-  if (!response.ok || !response.body) {
-    throw new Error(response.status === 401 ? "Phiên đăng nhập đã hết hạn." : "Không thể bắt đầu trợ lý TaxLens.");
-  }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    buffer += decoder.decode(value, { stream: !done });
-    const frames = buffer.replaceAll("\r\n", "\n").split("\n\n");
-    buffer = frames.pop() ?? "";
-    for (const frame of frames) {
-      const data = frame
-        .split("\n")
-        .filter((line) => line.startsWith("data:"))
-        .map((line) => line.slice(5).trimStart())
-        .join("\n");
-      if (data) yield JSON.parse(data) as AgentStreamEvent;
+    // Poll run status until terminal
+    const pollInterval = 1000;
+    const maxAttempts = 60;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (signal?.aborted) return;
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      try {
+        const pollUrl = demo
+          ? `${baseUrl}/agents/runs/${accepted.run_id}`
+          : `/api/backend/agents/runs/${accepted.run_id}`;
+        const pollResp = await fetch(pollUrl, {
+          method: "GET",
+          credentials: demo ? undefined : "same-origin",
+          headers: new Headers({ accept: "application/json" }),
+          signal,
+        });
+        if (!pollResp.ok) continue;
+        const runState = await pollResp.json() as {
+          status: string;
+          plan?: { steps?: Array<{ step: number; action: string; agent: string }> };
+          error?: string;
+          response_text?: string;
+        };
+        if (runState.plan?.steps?.length) {
+          yield { type: "plan", steps: runState.plan.steps };
+        }
+        yield {
+          type: "progress_summary",
+          agent: "supervisor",
+          status: runState.status,
+          message: runState.status === "EXECUTING"
+            ? "TaxLens đang thực thi các bước đã lên kế hoạch."
+            : runState.status === "COMPLETED"
+              ? "TaxLens đã hoàn thành xử lý yêu cầu."
+              : runState.status === "FAILED"
+                ? `Lỗi xử lý: ${runState.error ?? "không xác định"}`
+                : `Đang xử lý… (${runState.status})`,
+        };
+        if (["COMPLETED", "DONE", "FAILED"].includes(runState.status)) {
+          if (runState.status === "FAILED") {
+            yield { type: "error", message: runState.error ?? "Xử lý thất bại." };
+          } else {
+            if (runState.response_text) {
+              yield { type: "agent_response", response: runState.response_text };
+            }
+            yield { type: "artifact", artifact: { run_id: accepted.run_id, status: runState.status } };
+          }
+          yield { type: "done", run_id: accepted.run_id };
+          return;
+        }
+      } catch {
+        // Network error during poll, continue
+      }
     }
-    if (done) break;
+    // Timeout — yield done so UI unblocks
+    yield { type: "done", run_id: accepted.run_id };
+    return;
   }
 }

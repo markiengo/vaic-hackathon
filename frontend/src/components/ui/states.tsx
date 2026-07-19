@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
 export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div aria-hidden className={cn("animate-pulse rounded-md bg-border", className)} {...props} />;
+  return <div aria-hidden className={cn("skeleton-shimmer rounded-md", className)} {...props} />;
 }
 
 type StateProps = { title: string; description: string; action?: ReactNode; compact?: boolean };

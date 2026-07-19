@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import TaxLensError, get_current_user
 from app.models.cash import CashSession
+from app.models.merchant import Store, Device
 from app.models.payment import PaymentIntent
 from app.models.product import Product
 from app.models.sale import Sale, SaleLine
@@ -29,6 +30,51 @@ from app.schemas.pos import (
 router = APIRouter(prefix="/pos", tags=["pos"])
 
 _QR_MOCK_PREFIX = "000201010212382300069704220"
+
+
+@router.get("/context")
+async def get_pos_context(
+    merchant_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    store_result = await db.execute(
+        select(Store).where(Store.merchant_id == merchant_id).limit(1)
+    )
+    store = store_result.scalars().first()
+    if store is None:
+        raise TaxLensError("ERR-POS-004", 404, "Không tìm thấy cửa hàng cho merchant này")
+
+    device_result = await db.execute(
+        select(Device).where(Device.store_id == store.id, Device.is_active == True).limit(1)
+    )
+    device = device_result.scalars().first()
+
+    cash_result = await db.execute(
+        select(CashSession)
+        .where(CashSession.store_id == store.id, CashSession.status == "OPEN")
+        .limit(1)
+    )
+    cash_session = cash_result.scalars().first()
+
+    return {
+        "merchant_id": merchant_id,
+        "store_id": store.id,
+        "store_name": store.name,
+        "device_id": device.id if device else None,
+        "staff_id": user.id,
+        "active_cash_session": {
+            "id": cash_session.id,
+            "opening_cash": float(cash_session.opening_cash) if cash_session.opening_cash else 0,
+            "expected_cash": float(cash_session.expected_cash) if cash_session.expected_cash else None,
+            "counted_cash": float(cash_session.counted_cash) if cash_session.counted_cash else None,
+            "cash_expenses": float(cash_session.cash_expenses) if cash_session.cash_expenses else 0,
+            "discrepancy": float(cash_session.discrepancy) if cash_session.discrepancy else None,
+            "status": cash_session.status,
+            "opened_at": cash_session.opened_at.isoformat() if cash_session.opened_at else None,
+            "closed_at": cash_session.closed_at.isoformat() if cash_session.closed_at else None,
+        } if cash_session else None,
+    }
 
 
 @router.post("/cash-sessions/open", status_code=201, response_model=PosCashSessionOpenResponse)

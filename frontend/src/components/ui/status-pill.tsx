@@ -4,6 +4,7 @@ const statuses = {
   "Đã khớp": "neutral",
   "Cần xác nhận": "warning",
   "Chưa xác định": "neutral",
+  "Chưa phân loại": "neutral",
   "Thiếu hóa đơn": "danger",
   "Sai số tiền": "danger",
   "Chờ đồng bộ": "info",

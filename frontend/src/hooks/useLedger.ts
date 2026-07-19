@@ -17,6 +17,8 @@ export function useDashboard(merchantId: string | undefined, period: string) {
     queryKey: queryKeys.dashboard(merchantId ?? "", period),
     queryFn: () => getDashboard(merchantId!, period),
     enabled: Boolean(merchantId),
+    staleTime: 30_000,
+    retry: 1,
   });
 }
 
@@ -25,6 +27,8 @@ export function useExceptions(merchantId: string | undefined, period: string) {
     queryKey: queryKeys.exceptions(merchantId ?? "", { period, status: "PENDING" }),
     queryFn: () => getExceptions(merchantId!, period),
     enabled: Boolean(merchantId),
+    staleTime: 30_000,
+    retry: 1,
   });
 }
 
@@ -37,6 +41,8 @@ export function useInvoices(
     queryKey: queryKeys.invoices(merchantId ?? "", { period, status }),
     queryFn: () => getInvoices(merchantId!, period, status),
     enabled: Boolean(merchantId),
+    staleTime: 30_000,
+    retry: 1,
   });
 }
 
@@ -45,6 +51,8 @@ export function useTaxReadiness(merchantId: string | undefined, period: string) 
     queryKey: queryKeys.taxReadiness(merchantId ?? "", period),
     queryFn: () => getTaxReadiness(merchantId!, period),
     enabled: Boolean(merchantId),
+    staleTime: 30_000,
+    retry: 1,
   });
 }
 

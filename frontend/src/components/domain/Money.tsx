@@ -15,11 +15,13 @@ interface MoneyProps {
 }
 
 export function formatMoney(value: number): string {
-  return formatter.format(value).replace(/\s/g, "");
+  const safe = typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return formatter.format(safe).replace(/\s/g, "");
 }
 
 export function Money({ value, className, showPositiveSign = false }: MoneyProps) {
-  const formatted = `${showPositiveSign && value > 0 ? "+" : ""}${formatMoney(value)}`;
+  const safe = typeof value === "number" && Number.isFinite(value) ? value : 0;
+  const formatted = `${showPositiveSign && safe > 0 ? "+" : ""}${formatMoney(safe)}`;
   return (
     <span
       aria-label={`${value < 0 ? "Âm " : ""}${Math.abs(value).toLocaleString("vi-VN")} đồng`}

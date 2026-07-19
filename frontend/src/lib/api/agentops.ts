@@ -266,3 +266,58 @@ export function getAuditEvents() {
 export function getComplianceRules() {
   return apiFetch<{ rules: ComplianceRule[] }>("tax/rules");
 }
+
+export function createSupportRequest(input: {
+  merchantId: string;
+  period: string;
+  topic: string;
+  description: string;
+  priority?: string;
+}) {
+  return apiFetch<{ case_id: string; status: string; topic: string; created: boolean }>(
+    "cases/support",
+    {
+      method: "POST",
+      ...jsonBody({
+        merchant_id: input.merchantId,
+        period: input.period,
+        topic: input.topic,
+        description: input.description,
+        priority: input.priority ?? "MEDIUM",
+      }),
+    },
+  );
+}
+
+export function resetDemo() {
+  return apiFetch<{ status: string; summary: Record<string, number> }>("demo/reset", {
+    method: "POST",
+  });
+}
+
+export interface NotificationItem {
+  id: number;
+  type: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  is_read: boolean;
+  created_at: string | null;
+}
+
+export function getNotifications(unreadOnly = false) {
+  const query = unreadOnly ? "?unread_only=true" : "";
+  return apiFetch<{ notifications: NotificationItem[]; unread_count: number }>(`notifications${query}`);
+}
+
+export function markNotificationRead(id: number) {
+  return apiFetch<{ id: number; is_read: boolean }>(`notifications/${id}/read`, {
+    method: "POST",
+  });
+}
+
+export function markAllNotificationsRead() {
+  return apiFetch<{ status: string }>("notifications/read-all", {
+    method: "POST",
+  });
+}

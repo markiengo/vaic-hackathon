@@ -32,10 +32,19 @@ Frontend dùng gateway cùng origin tại `/api/backend/*`. Gateway gắn access
 
 ## Tuyến chính
 
-- Merchant: `/dashboard`, `/transactions`, `/exceptions`, `/invoices`, `/tax-readiness`, `/sales`, `/assistant`, `/settings`
-- SHB Operations: `/ops`, `/ops/merchants`, `/ops/cases`, `/ops/agent-runs`, `/ops/audit`, `/ops/compliance`
+- Merchant: `/dashboard`, `/transactions`, `/exceptions`, `/invoices`, `/tax-readiness`, `/sales`, `/assistant`, `/support`, `/settings`
+- SHB Operations: `/ops`, `/ops/merchants`, `/ops/cases`, `/ops/agent-runs`, `/ops/audit`, `/ops/compliance`, `/ops/settings`
 - Public/Auth: `/login`, `/confirm/[token]`
 - Design QA nội bộ: `/_dev/showcase`
+
+## Tài khoản demo
+
+| Vai trò           | Email                         | Mật khẩu             |
+| ------------------- | ----------------------------- | ------------------- |
+| Merchant (Salon Hương) | `huong.salonhoa@gmail.com`    | `TaxLensDemo!2026`  |
+| SHB Ops Staff      | `long.ops@shb.com.vn`        | `TaxLensDemo!2026`  |
+
+Đăng nhập tại `/login`. Backend phải đã seed dữ liệu (`python scripts/seed_data.py --reset`).
 
 ## Cổng kiểm tra
 

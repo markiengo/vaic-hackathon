@@ -320,7 +320,7 @@ export function AssistantWorkspace() {
           </button>
           <button
             type="button"
-            onClick={() => { setRequest(""); }}
+            onClick={() => { setRequest(""); stream.reset(); }}
             className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-ink"
           >
             <Plus aria-hidden size={16} />
@@ -418,7 +418,11 @@ export function AssistantWorkspace() {
 
                 {stream.events.length > 0 && (
                   <div className="text-sm leading-6 text-ink">
-                    Em sẽ kiểm tra giao dịch, đơn hàng, tiền mặt và hóa đơn tháng 7.
+                    {stream.responseText ?? (
+                      stream.isStreaming
+                        ? "Em đang xử lý yêu cầu của chị…"
+                        : "Em sẽ kiểm tra giao dịch, đơn hàng, tiền mặt và hóa đơn tháng 7."
+                    )}
                   </div>
                 )}
 

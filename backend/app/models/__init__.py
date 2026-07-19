@@ -12,3 +12,4 @@ from app.models.invoice import Invoice  # noqa: F401
 from app.models.tax import TaxClassification, TaxRuleVersion  # noqa: F401
 from app.models.reconciliation import ReconciliationCase, ExceptionRecord  # noqa: F401
 from app.models.agent import AgentRun, ToolCall, AuditEvent  # noqa: F401
+from app.models.notification import Notification  # noqa: F401

@@ -87,7 +87,7 @@ async def get_portfolio(
 
     summary = {
         "total": len(merchant_list),
-        "active": sum(1 for m in merchant_list if m["status"] == "active"),
+        "active": sum(1 for m in merchant_list if m["status"].upper() == "ACTIVE"),
         "open_cases": sum(m["open_cases"] for m in merchant_list),
         "active_runs": sum(m["active_runs"] for m in merchant_list),
     }

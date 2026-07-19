@@ -3,6 +3,7 @@ import type { NextRequest, NextResponse } from "next/server";
 export const ACCESS_COOKIE = "taxlens_access";
 export const REFRESH_COOKIE = "taxlens_refresh";
 export const CSRF_COOKIE = "taxlens_csrf";
+export const DEMO_COOKIE = "taxlens_demo";
 
 export interface BackendTokens {
   access_token: string;
@@ -47,8 +48,29 @@ export function setSessionCookies(
   }
 }
 
+export function setDemoCookie(response: NextResponse, userId: string = "U005"): void {
+  response.cookies.set(DEMO_COOKIE, "1", {
+    httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60,
+    path: "/",
+    sameSite: "lax",
+    secure,
+  });
+  response.cookies.set("taxlens_demo_user", userId, {
+    httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60,
+    path: "/",
+    sameSite: "lax",
+    secure,
+  });
+}
+
+export function isDemoSession(request: NextRequest): boolean {
+  return request.cookies.get(DEMO_COOKIE)?.value === "1";
+}
+
 export function clearSessionCookies(response: NextResponse): void {
-  for (const name of [ACCESS_COOKIE, REFRESH_COOKIE, CSRF_COOKIE]) {
+  for (const name of [ACCESS_COOKIE, REFRESH_COOKIE, CSRF_COOKIE, DEMO_COOKIE, "taxlens_demo_user"]) {
     response.cookies.set(name, "", {
       httpOnly: name !== CSRF_COOKIE,
       maxAge: 0,

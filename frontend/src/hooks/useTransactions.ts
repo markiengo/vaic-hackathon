@@ -16,5 +16,7 @@ export function useTransactions(filters: TransactionFilters) {
       transport: filters.transport,
     }),
     enabled: Boolean(filters.merchantId),
+    staleTime: 30_000,
+    retry: 1,
   });
 }

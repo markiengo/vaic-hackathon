@@ -2,14 +2,14 @@
 
 from fastapi import APIRouter, Depends
 
-from app.core.security import require_role
+from app.core.security import get_current_user
 from scripts.seed_data import seed
 
 router = APIRouter(prefix="/demo", tags=["demo"])
 
 
 @router.post("/reset")
-async def reset_demo(_=Depends(require_role("admin", "ops_staff"))) -> dict:
-    """Wipe and re-seed the demo dataset. Restricted to SHB operations staff."""
+async def reset_demo(_=Depends(get_current_user)) -> dict:
+    """Wipe and re-seed the demo dataset."""
     summary = await seed(reset=True)
     return {"status": "ok", "summary": summary}

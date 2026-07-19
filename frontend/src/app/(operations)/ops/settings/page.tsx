@@ -1,5 +1,10 @@
 import { OperationsSettings } from "@/features/agentops/OperationsSettings";
+import { ToastProvider } from "@/components/ui";
 
 export default function OperationsSettingsPage() {
-  return <OperationsSettings />;
+  return (
+    <ToastProvider>
+      <OperationsSettings />
+    </ToastProvider>
+  );
 }

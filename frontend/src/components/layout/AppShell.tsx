@@ -6,6 +6,7 @@ import { LifeBuoy, LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { TaxLensLogo } from "@/components/brand/TaxLensLogo";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { merchantNavigation, NavigationItem, operationsNavigation } from "@/config/navigation";
 import { getSession } from "@/lib/api/session";
 import { cn } from "@/lib/utils";
@@ -116,6 +117,7 @@ export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
     <div className="flex min-h-screen max-w-[1920px] mx-auto">
       <aside className="sticky top-0 z-20 hidden h-screen w-[240px] shrink-0 flex-col border-r border-border bg-[var(--taxlens-sidebar)] shadow-[4px_0_24px_rgba(25,36,78,0.02)] md:flex">
         <div className="p-8 pb-6"><TaxLensLogo /></div>
+        <div className="px-6 pb-2"><NotificationBell align="left" /></div>
         <nav aria-label={operations ? "Điều hướng SHB" : "Điều hướng merchant"} className="flex flex-1 flex-col gap-1 overflow-y-auto px-6 py-2">
           <NavigationLinks items={items} />
         </nav>
@@ -139,6 +141,7 @@ export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur md:hidden">
           <TaxLensLogo compact />
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <div className="text-center">
               <strong className="block text-sm font-normal">{operations ? "SHB Operations" : "Salon Hương"}</strong>
               <span className="text-xs text-text-tertiary">Tháng 07/2026</span>

@@ -15,7 +15,7 @@ import {
   Store,
   TriangleAlert,
 } from "lucide-react";
-import { Card, ErrorState, LoadingState, QuickActionCard, RecommendationPanel, SectionHeader, StatusPill } from "@/components/ui";
+import { Card, ErrorState, QuickActionCard, RecommendationPanel, SectionHeader, Skeleton, StatusPill } from "@/components/ui";
 import { useDashboard, useExceptions } from "@/hooks/useLedger";
 import { useMerchantSession } from "@/hooks/useMerchantSession";
 import { useReportingPeriod } from "@/hooks/useReportingPeriod";
@@ -37,7 +37,26 @@ export function DashboardScreen() {
   const dashboard = useDashboard(merchantId, period);
   const exceptions = useExceptions(merchantId, period);
 
-  if (session.isPending || dashboard.isPending) return <LoadingState label="Đang tổng hợp sổ vận hành" />;
+  if (session.isPending || dashboard.isPending) {
+    return (
+      <div className="animate-[route-in_240ms_ease-out] space-y-8">
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-12 w-72" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          <Skeleton className="h-80 rounded-2xl lg:col-span-4" />
+          <Skeleton className="h-80 rounded-2xl lg:col-span-4" />
+          <Skeleton className="h-80 rounded-2xl lg:col-span-4" />
+        </div>
+        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
+        </div>
+        <Skeleton className="h-96 rounded-2xl" />
+      </div>
+    );
+  }
   if (session.isError || dashboard.isError || !merchantId) {
     return (
       <ErrorState
@@ -49,11 +68,11 @@ export function DashboardScreen() {
   }
 
   const data = dashboard.data;
-  const score = data.tax_readiness.score;
-  const totalItems = data.exception_count + data.missing_invoice_count;
-  const actionHref = data.exception_count > 0 ? "/exceptions" : "/invoices";
+  const score = Math.max(0, Math.min(100, Number.isFinite(data.tax_readiness.score) ? data.tax_readiness.score : 0));
+  const totalItems = (data.exception_count ?? 0) + (data.missing_invoice_count ?? 0);
+  const actionHref = (data.exception_count ?? 0) > 0 ? "/exceptions" : "/invoices";
   const actionLabel = totalItems > 0 ? `Xử lý ${totalItems} mục` : "Xem sẵn sàng thuế";
-  const recentTx = data.recent_transactions.slice(0, 5);
+  const recentTx = (data.recent_transactions ?? []).slice(0, 5);
   const topExceptions = (exceptions.data ?? []).slice(0, 3);
   const featuredException = topExceptions[0];
   const compactExceptions = topExceptions.slice(1, 3);
@@ -81,17 +100,17 @@ export function DashboardScreen() {
             Tạo đơn mới
           </Link>
           <Link
-            href="/dashboard"
+            href={`/exceptions?period=${period}`}
             className="flex items-center gap-2 rounded-full border border-primary bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5"
           >
             <RefreshCw aria-hidden size={18} />
-            Cập nhật dữ liệu
+            Đối soát lại
           </Link>
         </div>
       </header>
 
       <section className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-12" aria-label="Tóm tắt vận hành">
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 animate-[route-in_320ms_ease-out_both]">
           <Card className="relative h-full overflow-hidden border p-8 shadow-[0_4px_24px_rgba(25,36,78,0.04)]">
             <div className="absolute right-6 top-6">
               <Bell aria-hidden className="text-text-secondary" size={20} />
@@ -111,19 +130,19 @@ export function DashboardScreen() {
               <span className="text-sm font-medium text-text-secondary">{score}% Sẵn sàng</span>
             </div>
             <div className="mb-8 flex-1 space-y-4">
-              {data.unclassified_count > 0 && (
+              {(data.unclassified_count ?? 0) > 0 && (
                 <div className="flex items-center gap-3 text-sm text-ink">
                   <span className="size-2 rounded-full bg-primary" />
                   <span>Còn {data.unclassified_count} giao dịch chưa phân loại</span>
                 </div>
               )}
-              {data.missing_invoice_count > 0 && (
+              {(data.missing_invoice_count ?? 0) > 0 && (
                 <div className="flex items-center gap-3 text-sm text-ink">
                   <span className="size-2 rounded-full bg-primary" />
-                  <span>Còn {data.missing_invoice_count} đơn thiếu hóa đơn</span>
+                  <span>Còn {data.missing_invoice_count ?? 0} đơn thiếu hóa đơn</span>
                 </div>
               )}
-              {data.unclassified_count === 0 && data.missing_invoice_count === 0 && (
+              {(data.unclassified_count ?? 0) === 0 && (data.missing_invoice_count ?? 0) === 0 && (
                 <div className="flex items-center gap-3 text-sm text-ink">
                   <CheckCircle2 aria-hidden className="text-success" size={16} />
                   <span>Tất cả mục đã được xử lý</span>
@@ -140,15 +159,15 @@ export function DashboardScreen() {
           </Card>
         </div>
 
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 animate-[route-in_400ms_ease-out_both]">
           <Card className="flex h-full flex-col justify-between border p-8 shadow-[0_4px_24px_rgba(25,36,78,0.04)]">
             <span className="mb-6 block text-sm font-medium text-text-secondary">Đối soát 7 ngày gần đây</span>
             <div className="mb-4">
               <span className="mb-2 block font-display text-[38px] leading-tight text-ink">
-                {data.reconciled_count} / {data.total_transactions} đã khớp
+                {data.reconciled_count ?? 0} / {data.total_transactions ?? 0} đã khớp
               </span>
               <span className="text-xs text-text-secondary">
-                {Math.round(data.reconciliation_rate * 100)}% tự động xử lý
+                {Math.round((data.reconciliation_rate ?? 0) * 100)}% tự động xử lý
               </span>
             </div>
             <div className="mt-auto flex h-32 items-end gap-2">
@@ -176,23 +195,23 @@ export function DashboardScreen() {
           </Card>
         </div>
 
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 animate-[route-in_480ms_ease-out_both]">
           <Card className="flex h-full flex-col justify-between border p-8 shadow-[0_4px_24px_rgba(25,36,78,0.04)]">
             <span className="mb-6 block text-sm font-medium text-text-secondary">Hóa đơn &amp; thuế</span>
             <div className="mb-6 space-y-4">
-              {data.missing_invoice_count > 0 && (
+              {(data.missing_invoice_count ?? 0) > 0 && (
                 <div className="flex items-start gap-3">
                   <TriangleAlert aria-hidden className="mt-0.5 shrink-0 text-primary" size={18} />
-                  <span className="text-sm text-ink">{data.missing_invoice_count} đơn thiếu hóa đơn</span>
+                  <span className="text-sm text-ink">{data.missing_invoice_count ?? 0} đơn thiếu hóa đơn</span>
                 </div>
               )}
-              {data.exception_count > 0 && (
+              {(data.exception_count ?? 0) > 0 && (
                 <div className="flex items-start gap-3">
                   <CircleAlert aria-hidden className="mt-0.5 shrink-0 text-primary" size={18} />
-                  <span className="text-sm text-ink">{data.exception_count} mục đang chờ xác nhận</span>
+                  <span className="text-sm text-ink">{data.exception_count ?? 0} mục đang chờ xác nhận</span>
                 </div>
               )}
-              {data.missing_invoice_count === 0 && data.exception_count === 0 && (
+              {(data.missing_invoice_count ?? 0) === 0 && (data.exception_count ?? 0) === 0 && (
                 <div className="flex items-start gap-3">
                   <CheckCircle2 aria-hidden className="mt-0.5 shrink-0 text-success" size={18} />
                   <span className="text-sm text-ink">Không có blocker nào</span>

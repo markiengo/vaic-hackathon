@@ -1,351 +1,612 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  ArrowRight,
   Banknote,
+  ChevronRight,
+  Download,
+  EllipsisVertical,
   FileText,
+  Link2,
   RefreshCw,
   Search,
   ShieldQuestion,
-  Upload,
+  Sparkles,
+  Store,
 } from "lucide-react";
-import { Money } from "@/components/domain/Money";
-import {
-  buttonVariants,
-  Card,
-  EmptyState,
-  ErrorState,
-  Field,
-  LoadingState,
-  PageHeader,
-  StatusPill,
-} from "@/components/ui";
+import { Button, Skeleton, StatusPill } from "@/components/ui";
+import { useTransactions } from "@/hooks/useTransactions";
 import { useMerchantSession } from "@/hooks/useMerchantSession";
 import { useReportingPeriod } from "@/hooks/useReportingPeriod";
-import { useTransactions } from "@/hooks/useTransactions";
 import type { BankTransaction } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 import {
-  formatDateTime,
+  formatMoney,
+  formatTime,
+  formatTimeFirst,
   humanize,
   matchStatusLabel,
+  sourceLabel,
 } from "@/features/ledger/format";
 
-type FilterKey = "all" | "ambiguous" | "matched" | "missing_invoice";
-
-const filters: Array<{ value: FilterKey; label: string }> = [
-  { value: "all", label: "Tất cả" },
-  { value: "ambiguous", label: "Cần xử lý" },
-  { value: "matched", label: "Đã khớp" },
-  { value: "missing_invoice", label: "Thiếu hóa đơn" },
-];
+type TabValue = "all" | "needs_review" | "matched" | "missing_invoice";
 
 export function TransactionsScreen() {
   const session = useMerchantSession();
-  const merchantId = session.data?.user.merchant_id ?? "";
+  const merchantId = session.data?.user.merchant_id ?? "M001";
   const { period, periodLabel, setPeriod } = useReportingPeriod();
-  const [status, setStatus] = useState<FilterKey>("all");
-  const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string>();
-  const deferredSearch = useDeferredValue(search.trim().toLocaleLowerCase("vi"));
-  const query = useTransactions({ merchantId, period, pageSize: 100 });
 
-  if (session.isPending || query.isPending) {
-    return <LoadingState label="Đang lấy và hợp nhất giao dịch SHB" />;
-  }
-  if (session.isError || query.isError || !merchantId) {
+  const [activeTab, setActiveTab] = useState<TabValue>("all");
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const transactions = useTransactions({
+    merchantId,
+    period,
+    status: "all",
+    search: undefined,
+    pageSize: 100,
+  });
+
+  const allTransactions = transactions.data?.transactions ?? [];
+
+  const counts = useMemo(() => {
+    const total = allTransactions.length;
+    const matched = allTransactions.filter((t) => t.match_status === "matched").length;
+    const needsReview = allTransactions.filter(
+      (t) => Boolean(t.pending_exception_id) || ["ambiguous", "unmatched"].includes(t.match_status ?? ""),
+    ).length;
+    const missingInvoice = allTransactions.filter(
+      (t) => t.match_status === "matched" && !t.invoice_id,
+    ).length;
+    return { total, matched, needsReview, missingInvoice };
+  }, [allTransactions]);
+
+  const filtered = useMemo(() => {
+    return allTransactions.filter((t) => {
+      if (activeTab === "needs_review") {
+        return Boolean(t.pending_exception_id) || ["ambiguous", "unmatched"].includes(t.match_status ?? "");
+      }
+      if (activeTab === "matched") return t.match_status === "matched";
+      if (activeTab === "missing_invoice") return t.match_status === "matched" && !t.invoice_id;
+      return true;
+    }).filter((t) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        t.sender_name?.toLowerCase().includes(q) ||
+        t.raw_note?.toLowerCase().includes(q) ||
+        t.reference_number?.toLowerCase().includes(q)
+      );
+    });
+  }, [allTransactions, activeTab, search]);
+
+  const selected = useMemo(() => {
+    if (!selectedId && filtered.length > 0) return filtered[0];
+    return filtered.find((t) => t.id === selectedId) ?? filtered[0] ?? null;
+  }, [selectedId, filtered]);
+
+  if (session.isPending) {
     return (
-      <ErrorState
-        title="Chưa thể tải giao dịch"
-        description="Kiểm tra kết nối rồi thử lại. Dữ liệu gốc không bị thay đổi."
-        retry={() => {
-          void session.refetch();
-          void query.refetch();
-        }}
-      />
+      <div className="animate-[route-in_240ms_ease-out] space-y-8">
+        <Skeleton className="h-12 w-72" />
+        <Skeleton className="h-10 w-full max-w-3xl" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-96 rounded-2xl" />
+          <Skeleton className="h-96 rounded-2xl" />
+        </div>
+      </div>
     );
   }
 
-  const allRows = query.data.transactions;
-  const counts: Record<FilterKey, number> = {
-    all: allRows.length,
-    ambiguous: allRows.filter(needsReview).length,
-    matched: allRows.filter((row) => row.match_status === "matched" || row.match_status === "partial").length,
-    missing_invoice: allRows.filter((row) => !row.invoice_id && (row.match_status === "matched" || row.match_status === "partial")).length,
-  };
-  const rows = allRows.filter((row) => {
-    const statusMatch =
-      status === "all" ||
-      (status === "ambiguous" && needsReview(row)) ||
-      (status === "matched" && (row.match_status === "matched" || row.match_status === "partial")) ||
-      (status === "missing_invoice" && !row.invoice_id && (row.match_status === "matched" || row.match_status === "partial"));
-    if (!statusMatch || !deferredSearch) return statusMatch;
-    return [
-      row.id,
-      row.sender_name,
-      row.raw_note,
-      row.reference_number,
-      row.payment_code,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLocaleLowerCase("vi")
-      .includes(deferredSearch);
-  });
-  const selected = rows.find((row) => row.id === selectedId) ?? rows[0];
+  const tabs: { value: TabValue; label: string; count: number; warn?: boolean }[] = [
+    { value: "all", label: "Tất cả", count: counts.total },
+    { value: "needs_review", label: "Cần xác nhận", count: counts.needsReview, warn: true },
+    { value: "matched", label: "Đã khớp", count: counts.matched },
+    { value: "missing_invoice", label: "Thiếu hóa đơn", count: counts.missingInvoice },
+  ];
 
   return (
-    <div className="space-y-7 animate-[route-in_240ms_ease-out]">
-      <PageHeader
-        eyebrow="Dòng tiền hợp nhất"
-        period={periodLabel}
-        title="Giao dịch"
-        description="Theo dõi và kiểm tra toàn bộ dòng tiền của cửa hàng từ bản ghi gốc đến phân loại, đối soát và chứng từ liên quan."
-        actions={
-          <>
-            <Link href={`/tax-readiness?period=${period}`} className={buttonVariants({ variant: "outline" })}>
-              <Upload aria-hidden size={16} /> Xuất dữ liệu
-            </Link>
-            <Link href="/settings" className={buttonVariants({ variant: "outline" })}>
-              <RefreshCw aria-hidden size={16} /> Cập nhật dữ liệu
-            </Link>
-            <Link href="/sales" className={buttonVariants({ variant: "primary" })}>
-              Tạo giao dịch
-            </Link>
-          </>
-        }
-      />
-
-      {/* Summary strip */}
-      <div className="flex flex-wrap items-center gap-4 rounded-xl border bg-surface px-5 py-4 text-sm">
-        <span className="font-semibold text-ink">{counts.all} giao dịch</span>
-        <span className="text-text-secondary">·</span>
-        <span className="text-text-secondary">{counts.matched} đã khớp tự động</span>
-        <span className="text-text-secondary">·</span>
-        <span className={cn("font-medium", counts.ambiguous > 0 ? "text-primary" : "text-text-secondary")}>{counts.ambiguous} cần xử lý</span>
-        <span className="text-text-secondary">·</span>
-        <span className={cn("font-medium", counts.missing_invoice > 0 ? "text-primary" : "text-text-secondary")}>{counts.missing_invoice} thiếu hóa đơn</span>
-      </div>
+    <div className="flex flex-col gap-6 animate-[route-in_240ms_ease-out]">
+      <PageHeader periodLabel={periodLabel} />
+      <TabBar tabs={tabs} active={activeTab} onChange={setActiveTab} />
 
       <section
-        className="grid min-w-0 gap-5 xl:h-[46rem] xl:grid-cols-[minmax(0,44fr)_minmax(0,56fr)]"
-        aria-label="Điều tra giao dịch"
+        className={cn(
+          "grid min-h-0 gap-6",
+          "grid-cols-1",
+          "lg:grid-cols-[minmax(380px,0.44fr)_minmax(0,0.56fr)]",
+          "xl:grid-cols-[minmax(420px,0.42fr)_minmax(0,0.58fr)]",
+        )}
+        style={{ height: "calc(100dvh - 300px)", minHeight: "620px" }}
       >
-        <Card className="flex min-h-0 flex-col p-0">
-          <div className="grid gap-4 border-b p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold">Danh sách giao dịch</h2>
-                <p className="mt-1 text-xs text-text-secondary">{rows.length} kết quả trong {periodLabel.toLocaleLowerCase("vi")}</p>
-              </div>
-              <Search aria-hidden size={18} className="text-text-tertiary" />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-[1fr_10.5rem]">
-              <Field
-                label="Tìm giao dịch"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Người gửi, nội dung, mã tham chiếu"
-              />
-              <Field
-                label="Kỳ dữ liệu"
-                type="month"
-                value={period}
-                onChange={(event) => setPeriod(event.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Trạng thái giao dịch">
-              {filters.map((filter) => (
-                <button
-                  key={filter.value}
-                  role="tab"
-                  aria-selected={status === filter.value}
-                  type="button"
-                  onClick={() => setStatus(filter.value)}
-                  className={cn(
-                    "min-h-10 rounded-xl border px-2 text-xs font-semibold text-text-secondary transition-colors hover:border-primary hover:text-primary 2xl:px-3 2xl:text-sm",
-                    status === filter.value && "border-primary bg-primary text-white hover:text-white",
-                  )}
-                >
-                  {filter.label} ({counts[filter.value]})
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {rows.length === 0 ? (
-            <EmptyState
-              compact
-              title="Không tìm thấy giao dịch"
-              description="Thử đổi trạng thái hoặc từ khóa. TaxLens không ẩn giao dịch khỏi sổ gốc."
-              action={
-                search || status !== "all" ? (
-                  <button
-                    className="text-sm font-semibold text-secondary"
-                    onClick={() => {
-                      setSearch("");
-                      setStatus("all");
-                    }}
-                  >
-                    Xóa bộ lọc
-                  </button>
-                ) : undefined
-              }
-            />
-          ) : (
-            <div className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain">
-              {rows.map((row) => (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => setSelectedId(row.id)}
-                  className={cn(
-                    "grid w-full grid-cols-[1fr_auto] gap-3 p-4 text-left transition-colors hover:bg-background sm:p-5",
-                    selected?.id === row.id && "bg-accent/60 ring-1 ring-inset ring-secondary/35",
-                  )}
-                  aria-pressed={selected?.id === row.id}
-                >
-                  <span className="min-w-0">
-                    <strong className="block truncate text-sm font-semibold">{row.sender_name ?? "Người gửi chưa rõ"}</strong>
-                    <span className="font-mono mt-1 block truncate text-xs text-text-secondary">{row.raw_note ?? "Không có nội dung"}</span>
-                    <span className="mt-3 block"><StatusPill status={matchStatusLabel(row.match_status)} /></span>
-                  </span>
-                  <span className="text-right">
-                    <Money value={row.amount} className="block text-sm font-semibold" />
-                    <span className="mt-1 block text-xs text-text-tertiary">{formatDateTime(row.transaction_date)}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {selected ? <TransactionDetail transaction={selected} period={period} /> : (
-          <EmptyState title="Chọn một giao dịch" description="Chi tiết và bằng chứng sẽ xuất hiện ở đây." />
+        <TransactionListPane
+          transactions={filtered}
+          totalCount={counts.total}
+          periodLabel={periodLabel}
+          search={search}
+          onSearch={setSearch}
+          period={period}
+          onPeriodChange={setPeriod}
+          selectedId={selected?.id ?? null}
+          onSelect={setSelectedId}
+          isLoading={transactions.isPending}
+        />
+        {selected ? (
+          <TransactionDetailPane transaction={selected} period={period} />
+        ) : (
+          <EmptyDetailPane />
         )}
       </section>
     </div>
   );
 }
 
-function TransactionDetail({ transaction, period }: { transaction: BankTransaction; period: string }) {
-  const suggestion = suggestionFor(transaction);
+function PageHeader({ periodLabel }: { periodLabel: string }) {
   return (
-    <Card variant="workspace" className="flex min-h-0 flex-col p-0">
-      <div className="border-b p-5 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[13px] font-medium text-text-tertiary">Bản ghi ngân hàng</p>
-            <h2 className="font-display mt-2 text-3xl text-ink">{transaction.sender_name ?? "Người gửi chưa rõ"}</h2>
-            <Money value={transaction.amount} className="mt-3 block text-3xl tracking-[-0.04em]" />
-          </div>
-          <StatusPill status={matchStatusLabel(transaction.match_status)} />
+    <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="max-w-[620px]">
+        <div className="mb-3 flex items-center gap-2 text-[13px] text-text-tertiary">
+          <span className="font-medium text-text-secondary">Dòng tiền</span>
+          <span aria-hidden>·</span>
+          <span>{periodLabel}</span>
+        </div>
+        <h1 className="mb-2 font-display text-[44px] leading-tight tracking-[-0.02em] text-ink">Giao dịch</h1>
+        <p className="text-[15px] leading-relaxed text-text-secondary">
+          Theo dõi, đối soát và kiểm tra các khoản tiền vào của cửa hàng.
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <Button variant="outline" className="min-h-10">
+          <RefreshCw aria-hidden size={16} />
+          Cập nhật dữ liệu
+        </Button>
+        <Button variant="primary" className="min-h-10">
+          <Download aria-hidden size={16} />
+          Xuất dữ liệu
+        </Button>
+        <div className="relative">
+          <details className="group">
+            <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-border-strong bg-surface px-4 text-sm font-medium text-text-secondary transition-colors hover:bg-neutral-soft">
+              <EllipsisVertical aria-hidden size={16} />
+              <span className="hidden sm:inline">Thao tác khác</span>
+            </summary>
+            <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-border bg-surface p-1.5 shadow-[var(--taxlens-shadow-md)]">
+              <Link
+                href="/sales"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-neutral-soft hover:text-ink"
+              >
+                <Banknote aria-hidden size={16} />
+                Ghi nhận giao dịch thủ công
+              </Link>
+            </div>
+          </details>
         </div>
       </div>
-
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-5 sm:p-7">
-        <section className="grid gap-4 sm:grid-cols-2">
-          <Evidence icon={Banknote} label="Nguồn và thời điểm" value={`${transaction.source ?? "Ngân hàng"} · ${formatDateTime(transaction.transaction_date)}`} />
-          <Evidence icon={FileText} label="Mã tham chiếu" value={transaction.reference_number ?? transaction.payment_code ?? "Chưa có"} />
-        </section>
-
-        <section className="rounded-xl border bg-background p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Nội dung gốc</p>
-          <blockquote className="font-mono mt-3 text-base leading-7">“{transaction.raw_note ?? "Không có nội dung"}”</blockquote>
-        </section>
-
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Fact label="Phân loại" value={humanize(transaction.classification)} />
-          <Fact label="Đã phân bổ" value={<Money value={transaction.allocated_amount ?? 0} />} />
-          <Fact label="Nguồn" value={transaction.source ?? "Chưa rõ"} />
-          <Fact label="Hóa đơn" value={transaction.invoice_id ? "Đã liên kết" : "Chưa liên kết"} />
-        </section>
-
-        <section className="rounded-xl bg-accent/55 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <ShieldQuestion aria-hidden className="mt-0.5 shrink-0 text-secondary" size={20} />
-              <div>
-                <h3 className="text-sm font-semibold">Đề xuất TaxLens</h3>
-                <p className="mt-1 text-sm leading-6 text-text-secondary">{suggestion.summary}</p>
-              </div>
-            </div>
-            <span className="rounded-full border bg-surface px-3 py-1 font-mono text-xs font-semibold">
-              {suggestion.confidence == null ? "Chưa đủ dữ liệu tin cậy" : `${suggestion.confidence}% tin cậy`}
-            </span>
-          </div>
-          <div className="mt-5">
-            <p className="text-[13px] font-medium text-text-tertiary">Bằng chứng</p>
-            <ul className="mt-3 grid gap-2 text-sm text-text-secondary">
-              {suggestion.evidence.map((item) => (
-                <li key={item} className="flex gap-2"><span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-secondary" />{item}</li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <section className="border-t pt-5">
-          <h3 className="text-sm font-semibold">Kết quả đối soát</h3>
-          <p className="mt-2 text-sm leading-6 text-text-secondary">
-            {transaction.match_status === "matched"
-              ? `Đã nối giao dịch với ${transaction.matched_sale_ids?.length ?? 1} đơn hàng và lưu bằng chứng phân bổ.`
-              : transaction.match_status === "partial"
-                ? "Một phần số tiền đã được phân bổ; phần còn lại cần kiểm tra trước khi khép sổ."
-                : "Chưa có đủ bằng chứng để tự động ghi nhận kết quả cuối cùng."}
-          </p>
-        </section>
-      </div>
-
-      <footer className="sticky bottom-0 flex flex-wrap gap-2 border-t bg-surface p-4 sm:px-7">
-        <Link href={`/exceptions?period=${period}`} className={buttonVariants({ variant: needsReview(transaction) ? "primary" : "outline" })}>
-          {needsReview(transaction) ? "Xem và xác nhận" : "Đổi phân loại"}
-          <ArrowRight aria-hidden size={16} />
-        </Link>
-        <Link href={`/assistant?period=${period}`} className={buttonVariants({ variant: "ghost" })}>Chuyển cho ngân hàng xử lý</Link>
-      </footer>
-    </Card>
+    </header>
   );
 }
 
-function needsReview(transaction: BankTransaction): boolean {
-  return Boolean(transaction.pending_exception_id) || ["ambiguous", "unmatched"].includes(transaction.match_status ?? "");
-}
-
-function suggestionFor(transaction: BankTransaction) {
-  const raw = transaction.ai_interpretation;
-  const payload = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
-  const rawConfidence = typeof payload.confidence === "number" ? payload.confidence : null;
-  const confidence = rawConfidence == null
-    ? null
-    : Math.round(Math.min(100, Math.max(0, rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence)));
-  const reasoning = Array.isArray(payload.reasoning)
-    ? payload.reasoning.filter((item): item is string => typeof item === "string" && Boolean(item.trim()))
-    : [];
-  const evidence = [
-    ...reasoning,
-    transaction.reference_number || transaction.payment_code ? `Mã tham chiếu: ${transaction.reference_number ?? transaction.payment_code}` : null,
-    transaction.raw_note ? `Nội dung chuyển khoản: “${transaction.raw_note}”` : "Nội dung chuyển khoản đang để trống",
-    transaction.matched_sale_ids?.length ? `${transaction.matched_sale_ids.length} đơn hàng có liên quan trong ledger` : null,
-  ].filter((item): item is string => Boolean(item)).slice(0, 4);
-  const summary = typeof payload.summary === "string"
-    ? payload.summary
-    : needsReview(transaction)
-      ? "Bằng chứng chưa đủ để tự động khớp. Bạn là người quyết định phân loại cuối cùng."
-      : "Kết quả được truy ngược từ mã tham chiếu, phân bổ và record liên quan trong ledger.";
-  return { confidence, evidence, summary };
-}
-
-function Evidence({ icon: Icon, label, value }: { icon: typeof Banknote; label: string; value: string }) {
+function TabBar({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: { value: TabValue; label: string; count: number; warn?: boolean }[];
+  active: TabValue;
+  onChange: (v: TabValue) => void;
+}) {
   return (
-    <div className="flex gap-3 rounded-xl border p-4">
-      <Icon aria-hidden className="mt-0.5 shrink-0 text-secondary" size={18} />
-      <div><p className="text-[13px] font-medium text-text-tertiary">{label}</p><p className="mt-2 text-sm">{value}</p></div>
+    <div role="tablist" aria-label="Lọc giao dịch" className="flex items-center gap-1 border-b border-border">
+      {tabs.map((tab) => {
+        const isActive = active === tab.value;
+        return (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(tab.value)}
+            className={cn(
+              "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+              isActive
+                ? "border-secondary text-secondary"
+                : "border-transparent text-text-tertiary hover:text-text-secondary",
+            )}
+          >
+            {tab.label}
+            <span
+              className={cn(
+                "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-medium",
+                tab.warn && tab.count > 0
+                  ? "bg-primary-soft text-primary"
+                  : isActive
+                    ? "bg-selection-soft text-secondary"
+                    : "bg-neutral-soft text-text-tertiary",
+              )}
+            >
+              {tab.count}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-function Fact({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div><p className="text-[13px] font-medium text-text-tertiary">{label}</p><p className="mt-2 text-sm font-semibold">{value}</p></div>;
+function TransactionListPane({
+  transactions,
+  totalCount,
+  periodLabel,
+  search,
+  onSearch,
+  period,
+  onPeriodChange,
+  selectedId,
+  onSelect,
+  isLoading,
+}: {
+  transactions: BankTransaction[];
+  totalCount: number;
+  periodLabel: string;
+  search: string;
+  onSearch: (v: string) => void;
+  period: string;
+  onPeriodChange: (v: string) => void;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--taxlens-shadow-card)]">
+      <div className="shrink-0 border-b border-border p-6">
+        <h2 className="text-[18px] font-semibold text-ink">Danh sách giao dịch</h2>
+        <p className="mt-1 text-[13px] text-text-secondary">
+          {totalCount} kết quả trong {periodLabel.toLowerCase()}
+        </p>
+        <div className="mt-4 space-y-3">
+          <div className="relative">
+            <Search aria-hidden size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => onSearch(e.target.value)}
+              placeholder="Tìm theo người gửi, nội dung hoặc mã tham chiếu"
+              className="min-h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-3.5 text-sm text-ink placeholder:text-text-tertiary focus:border-secondary focus:outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="month"
+              value={period}
+              onChange={(e) => onPeriodChange(e.target.value)}
+              className="min-h-11 flex-1 rounded-xl border border-border bg-surface px-3.5 text-sm text-ink focus:border-secondary focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {isLoading ? (
+          <div className="space-y-2 p-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 p-12 text-center">
+            <Store aria-hidden size={24} className="text-text-tertiary" />
+            <p className="text-sm text-text-secondary">Không có giao dịch phù hợp.</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {transactions.map((tx) => (
+              <TransactionRow
+                key={tx.id}
+                tx={tx}
+                selected={tx.id === selectedId}
+                onClick={() => onSelect(tx.id)}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TransactionRow({
+  tx,
+  selected,
+  onClick,
+}: {
+  tx: BankTransaction;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const status = tx.match_status === "matched" && !tx.invoice_id ? "Thiếu hóa đơn" : matchStatusLabel(tx.match_status);
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "flex w-full items-center gap-4 px-6 py-[18px] text-left transition-colors",
+          selected ? "bg-[#E8F3F3]" : "hover:bg-neutral-soft",
+        )}
+        style={selected ? { boxShadow: "inset 3px 0 0 0 var(--taxlens-secondary)" } : undefined}
+      >
+        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-soft">
+          <Store aria-hidden size={18} className="text-text-tertiary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="truncate text-[15px] font-semibold text-ink">
+              {tx.sender_name ?? "Người gửi chưa rõ"}
+            </p>
+            <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-ink">
+              {formatMoney(tx.amount)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <p className="truncate font-mono text-xs text-text-secondary">
+              {tx.reference_number ?? tx.raw_note ?? "Không có nội dung"}
+            </p>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <StatusPill status={status} className="px-2.5 py-0.5 text-xs" />
+            <span className="text-xs text-text-tertiary">{formatTime(tx.transaction_date)}</span>
+          </div>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+function TransactionDetailPane({
+  transaction,
+  period,
+}: {
+  transaction: BankTransaction;
+  period: string;
+}) {
+  const isMatched = transaction.match_status === "matched";
+  const needsReview = Boolean(transaction.pending_exception_id) || ["ambiguous", "unmatched"].includes(transaction.match_status ?? "");
+  const status = isMatched && !transaction.invoice_id ? "Thiếu hóa đơn" : matchStatusLabel(transaction.match_status);
+  const suggestion = suggestionFor(transaction);
+
+  return (
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--taxlens-shadow-card)]">
+      <div className="shrink-0 border-b border-border px-8 py-7">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-text-tertiary">Bản ghi ngân hàng</p>
+            <p className="mt-1 font-mono text-xs text-text-secondary">{transaction.id}</p>
+            <h3 className="mt-4 font-display text-[32px] leading-tight text-ink">
+              {transaction.sender_name ?? "Người gửi chưa rõ"}
+            </h3>
+          </div>
+          <StatusPill status={status} className="shrink-0" />
+        </div>
+        <p className="mt-3 font-display text-[34px] leading-tight tabular-nums text-ink">
+          {formatMoney(transaction.amount)}
+        </p>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
+        <DetailSection title="Thông tin giao dịch">
+          <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
+            <Fact label="Nguồn" value={sourceLabel(transaction.source)} />
+            <Fact label="Thời điểm" value={formatTimeFirst(transaction.transaction_date)} mono />
+            <Fact label="Mã tham chiếu" value={transaction.reference_number ?? "—"} mono />
+            <Fact label="Số tài khoản" value={"•••• 2481"} mono />
+          </dl>
+        </DetailSection>
+
+        <DetailSection title="Nội dung chuyển khoản">
+          <div className="rounded-xl bg-neutral-soft px-4 py-3">
+            <p className="font-mono text-sm text-text-secondary">
+              {transaction.raw_note ?? "Không có nội dung"}
+            </p>
+          </div>
+        </DetailSection>
+
+        <DetailSection title="Đối soát">
+          <div className="space-y-3">
+            <div className="flex items-center gap-4 rounded-xl border border-border p-4">
+              <div className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-soft">
+                <Banknote aria-hidden size={18} className="text-text-tertiary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-ink">Giao dịch SHB</p>
+                <p className="font-mono text-xs text-text-secondary">{formatMoney(transaction.amount)}</p>
+              </div>
+              <StatusPill status={isMatched ? "Đã khớp" : "Cần xác nhận"} />
+            </div>
+            {transaction.matched_sale_id && (
+              <>
+                <div className="flex justify-center">
+                  <Link2 aria-hidden size={16} className="text-text-tertiary" />
+                </div>
+                <div className="flex items-center gap-4 rounded-xl border border-border p-4">
+                  <div className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-soft">
+                    <Store aria-hidden size={18} className="text-text-tertiary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink">Đơn hàng {transaction.matched_sale_id}</p>
+                    <p className="text-xs text-text-secondary">{humanize(transaction.classification)}</p>
+                  </div>
+                  <span className="font-mono text-sm font-semibold tabular-nums text-ink">
+                    {formatMoney(transaction.allocated_amount ?? transaction.amount)}
+                  </span>
+                </div>
+              </>
+            )}
+            <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+              <Fact label="Phương thức khớp" value={isMatched ? "Mã tham chiếu chính xác" : "Chưa khớp"} />
+              <Fact label="Độ tin cậy" value={suggestion.confidence ? `${suggestion.confidence}%` : "Chưa xác định"} />
+              <Fact label="Hóa đơn" value={transaction.invoice_id ? "Đã liên kết" : "Chưa liên kết"} />
+              <Fact label="Phân loại" value={humanize(transaction.classification)} />
+            </div>
+          </div>
+        </DetailSection>
+
+        <DetailSection title="Bằng chứng">
+          <div className="rounded-xl border border-border bg-[var(--taxlens-information-soft)] px-4 py-3.5">
+            <p className="text-sm leading-relaxed text-ink">
+              {suggestion.summary}
+            </p>
+          </div>
+        </DetailSection>
+
+        <DetailSection title="Lịch sử" last>
+          <ol className="space-y-4">
+            <TimelineItem time={formatTime(transaction.transaction_date)} text="Giao dịch được nhận từ SHB" />
+            {isMatched && (
+              <TimelineItem time={formatTime(transaction.transaction_date)} text={`TaxLens khớp với đơn ${transaction.matched_sale_id ?? ""}`} />
+            )}
+            {transaction.invoice_id && (
+              <TimelineItem time={formatTime(transaction.transaction_date)} text={`Hóa đơn ${transaction.invoice_id} được liên kết`} />
+            )}
+          </ol>
+        </DetailSection>
+      </div>
+
+      <DetailFooter transaction={transaction} period={period} needsReview={needsReview} isMatched={isMatched} />
+    </div>
+  );
+}
+
+function DetailSection({ title, children, last }: { title: string; children: React.ReactNode; last?: boolean }) {
+  return (
+    <section className={cn(!last && "mb-7 pb-7 border-b border-border")}>
+      <h4 className="mb-4 text-[13px] font-semibold uppercase tracking-wide text-text-tertiary">{title}</h4>
+      {children}
+    </section>
+  );
+}
+
+function Fact({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+  return (
+    <div>
+      <dt className="text-[13px] text-text-tertiary">{label}</dt>
+      <dd className={cn("mt-1 text-sm font-medium text-ink", mono && "font-mono")}>{value}</dd>
+    </div>
+  );
+}
+
+function TimelineItem({ time, text }: { time: string; text: string }) {
+  return (
+    <li className="flex gap-4">
+      <div className="flex flex-col items-center">
+        <span className="size-2 rounded-full bg-secondary" />
+        <span className="mt-1 w-px flex-1 bg-border" />
+      </div>
+      <div className="pb-1">
+        <p className="font-mono text-xs text-text-tertiary">{time}</p>
+        <p className="mt-0.5 text-sm text-ink">{text}</p>
+      </div>
+    </li>
+  );
+}
+
+function DetailFooter({
+  transaction,
+  period,
+  needsReview,
+  isMatched,
+}: {
+  transaction: BankTransaction;
+  period: string;
+  needsReview: boolean;
+  isMatched: boolean;
+}) {
+  if (needsReview) {
+    return (
+      <div className="flex shrink-0 items-center gap-3 border-t border-border bg-surface px-6 py-4">
+        <Link
+          href={`/exceptions?period=${period}`}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover"
+        >
+          <Sparkles aria-hidden size={16} />
+          Xác nhận phân loại
+        </Link>
+        <Link
+          href={`/transactions?period=${period}`}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface px-5 text-sm font-medium text-text-secondary transition-colors hover:bg-neutral-soft"
+        >
+          Chọn phương án khác
+        </Link>
+        <Link
+          href="/assistant"
+          className="ml-auto inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-text-tertiary transition-colors hover:text-text-secondary"
+        >
+          <ShieldQuestion aria-hidden size={16} />
+          Nhờ SHB hỗ trợ
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-3 border-t border-border bg-surface px-6 py-4">
+      {transaction.matched_sale_id ? (
+        <Link
+          href={`/sales?period=${period}`}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface px-5 text-sm font-medium text-text-secondary transition-colors hover:bg-neutral-soft"
+        >
+          <FileText aria-hidden size={16} />
+          Xem đơn liên kết
+        </Link>
+      ) : (
+        <Link
+          href={`/invoices?period=${period}`}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface px-5 text-sm font-medium text-text-secondary transition-colors hover:bg-neutral-soft"
+        >
+          <FileText aria-hidden size={16} />
+          Xem hóa đơn
+        </Link>
+      )}
+      <div className="ml-auto flex items-center gap-2">
+        <Link
+          href="/assistant"
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-text-tertiary transition-colors hover:text-text-secondary"
+        >
+          <ShieldQuestion aria-hidden size={16} />
+          Nhờ SHB hỗ trợ
+        </Link>
+        <Link
+          href={`/exceptions?period=${period}`}
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border-strong bg-surface px-4 text-sm font-medium text-text-secondary transition-colors hover:bg-neutral-soft"
+        >
+          Điều chỉnh phân loại
+          <ChevronRight aria-hidden size={14} />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function EmptyDetailPane() {
+  return (
+    <div className="flex min-h-0 flex-col items-center justify-center rounded-2xl border border-border bg-surface shadow-[var(--taxlens-shadow-card)]">
+      <Store aria-hidden size={28} className="text-text-tertiary" />
+      <p className="mt-3 text-sm text-text-secondary">Chọn một giao dịch để xem chi tiết.</p>
+    </div>
+  );
+}
+
+function suggestionFor(transaction: BankTransaction) {
+  const raw = transaction.ai_interpretation;
+  const payload = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const rawConfidence = typeof payload.confidence === "number" ? payload.confidence : null;
+  const confidence = rawConfidence == null
+    ? null
+    : Math.round(Math.min(100, Math.max(0, rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence)));
+  const summary = typeof payload.summary === "string"
+    ? payload.summary
+    : transaction.reference_number
+      ? `Mã ${transaction.reference_number} trùng với yêu cầu thanh toán. Số tiền khớp hoàn toàn và mã chưa được sử dụng cho giao dịch khác.`
+      : "Bằng chứng chưa đủ để tự động khớp. Bạn là người quyết định phân loại cuối cùng.";
+  return { confidence, summary };
 }

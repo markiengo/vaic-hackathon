@@ -57,6 +57,10 @@ export interface TaxReadinessReport {
   blockers: ReadinessCheck[];
   export_allowed: boolean;
   ready: boolean;
+  passed_count?: number;
+  total_count?: number;
+  blocking_count?: number;
+  missing_invoice_sales?: string[];
 }
 
 export interface DashboardSummary {
@@ -86,14 +90,20 @@ export interface ReconciliationException {
   case_id?: string;
   bank_transaction_id?: string | null;
   sale_id?: string | null;
-  amount: MoneyValue;
+  amount: MoneyValue | null;
   sender_name: string | null;
   raw_note: string | null;
+  transaction_date?: IsoDateTime | null;
+  source?: string | null;
+  reference_number?: string | null;
   ai_suggestion: {
     suggested_type?: string | null;
     confidence?: number | null;
     reasoning?: string[] | null;
     reason?: string | null;
+    evidence?: string[] | null;
+    uncertainties?: string[] | null;
+    candidates?: unknown[] | null;
   } | null;
   status: ResolutionStatus | string;
   human_decision?: string | null;

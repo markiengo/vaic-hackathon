@@ -12,8 +12,10 @@ import {
   Laptop,
   Moon,
   RefreshCw,
+  RotateCcw,
   ShieldCheck,
   Sun,
+  TriangleAlert,
   UploadCloud,
 } from "lucide-react";
 import { Money } from "@/components/domain/Money";
@@ -41,6 +43,7 @@ import {
   type IntegrationSyncStatus,
   type LedgerImportResult,
 } from "@/lib/api/settings";
+import { resetDemo } from "@/lib/api/agentops";
 import { cn } from "@/lib/utils";
 
 const currentPeriod = new Intl.DateTimeFormat("en-CA", {
@@ -127,6 +130,8 @@ export function SettingsWorkspace() {
   const [dragging, setDragging] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<LedgerImportResult | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   const merchantQuery = useQuery({
     queryKey: settingsQueryKeys.merchant(merchantId ?? "none"),
@@ -358,6 +363,61 @@ export function SettingsWorkspace() {
         </div>
 
         {importResult ? <div className="mt-7 border-t pt-7"><ImportResult result={importResult} /></div> : null}
+      </Card>
+
+      <Card variant="workspace" aria-labelledby="demo-reset-title">
+        <div className="flex items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-warning/10 text-warning"><RotateCcw aria-hidden size={21} /></span>
+          <div className="flex-1">
+            <p className="text-[13px] font-medium text-text-tertiary">Chế độ demo</p>
+            <h2 id="demo-reset-title" className="font-display mt-1 text-3xl text-ink">Đặt lại dữ liệu demo</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">Xóa toàn bộ dữ liệu hiện tại và khôi phục về bộ dữ liệu demo ban đầu. Hữu ích khi cần trình diễn từ đầu.</p>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-xl border border-warning/25 bg-warning/5 p-4">
+          <div className="flex items-start gap-2">
+            <TriangleAlert aria-hidden className="mt-0.5 shrink-0 text-warning" size={16} />
+            <p className="text-sm leading-6 text-text-secondary">
+              Tất cả giao dịch, đơn hàng, hóa đơn, cases và agent runs sẽ bị xóa. Hành động này không thể hoàn tác.
+            </p>
+          </div>
+        </div>
+
+        {resetConfirmOpen ? (
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-ink">Bạn chắc chắn?</span>
+            <Button
+              variant="danger"
+              disabled={resetBusy}
+              onClick={async () => {
+                setResetBusy(true);
+                try {
+                  const result = await resetDemo();
+                  toast({
+                    title: "Đã đặt lại dữ liệu demo",
+                    description: `Đã khôi phục ${result.summary?.merchants ?? 0} merchant, ${result.summary?.sales ?? 0} đơn hàng.`,
+                    tone: "success",
+                  });
+                  queryClient.invalidateQueries();
+                  setResetConfirmOpen(false);
+                } catch (error) {
+                  toast({ title: "Không thể đặt lại", description: errorMessage(error), tone: "danger" });
+                } finally {
+                  setResetBusy(false);
+                }
+              }}
+            >
+              {resetBusy ? "Đang đặt lại..." : "Xác nhận đặt lại"}
+            </Button>
+            <Button variant="outline" onClick={() => setResetConfirmOpen(false)}>Hủy</Button>
+          </div>
+        ) : (
+          <Button variant="outline" className="mt-5" onClick={() => setResetConfirmOpen(true)}>
+            <RotateCcw aria-hidden size={17} />
+            Đặt lại dữ liệu demo
+          </Button>
+        )}
       </Card>
     </div>
   );

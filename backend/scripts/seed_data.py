@@ -51,6 +51,7 @@ from app.models.agent import AgentRun, AuditEvent, ToolCall
 from app.models.cash import CashSession
 from app.models.invoice import Invoice
 from app.models.merchant import Device, Merchant, Store
+from app.models.notification import Notification
 from app.models.payment import PaymentAllocation, PaymentIntent
 from app.models.product import Product
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
@@ -75,6 +76,7 @@ async def reset_all(db) -> None:
     """Delete all TaxLens rows in FK-safe (child-first) order."""
 
     for model in (
+        Notification,
         AuditEvent,
         ToolCall,
         AgentRun,
@@ -625,6 +627,8 @@ async def _counts(db) -> dict[str, int]:
         "invoices": await count(Invoice),
         "payment_intents": await count(PaymentIntent),
         "tax_rule_versions": await count(TaxRuleVersion),
+        "cases": await count(ReconciliationCase),
+        "exceptions": await count(ExceptionRecord),
     }
 
 
@@ -632,6 +636,96 @@ def print_summary(counts: dict[str, int]) -> None:
     print("Seed summary:")
     for label, value in counts.items():
         print(f"  {label:<18} = {value}")
+
+
+async def seed_portfolio_merchants(db) -> None:
+    """Create additional portfolio merchants with cases for SHB ops view.
+
+    These merchants have minimal data (profile + a case with exceptions)
+    so the SHB operations dashboard shows a realistic portfolio.
+    """
+    portfolio_merchants = [
+        {"id": "M002", "name": "Cafe Mỹ Tho", "business_type": "fnb", "business_category": "food_beverage", "tax_id": "8012345679", "status": "ACTIVE"},
+        {"id": "M003", "name": "Bakery Hương Mai", "business_type": "fnb", "business_category": "bakery", "tax_id": "8012345680", "status": "ACTIVE"},
+        {"id": "M004", "name": "Pharmacy Long Châu", "business_type": "retail", "business_category": "pharmacy", "tax_id": "8012345681", "status": "ACTIVE"},
+        {"id": "M005", "name": "Fashion Store LM", "business_type": "retail", "business_category": "fashion_retail", "tax_id": "8012345682", "status": "ACTIVE"},
+        {"id": "M006", "name": "Electronics Zone", "business_type": "retail", "business_category": "electronics", "tax_id": "8012345683", "status": "ACTIVE"},
+        {"id": "M007", "name": "Spa Thiên An", "business_type": "salon", "business_category": "beauty_services", "tax_id": "8012345684", "status": "ACTIVE"},
+        {"id": "M008", "name": "Bookstore Tri Thức", "business_type": "retail", "business_category": "books", "tax_id": "8012345685", "status": "INACTIVE"},
+        {"id": "M009", "name": "Gym Fitness Pro", "business_type": "service", "business_category": "fitness", "tax_id": "8012345686", "status": "ACTIVE"},
+    ]
+
+    for m in portfolio_merchants:
+        db.add(Merchant(
+            id=m["id"],
+            name=m["name"],
+            business_type=m["business_type"],
+            business_category=m["business_category"],
+            tax_id=m["tax_id"],
+            contact_phone="0901234567",
+            contact_email=f"contact@{m['id'].lower()}.vn",
+            status=m["status"],
+        ))
+    await db.flush()
+
+    # Create cases for some merchants
+    cases_data = [
+        {"id": "CASE-M002-2026-07", "merchant_id": "M002", "priority": "HIGH", "status": "OPEN",
+         "exceptions": [{"type": "unmatched_transaction", "suggestion": {"classification": "revenue", "confidence": 0.72, "reason": "Giao dịch 15M chưa khớp đơn hàng"}}]},
+        {"id": "CASE-M004-2026-07", "merchant_id": "M004", "priority": "MEDIUM", "status": "ASSIGNED",
+         "assigned_rm": "U003",
+         "exceptions": [{"type": "missing_invoice", "suggestion": {"classification": "needs_review", "confidence": 0.85, "reason": "3 đơn hàng thiếu hóa đơn"}}]},
+        {"id": "CASE-M005-2026-07", "merchant_id": "M005", "priority": "LOW", "status": "OPEN",
+         "exceptions": [{"type": "cash_discrepancy", "suggestion": {"classification": "internal_transfer", "confidence": 0.91, "reason": "Chênh lệch 200K VND trong ca sáng"}}]},
+        {"id": "CASE-M007-2026-07", "merchant_id": "M007", "priority": "MEDIUM", "status": "OPEN",
+         "exceptions": [
+             {"type": "unmatched_transaction", "suggestion": {"classification": "revenue", "confidence": 0.68, "reason": "Giao dịch 500K không có reference"}},
+             {"type": "missing_invoice", "suggestion": {"classification": "needs_review", "confidence": 0.80, "reason": "2 đơn thiếu hóa đơn"}},
+         ]},
+        {"id": "CASE-M009-2026-07", "merchant_id": "M009", "priority": "HIGH", "status": "ASSIGNED",
+         "assigned_rm": "U003",
+         "exceptions": [{"type": "invoice_issue", "suggestion": {"classification": "revenue", "confidence": 0.95, "reason": "Hóa đơn sai MST khách hàng"}}]},
+    ]
+
+    for case_data in cases_data:
+        case = ReconciliationCase(
+            id=case_data["id"],
+            merchant_id=case_data["merchant_id"],
+            period="2026-07",
+            status=case_data["status"],
+            priority=case_data["priority"],
+            assigned_rm_id=case_data.get("assigned_rm"),
+            tax_rule_version="2026.07",
+        )
+        db.add(case)
+        await db.flush()
+
+        for ex_data in case_data["exceptions"]:
+            db.add(ExceptionRecord(
+                case_id=case_data["id"],
+                exception_type=ex_data["type"],
+                ai_suggestion=ex_data["suggestion"],
+                status="PENDING",
+            ))
+
+    await db.flush()
+
+
+async def seed_notifications(db) -> None:
+    """Create demo notifications for merchant and ops users."""
+    notifs = [
+        # Merchant notifications (U005 = merchant user)
+        {"user_id": "U005", "merchant_id": "M001", "type": "exception", "title": "3 ngoại lệ cần xác nhận", "body": "Có 3 giao dịch chưa khớp trong kỳ 07/2026.", "link": "/exceptions?period=2026-07", "is_read": False},
+        {"user_id": "U005", "merchant_id": "M001", "type": "agent_run", "title": "Agent đã hoàn tất phân tích", "body": "Agent đối soát đã phân loại 20/23 giao dịch.", "link": "/assistant", "is_read": False},
+        {"user_id": "U005", "merchant_id": "M001", "type": "system", "title": "Chào mừng đến TaxLens", "body": "Tài khoản demo đã sẵn sàng. Kỳ đối soát tháng 7/2026 đang mở.", "link": "/dashboard", "is_read": True},
+        # Ops notifications (U002 = ops_staff user)
+        {"user_id": "U002", "merchant_id": None, "type": "case_update", "title": "Case mới từ Cafe Mỹ Tho", "body": "CASE-M002-2026-07: Giao dịch 15M chưa khớp đơn hàng.", "link": "/ops/cases", "is_read": False},
+        {"user_id": "U002", "merchant_id": None, "type": "case_update", "title": "Case ưu tiên cao từ Gym Fitness Pro", "body": "CASE-M009-2026-07: Hóa đơn sai MST khách hàng.", "link": "/ops/cases", "is_read": False},
+        {"user_id": "U002", "merchant_id": None, "type": "system", "title": "Portfolio cập nhật", "body": "9 merchants đang hoạt động, 5 cases đang mở.", "link": "/ops", "is_read": True},
+    ]
+    for n in notifs:
+        db.add(Notification(**n))
+    await db.flush()
 
 
 async def seed(reset: bool = True) -> dict[str, int]:
@@ -656,6 +750,8 @@ async def seed(reset: bool = True) -> dict[str, int]:
         await seed_cash_session(db)
         await seed_invoices(db, sales)
         await seed_tax_rule(db)
+        await seed_portfolio_merchants(db)
+        await seed_notifications(db)
         await db.commit()
 
         counts = await _counts(db)

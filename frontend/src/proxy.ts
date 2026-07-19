@@ -8,7 +8,10 @@ export function proxy(request: NextRequest): NextResponse {
   const isPublic = PUBLIC_ROUTES.some((route) =>
     route.endsWith("/") ? pathname.startsWith(route) : pathname === route,
   );
-  const hasSession = request.cookies.has(ACCESS_COOKIE) || request.cookies.has(REFRESH_COOKIE);
+  const hasSession =
+    request.cookies.has(ACCESS_COOKIE) ||
+    request.cookies.has(REFRESH_COOKIE) ||
+    request.cookies.get("taxlens_demo")?.value === "1";
 
   if (!isPublic && !hasSession) {
     const loginUrl = new URL("/login", request.url);

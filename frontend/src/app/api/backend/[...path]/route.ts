@@ -15,6 +15,36 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const ALLOWED_HEADERS = ["accept", "content-type", "idempotency-key", "if-none-match"];
 const RETURN_HEADERS = ["cache-control", "content-disposition", "content-type", "etag"];
 
+const DEMO_CREDENTIALS: Record<string, { email: string; password: string }> = {
+  U005: { email: "huong.salonhoa@gmail.com", password: "TaxLensDemo!2026" },
+  U002: { email: "long.ops@shb.com.vn", password: "TaxLensDemo!2026" },
+};
+
+let demoTokenCache: { userId: string; token: string; expires: number } | null = null;
+
+async function getDemoToken(userId: string): Promise<string | null> {
+  const now = Date.now();
+  if (demoTokenCache && demoTokenCache.userId === userId && demoTokenCache.expires > now + 30_000) {
+    return demoTokenCache.token;
+  }
+  const creds = DEMO_CREDENTIALS[userId];
+  if (!creds) return null;
+  try {
+    const resp = await fetch(backendUrl("auth/login"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(creds),
+      cache: "no-store",
+    });
+    if (!resp.ok) return null;
+    const tokens = await resp.json() as { access_token: string };
+    demoTokenCache = { userId, token: tokens.access_token, expires: now + 14 * 60 * 1000 };
+    return tokens.access_token;
+  } catch {
+    return null;
+  }
+}
+
 async function proxy(request: NextRequest, context: RouteContext): Promise<NextResponse> {
   if (!SAFE_METHODS.has(request.method) && !csrfIsValid(request)) {
     return NextResponse.json(
@@ -44,6 +74,12 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<NextR
   const body = SAFE_METHODS.has(request.method) ? undefined : await request.arrayBuffer();
   let accessToken = accessTokenFrom(request);
   let refreshed = null;
+
+  // Demo mode: get a real JWT from backend using demo credentials
+  if (!accessToken && request.cookies.get("taxlens_demo")?.value === "1") {
+    const demoUserId = request.cookies.get("taxlens_demo_user")?.value ?? "U005";
+    accessToken = await getDemoToken(demoUserId);
+  }
 
   if (!accessToken) {
     refreshed = await refreshBackendSession(request);
