@@ -2172,3 +2172,22 @@ Final run results (66 tests total):
 - `npx tsc --noEmit` (frontend) → **0 errors**.
 
 **Status:** First-run onboarding is now persisted end-to-end (backend + frontend). Next: continue toward remaining goal.md flows (notifications, SHB case handling, POS/cash/invoices exports, etc.).
+
+### 2026-07-19 — SHB case resolution endpoint
+
+**Changed:**
+- `backend/app/routers/cases.py`: added `POST /cases/{case_id}/resolve` — blocks if pending exceptions remain, sets case status, returns resolver ID.
+- `frontend/src/lib/api/agentops.ts`: added `resolveCase()` API function.
+- `frontend/src/hooks/useAgentOps.ts`: added `useResolveCase()` mutation hook with cache invalidation.
+- `frontend/src/features/agentops/OperationsViews.tsx`: added "Đóng case" button in CaseWorkspace decision controls; disabled when pending exceptions exist or case already resolved.
+- `docs/log.md`: this entry.
+
+**Reasoning:**
+- `goal.md` requires SHB ops to resolve/close cases after all exceptions are handled. The backend had no case-level close endpoint — only individual exception resolution via `reconciliation/exceptions/{id}/resolve`.
+- Blocking close when pending exceptions remain prevents accidental case closure with unresolved items.
+
+**Verification:**
+- `python -m pytest tests/test_integration.py -q --tb=line` → **37 passed**.
+- `npx tsc --noEmit` (frontend) → **0 errors**.
+
+**Status:** SHB case resolution flow complete. Next: notifications, remaining goal.md gaps.

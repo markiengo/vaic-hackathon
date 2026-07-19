@@ -252,6 +252,13 @@ export function resolveCaseException(
   );
 }
 
+export function resolveCase(caseId: string, decision = "RESOLVED", note?: string) {
+  return apiFetch<{ case_id: string; status: string; resolved_by: string; note: string | null }>(
+    `cases/${encodeURIComponent(caseId)}/resolve`,
+    { method: "POST", ...jsonBody({ decision, note: note ?? null }) },
+  );
+}
+
 export function getAuditEvents() {
   return apiFetch<{ events: AuditEvent[] }>("audit?format=json&limit=200");
 }

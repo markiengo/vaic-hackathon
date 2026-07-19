@@ -16,6 +16,7 @@ import {
   getComplianceRules,
   getMerchantDashboard,
   getMerchantPortfolio,
+  resolveCase,
   resolveCaseException,
   startAgentRun,
   type AgentAction,
@@ -137,6 +138,19 @@ export function useResolveCaseException(caseId: string) {
   return useMutation({
     mutationFn: ({ exceptionId, saleId, classification }: { exceptionId: number; saleId?: string | null; classification?: string | null }) =>
       resolveCaseException(exceptionId, { saleId, classification }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: agentOpsKeys.case(caseId) });
+      client.invalidateQueries({ queryKey: agentOpsKeys.cases });
+      client.invalidateQueries({ queryKey: agentOpsKeys.portfolio });
+    },
+  });
+}
+
+export function useResolveCase(caseId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ decision, note }: { decision?: string; note?: string }) =>
+      resolveCase(caseId, decision, note),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: agentOpsKeys.case(caseId) });
       client.invalidateQueries({ queryKey: agentOpsKeys.cases });

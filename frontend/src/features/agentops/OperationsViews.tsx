@@ -41,6 +41,7 @@ import {
   useMerchantDashboard,
   useMerchantDashboards,
   usePortfolio,
+  useResolveCase,
   useResolveCaseException,
 } from "@/hooks/useAgentOps";
 import type {
@@ -252,6 +253,7 @@ function CaseWorkspace({ caseId, compact = false }: { caseId: string; compact?: 
   const assignment = useAssignCase(caseId);
   const draft = useDraftCaseMessage(caseId);
   const resolution = useResolveCaseException(caseId);
+  const caseResolution = useResolveCase(caseId);
   const [rmId, setRmId] = useState("U003");
   if (detail.isLoading) return <LoadingState label="Đang tải case" />;
   if (detail.isError) return <SectionError title="Không tải được case" error={detail.error} retry={() => detail.refetch()} />;
@@ -285,10 +287,11 @@ function CaseWorkspace({ caseId, compact = false }: { caseId: string; compact?: 
           <div className="mt-6 space-y-3">
             <Button className="w-full" disabled={!pending || resolution.isPending} onClick={() => pending && resolution.mutate({ exceptionId: pending.id, saleId: pending.sale_id, classification: safeClassification })}>{resolution.isPending ? "Đang ghi quyết định" : "Phê duyệt đề xuất"}</Button>
             <Button variant="outline" className="w-full" disabled={item.exceptions.length === 0 || draft.isPending} onClick={() => draft.mutate(item.exceptions.map((exception) => exception.id))}>{draft.isPending ? "Đang tạo bản nháp" : "Soạn yêu cầu merchant xác nhận"}</Button>
+            <Button variant="secondary" className="w-full" disabled={!!pending || caseResolution.isPending || ["RESOLVED", "CLOSED"].includes(item.status)} onClick={() => caseResolution.mutate({})}>{caseResolution.isPending ? "Đang đóng case" : "Đóng case"}</Button>
           </div>
           <div className="mt-6 border-t pt-5"><label className="block text-sm font-semibold" htmlFor={`rm-${caseId}`}>Mã RM</label><input id={`rm-${caseId}`} value={rmId} onChange={(event) => setRmId(event.target.value)} className="mt-2 min-h-10 w-full rounded-xl border bg-surface px-3 font-mono text-sm text-ink" /><Button variant="secondary" className="mt-3 w-full" disabled={!rmId.trim() || assignment.isPending} onClick={() => assignment.mutate(rmId.trim())}>{assignment.isPending ? "Đang phân công" : "Gán case cho RM"}</Button></div>
-          {(assignment.isError || resolution.isError || draft.isError) && <p role="alert" className="mt-3 text-sm text-danger">{assignment.error?.message ?? resolution.error?.message ?? draft.error?.message}</p>}
-          {(assignment.isSuccess || resolution.isSuccess) && <p role="status" className="mt-3 inline-flex items-center gap-2 text-sm text-success"><CheckCircle2 size={16} />Đã cập nhật case</p>}
+          {(assignment.isError || resolution.isError || draft.isError || caseResolution.isError) && <p role="alert" className="mt-3 text-sm text-danger">{assignment.error?.message ?? resolution.error?.message ?? draft.error?.message ?? caseResolution.error?.message}</p>}
+          {(assignment.isSuccess || resolution.isSuccess || caseResolution.isSuccess) && <p role="status" className="mt-3 inline-flex items-center gap-2 text-sm text-success"><CheckCircle2 size={16} />Đã cập nhật case</p>}
         </Card>
       </section>
     </div>

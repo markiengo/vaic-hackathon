@@ -195,3 +195,45 @@ async def draft_message_alias(
     _user=Depends(get_current_user),
 ) -> dict:
     return await _handle_draft_message(case_id, body, db)
+
+
+class ResolveCaseRequest(BaseModel):
+    decision: str = "RESOLVED"
+    note: str | None = None
+
+
+@router.post("/{case_id}/resolve")
+async def resolve_case(
+    case_id: str,
+    body: ResolveCaseRequest,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+) -> dict:
+    case = await db.get(ReconciliationCase, case_id)
+    if case is None:
+        raise TaxLensError("ERR-CASE-001", 404, "Case không tồn tại")
+
+    pending_result = await db.execute(
+        select(ExceptionRecord).where(
+            ExceptionRecord.case_id == case_id,
+            ExceptionRecord.status == "PENDING",
+        )
+    )
+    pending = pending_result.scalars().all()
+    if pending:
+        raise TaxLensError(
+            "ERR-CASE-002",
+            400,
+            f"Vẫn còn {len(pending)} ngoại lệ chưa giải quyết",
+            {"pending_count": len(pending)},
+        )
+
+    case.status = body.decision
+    await db.commit()
+
+    return {
+        "case_id": case.id,
+        "status": case.status,
+        "resolved_by": user.id,
+        "note": body.note,
+    }
