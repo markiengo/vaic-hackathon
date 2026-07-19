@@ -72,3 +72,17 @@ class PosCashSessionCloseResponse(BaseModel):
     counted_cash: Decimal
     discrepancy: Decimal
     status: str
+
+
+class PosCashSessionOpenRequest(BaseModel):
+    store_id: str
+    staff_id: str
+    opening_cash: Decimal = Field(ge=0)
+
+
+class PosCashSessionOpenResponse(BaseModel):
+    session_id: str
+    store_id: str | None
+    opening_cash: Decimal
+    status: str
+    opened_at: str | None

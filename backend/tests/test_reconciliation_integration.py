@@ -171,14 +171,14 @@ async def test_score_tool_uses_canonical_transaction_id_and_exposes_reasoning(
     assert len(candidates) == 2
     assert candidates[0].transaction_id == p1_truth_set.ambiguous_transaction_ids[0]
     assert "action=HUMAN_CONFIRM" in candidates[0].reasoning
-    assert "deterministic_score=40" in candidates[0].reasoning
+    assert "deterministic_score=35" in candidates[0].reasoning
     assert "confidence_method=heuristic_v1" in candidates[0].reasoning
     assert (
         "reason_code=UNRESOLVED_DUPLICATE_AMOUNT"
         in candidates[0].reasoning
     )
     assert any(
-        reason.startswith("factor=duplicate_amount;points=-30;")
+        reason.startswith("factor=duplicate_amount;points=-35;")
         for reason in candidates[0].reasoning
     )
 

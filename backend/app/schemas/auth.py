@@ -27,3 +27,4 @@ class MeResponse(BaseModel):
     email: str
     role: str
     merchant_id: str | None
+    onboarding_completed: bool = False

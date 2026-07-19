@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from decimal import Decimal
 from typing import Any
 
 from app.agents.executor import AgentName, ToolExecution, execute_tool, skip_tool
+from app.services.vietnamese_nlp import interpret_transaction_note
 from app.schemas.agent import (
     MerchantOpsSummary,
     ReconciliationSummary,
@@ -50,6 +52,9 @@ def reconciliation_node(state: AgentGraphState) -> dict[str, Any]:
     merchant_id = str(state.get("merchant_id", ""))
     period = str(state.get("period", ""))
     case_id = str(state.get("case_id") or f"CASE-{merchant_id}-{period}")
+    raw_note = str(state.get("note") or state.get("request_text") or "")
+    note_interpretation = interpret_transaction_note(raw_note)
+    interpreted_note = note_interpretation.expanded_text or raw_note
 
     executions = [
         _execute(state, "reconciliation", "get_bank_transactions", {"merchant_id": merchant_id, "period": period}),
@@ -66,20 +71,7 @@ def reconciliation_node(state: AgentGraphState) -> dict[str, Any]:
                 "amount": Decimal(str(state.get("amount", "0"))),
                 "time_window_minutes": int(state.get("time_window_minutes", 60)),
                 "sender_name": state.get("sender_name"),
-                "note": state.get("note") or state.get("request_text"),
-            },
-        ),
-        _execute(
-            state,
-            "reconciliation",
-            "create_reconciliation_exception",
-            {
-                "case_id": case_id,
-                "merchant_id": merchant_id,
-                "period": period,
-                "exception_type": "PENDING_REVIEW",
-                "reason": "Agent skeleton created review hook; final exception logic pending tool data.",
-                "ai_suggestion": {"source": "reconciliation_agent"},
+                "note": interpreted_note,
             },
         ),
     ]
@@ -88,10 +80,29 @@ def reconciliation_node(state: AgentGraphState) -> dict[str, Any]:
     sales = _first_completed_output(executions, "get_sales_orders") or []
     invoices = _first_completed_output(executions, "get_invoices") or []
     candidates = _first_completed_output(executions, "score_match_candidates") or []
-    created_exception = _first_completed_output(executions, "create_reconciliation_exception")
+
+    # Only create exception if no matches found
     exceptions = list(state.get("exceptions", []))
-    if created_exception:
-        exceptions.append(created_exception)
+    if not candidates:
+        exc_exec = _execute(
+            state,
+            "reconciliation",
+            "create_reconciliation_exception",
+            {
+                "case_id": case_id,
+                "merchant_id": merchant_id,
+                "period": period,
+                "exception_type": "PENDING_REVIEW",
+                "reason": "No match candidates found for transaction.",
+                "ai_suggestion": {
+                    "source": "reconciliation_agent",
+                    "note_interpretation": asdict(note_interpretation),
+                },
+            },
+        )
+        executions.append(exc_exec)
+        if exc_exec.status == "completed" and exc_exec.output:
+            exceptions.append(exc_exec.output)
 
     summary = ReconciliationSummary(
         merchant_id=merchant_id,
@@ -109,6 +120,7 @@ def reconciliation_node(state: AgentGraphState) -> dict[str, Any]:
         "sales": sales if isinstance(sales, list) else state.get("sales", []),
         "matches": candidates if isinstance(candidates, list) else state.get("matches", []),
         "exceptions": exceptions,
+        "note_interpretation": asdict(note_interpretation),
         "reconciliation_output": summary.model_dump(),
         "reconciliation_tool_calls": _tool_outputs(executions),
         "trace": _append_tool_trace(state, executions),

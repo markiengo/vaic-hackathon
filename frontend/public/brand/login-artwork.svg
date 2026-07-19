@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" fill="none">
+  <rect width="800" height="1000" fill="#253C96"/>
+  <g opacity="0.08">
+    <circle cx="700" cy="200" r="320" stroke="#F36B2E" stroke-width="1.5"/>
+    <circle cx="720" cy="440" r="200" stroke="#F59A1E" stroke-width="1.5"/>
+    <circle cx="680" cy="640" r="120" stroke="#C4E7E5" stroke-width="1"/>
+  </g>
+  <g opacity="0.06">
+    <path d="M0 800 Q200 750 400 800 T800 820" stroke="#F36B2E" stroke-width="2" fill="none"/>
+    <path d="M0 850 Q200 800 400 850 T800 870" stroke="#F59A1E" stroke-width="2" fill="none"/>
+    <path d="M0 900 Q200 850 400 900 T800 920" stroke="#C4E7E5" stroke-width="1.5" fill="none"/>
+  </g>
+  <g opacity="0.04">
+    <line x1="0" y1="0" x2="800" y2="1000" stroke="#FFFFFF" stroke-width="0.5"/>
+    <line x1="800" y1="0" x2="0" y2="1000" stroke="#FFFFFF" stroke-width="0.5"/>
+  </g>
+  <g opacity="0.05" fill="#F36B2E">
+    <circle cx="120" cy="120" r="2"/>
+    <circle cx="200" cy="80" r="1.5"/>
+    <circle cx="300" cy="140" r="2"/>
+    <circle cx="80" cy="200" r="1.5"/>
+    <circle cx="160" cy="260" r="2"/>
+  </g>
+</svg>

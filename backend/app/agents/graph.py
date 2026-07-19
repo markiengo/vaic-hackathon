@@ -37,6 +37,7 @@ class AgentGraphState(TypedDict, total=False):
     time_window_minutes: int
     sender_name: str | None
     note: str | None
+    note_interpretation: dict[str, Any]
     merchant_segment: str
     business_vertical: str
     transaction: dict[str, Any]

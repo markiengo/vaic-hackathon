@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
@@ -83,4 +85,18 @@ async def get_me(user: User = Depends(get_current_user)) -> JSONResponse:
         "email": user.email,
         "role": user.role,
         "merchant_id": user.merchant_id,
+        "onboarding_completed": user.onboarding_completed_at is not None,
+    })
+
+
+@router.post("/me/onboarding")
+async def complete_onboarding(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> JSONResponse:
+    user.onboarding_completed_at = datetime.now(timezone.utc)
+    await db.commit()
+    return JSONResponse(content={
+        "id": user.id,
+        "onboarding_completed": True,
+        "completed_at": user.onboarding_completed_at.isoformat(),
     })

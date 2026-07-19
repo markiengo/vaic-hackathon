@@ -71,6 +71,20 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value is not None else None
 
 
+def _as_utc(value: datetime) -> datetime:
+    """Normalize ORM timestamps at the P5 tool -> P1 domain boundary.
+
+    PostgreSQL returns timezone-aware values for ``TIMESTAMP(timezone=True)``.
+    SQLite drops that metadata, and imported/legacy adapters may do the same.
+    P1 correctly rejects naive domain timestamps, so the persistence adapter
+    must restore the canonical UTC interpretation before candidate scoring.
+    """
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 # ---------------------------------------------------------------------------
 # Bank / source retrieval tools
 # ---------------------------------------------------------------------------
@@ -307,19 +321,17 @@ async def score_match_candidates(
                 merchant_id=sale.merchant_id,
                 store_id=sale.store_id,
                 net_amount=sale.net_amount,
-                created_at=sale.created_at,
+                created_at=_as_utc(sale.created_at),
                 payment_status=MatchPaymentStatus(sale.payment_status),
                 net_allocated_amount=allocated_by_sale.get(sale.id, MATCH_ZERO),
             )
             for sale in sale_rows
         ]
 
-        known_senders_result = await db.execute(
-            select(BankTransaction.sender_name)
-            .where(BankTransaction.merchant_id == merchant_id, BankTransaction.sender_name.isnot(None))
-            .distinct()
-        )
-        known_sender_names = [row[0] for row in known_senders_result.all()]
+        # Known sender history must come from independently established prior
+        # periods, never from the same batch being scored. The seed demo has no
+        # such history, so we use an empty trust set.
+        known_sender_names = ()
 
     config = MatchingConfig(candidate_window=timedelta(minutes=time_window_minutes))
     candidates = candidate_match(

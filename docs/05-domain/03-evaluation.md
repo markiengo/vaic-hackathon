@@ -4,8 +4,8 @@
 > **Authority:** Normative
 > **Owner:** QA Lead
 > **Applies to:** Đánh giá chất lượng AI agent output
-> **Implementation state:** Partial — matching tests exist (12 cases); agent evaluation not yet implemented
-> **Last verified against code:** 2026-07-17
+> **Implementation state:** Partial — matching tests and the 23-transaction Sprint 3 truth set are implemented; agent evaluation is not yet implemented
+> **Last verified against code:** 2026-07-18
 > **Verification:** Xem § Verification bên dưới
 
 ---
@@ -36,6 +36,53 @@ AI output được đánh giá so với human-verified truth sets. Đánh giá a
 | EVAL-MATCH-005 | TX 5M từ owner name, không order | Exception (NO_MATCH), suggestion: internal_transfer, confidence 0.82 | Pass/fail ±0.05 |
 | EVAL-MATCH-006 | Refund TX | Match với original sale với negative allocation | Pass/fail |
 | EVAL-MATCH-007 | TX đã allocated | Excluded khỏi candidates | Pass/fail |
+
+### Sprint 3 seed truth set
+
+Truth set dưới đây bám trực tiếp `backend/scripts/seed_data.py`. Sender history
+cho ba fuzzy matches phải đến từ nguồn lịch sử độc lập; không được lấy chính
+sender của transaction đang chấm để tự tăng confidence.
+
+| Transaction | Expected sale | Expected outcome | Method / type |
+|---|---|---|---|
+| `SEPAY-902194810` | `ORDER-1842` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194901` | `ORDER-1843` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194902` | `ORDER-1844` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194903` | `ORDER-1845` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194904` | `ORDER-1846` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194905` | `ORDER-1847` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194906` | `ORDER-1848` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194907` | `ORDER-1849` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194908` | `ORDER-1850` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194909` | `ORDER-1851` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194910` | `ORDER-1852` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194911` | `ORDER-1853` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194912` | `ORDER-1854` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194913` | `ORDER-1855` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194914` | `ORDER-1856` | `AUTO_MATCH` | `EXACT / PAYMENT` |
+| `SEPAY-902194950` | `ORDER-1850` | `AUTO_MATCH` | `EXACT / REFUND` |
+| `SEPAY-902194960` | `ORDER-1857` | `AUTO_MATCH` | `FUZZY / PAYMENT` |
+| `SEPAY-902194961` | `ORDER-1858` | `AUTO_MATCH` | `FUZZY / PAYMENT` |
+| `SEPAY-902194962` | `ORDER-1859` | `AUTO_MATCH` | `FUZZY / PAYMENT` |
+| `SEPAY-902194820` | — | `HUMAN_CONFIRM` | `AMBIGUOUS_MATCH` |
+| `SEPAY-902194821` | — | `HUMAN_CONFIRM` | `AMBIGUOUS_MATCH` |
+| `SEPAY-902194815` | — | `UNMATCHED` | `NO_MATCH` |
+| `SEPAY-902194970` | — | `UNMATCHED` | `NO_MATCH` |
+
+Expected metrics:
+
+- Bank auto-reconciliation: `19/23 = 82.61%`.
+- False matches: `0`.
+- Final sale states: `25 PAID`, `1 REFUNDED`, `4 UNPAID` trên 30 sales.
+- Matching latency: dưới 5 giây cho toàn bộ 23 bank transactions.
+- Chạy lại phải idempotent: 19 bank allocations và 4 bank exceptions, không
+  tạo duplicate.
+
+Cash discrepancy được test riêng bằng allocation ledger. Raw P5 seed hiện đánh
+dấu cash sales là `PAID` nhưng chưa tạo cash `payment_allocations`, đồng thời
+cash session có discrepancy nhưng thiếu `discrepancy_reason`; P1 không suy diễn
+cash collection từ status vì có nguy cơ double-count. P5 cần hoàn tất contract
+này trước full seed pipeline validation.
 
 ### Vietnamese note interpretation
 
@@ -141,4 +188,4 @@ AI output được đánh giá so với human-verified truth sets. Đánh giá a
 
 ---
 
-*Last updated: 2026-07-17*
+*Last updated: 2026-07-18*

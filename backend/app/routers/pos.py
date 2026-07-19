@@ -18,6 +18,8 @@ from app.schemas.pos import (
     PosCashSessionCloseRequest,
     PosCashSessionCloseResponse,
     PosCashSessionFlatCloseRequest,
+    PosCashSessionOpenRequest,
+    PosCashSessionOpenResponse,
     PosCreateSaleRequest,
     PosCreateSaleResponse,
     PosPaymentIntentRequest,
@@ -27,6 +29,48 @@ from app.schemas.pos import (
 router = APIRouter(prefix="/pos", tags=["pos"])
 
 _QR_MOCK_PREFIX = "000201010212382300069704220"
+
+
+@router.post("/cash-sessions/open", status_code=201, response_model=PosCashSessionOpenResponse)
+async def open_cash_session(
+    body: PosCashSessionOpenRequest,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> PosCashSessionOpenResponse:
+    existing_result = await db.execute(
+        select(CashSession)
+        .where(CashSession.store_id == body.store_id, CashSession.status == "OPEN")
+        .order_by(CashSession.opened_at.desc())
+        .limit(1)
+    )
+    existing = existing_result.scalars().first()
+    if existing is not None:
+        return PosCashSessionOpenResponse(
+            session_id=str(existing.id),
+            store_id=existing.store_id,
+            opening_cash=existing.opening_cash,
+            status=existing.status,
+            opened_at=existing.opened_at.isoformat() if existing.opened_at else None,
+        )
+
+    session = CashSession(
+        store_id=body.store_id,
+        staff_id=body.staff_id,
+        opening_cash=body.opening_cash,
+        expected_cash=body.opening_cash,
+        status="OPEN",
+    )
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+
+    return PosCashSessionOpenResponse(
+        session_id=str(session.id),
+        store_id=session.store_id,
+        opening_cash=session.opening_cash,
+        status=session.status,
+        opened_at=session.opened_at.isoformat() if session.opened_at else None,
+    )
 
 
 @router.get("/products")
@@ -227,8 +271,10 @@ async def _close_session(
     session_id: int, counted_cash: Decimal, discrepancy_reason: str | None, db: AsyncSession
 ) -> PosCashSessionCloseResponse:
     session = await db.get(CashSession, session_id)
-    if session is None or session.status != "OPEN":
-        raise TaxLensError("ERR-POS-004", 404, "Ca tiền mặt không tồn tại hoặc đã đóng")
+    if session is None:
+        raise TaxLensError("ERR-POS-004", 404, "Ca tiền mặt không tồn tại")
+    if session.status != "OPEN":
+        raise TaxLensError("ERR-POS-005", 409, "Ca tiền mặt đã đóng")
     expected = session.expected_cash or Decimal("0")
     discrepancy = counted_cash - expected
     session.counted_cash = counted_cash

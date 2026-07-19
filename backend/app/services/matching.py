@@ -158,8 +158,15 @@ class MatchingConfig:
     time_under_five_minutes_points: int = 10
     time_under_thirty_minutes_points: int = 5
     identifier_points: int = 20
-    known_sender_points: int = 10
-    duplicate_penalty: int = 30
+    # Sprint 3 seed calibration: a sender must come from independently trusted
+    # history supplied by the caller.  Exact amount (50) + under five minutes
+    # (10) + trusted sender (35) reaches the unchanged auto threshold of 95.
+    # Amount/time alone still cannot authorize a financial write.
+    known_sender_points: int = 35
+    # Keep the non-identified rival below the human threshold even when the
+    # transaction sender is trusted.  Ambiguity gates continue to win over the
+    # arithmetic score.
+    duplicate_penalty: int = 35
     human_threshold: int = 75
     auto_threshold: int = 95
     max_note_signal: int = 5
@@ -394,7 +401,13 @@ def candidate_match(
     note_signals: Mapping[str, int] | None = None,
     config: MatchingConfig = DEFAULT_MATCHING_CONFIG,
 ) -> list[MatchCandidate]:
-    """Rank eligible sale candidates and attach conservative decisions."""
+    """Rank eligible sale candidates and attach conservative decisions.
+
+    ``known_sender_names`` is a trust boundary: callers may only supply names
+    established independently of the transaction currently being scored.  A
+    name copied from the current transaction is not sender history and would
+    incorrectly amplify its own evidence.
+    """
 
     if transaction.amount <= ZERO or transaction.direction.casefold() not in {"in", "credit"}:
         return []
