@@ -166,7 +166,7 @@ export function OnboardingTour({ role }: { role: Role }) {
           </h3>
           <p className="mt-3 text-sm leading-6 text-text-secondary">{current.description}</p>
 
-          <div className="mt-auto pt-6">
+          <div className="pt-8">
             {/* Progress dots */}
             <div className="flex items-center gap-1.5">
               {steps.map((_, i) => (

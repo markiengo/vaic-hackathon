@@ -22,7 +22,7 @@ export function setSessionCookies(
     httpOnly: true,
     maxAge: 15 * 60,
     path: "/",
-    sameSite: "strict",
+    sameSite: "lax",
     secure,
   });
 
@@ -31,7 +31,7 @@ export function setSessionCookies(
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60,
       path: "/",
-      sameSite: "strict",
+      sameSite: "lax",
       secure,
     });
   }
@@ -41,7 +41,7 @@ export function setSessionCookies(
       httpOnly: false,
       maxAge: 7 * 24 * 60 * 60,
       path: "/",
-      sameSite: "strict",
+      sameSite: "lax",
       secure,
     });
   }
@@ -53,7 +53,7 @@ export function clearSessionCookies(response: NextResponse): void {
       httpOnly: name !== CSRF_COOKIE,
       maxAge: 0,
       path: "/",
-      sameSite: "strict",
+      sameSite: "lax",
       secure,
     });
   }

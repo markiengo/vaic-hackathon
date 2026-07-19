@@ -42,6 +42,7 @@ export function AuthForm(): React.ReactNode {
     setError(null);
     const response = await fetch("/api/auth/login", {
       body: JSON.stringify({ email, password }),
+      credentials: "same-origin",
       headers: { "content-type": "application/json" },
       method: "POST",
     });
