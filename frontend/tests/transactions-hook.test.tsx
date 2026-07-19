@@ -15,7 +15,7 @@ describe("useTransactions", () => {
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data?.total).toBe(2);
+    expect(result.current.data?.total).toBe(7);
     expect(result.current.data?.transactions[0].merchant_id).toBe("M001");
   });
 });

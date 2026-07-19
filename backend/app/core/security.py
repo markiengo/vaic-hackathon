@@ -31,7 +31,9 @@ from app.core.redis import get_redis
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 
-_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -108,19 +110,22 @@ def decode_token(token: str) -> dict:
 
 
 async def get_current_user(
-    token: str = Depends(_oauth2_scheme),
+    token: str | None = Depends(_oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ):
-    """Decode JWT and return the matching active User row."""
-    from app.models.user import User  # local import avoids circular at module load
+    """Return the authenticated user. Raises ERR-AUTH-001 if no valid token."""
+    from app.models.user import User
+
+    if not token:
+        raise TaxLensError("ERR-AUTH-001", 401, "Token không hợp lệ")
 
     payload = decode_token(token)
     if payload.get("type") != "access":
-        raise TaxLensError("ERR-AUTH-001", 401, "Token không đúng loại")
+        raise TaxLensError("ERR-AUTH-001", 401, "Token không hợp lệ")
 
-    user_id: str | None = payload.get("sub")
+    user_id = payload.get("sub")
     if not user_id:
-        raise TaxLensError("ERR-AUTH-001", 401, "Token thiếu subject")
+        raise TaxLensError("ERR-AUTH-001", 401, "Token không hợp lệ")
 
     user = await db.get(User, user_id)
     if user is None or not user.is_active:
@@ -130,16 +135,11 @@ async def get_current_user(
 
 
 def require_role(*roles: str):
-    """Factory: returns a FastAPI dependency that enforces one of the given roles."""
+    """Factory: returns a FastAPI dependency that enforces role-based access."""
 
     async def dependency(user=Depends(get_current_user)):
         if user.role not in roles:
-            raise TaxLensError(
-                "ERR-AUTH-003",
-                403,
-                "Không đủ quyền truy cập",
-                {"required_roles": list(roles), "user_role": user.role},
-            )
+            raise TaxLensError("ERR-AUTH-003", 403, "Không đủ quyền truy cập")
         return user
 
     return dependency

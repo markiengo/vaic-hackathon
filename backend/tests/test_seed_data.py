@@ -23,7 +23,7 @@ from app.models.user import User
 async def test_seed_merchant_count():
     async with AsyncSessionLocal() as session:
         count = await session.scalar(select(func.count(Merchant.id)))
-    assert count == 1
+    assert count == 9
 
 
 async def test_seed_store_count():

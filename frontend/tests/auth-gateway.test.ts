@@ -93,7 +93,7 @@ describe("same-origin session gateway", () => {
   it("expires every session cookie on logout", () => {
     const response = NextResponse.json({ ok: true });
     clearSessionCookies(response);
-    expect(response.cookies.getAll()).toHaveLength(3);
+    expect(response.cookies.getAll()).toHaveLength(5);
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
   });
 });

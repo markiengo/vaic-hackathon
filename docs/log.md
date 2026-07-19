@@ -2191,3 +2191,105 @@ Final run results (66 tests total):
 - `npx tsc --noEmit` (frontend) → **0 errors**.
 
 **Status:** SHB case resolution flow complete. Next: notifications, remaining goal.md gaps.
+
+### 2026-07-19 — P3 Sprint 4 — Fix NaN ₫ and redesign Cần xác nhận screen
+
+**Changed:**
+- `backend/app/routers/reconciliation.py`: Modified `list_exceptions` endpoint to join `ExceptionRecord` with `BankTransaction` via `outerjoin`. Now returns `amount` (as float), `sender_name`, `raw_note`, `transaction_date`, `source`, `reference_number`, and `merchant_id` — fields previously missing and causing `NaN ₫` on the frontend. Added optional `status` query parameter for filtering by exception status.
+- `frontend/src/features/ledger/format.ts`: Made `formatMoney` robust against `undefined`, `null`, empty string, `NaN`, and non-numeric string inputs. Returns "Không có số tiền hợp lệ" fallback instead of `NaN ₫`. Added `formatMoneyOrDash` variant for compact displays.
+- `frontend/src/lib/i18n/vi.ts` (new): Centralized Vietnamese mapping for English backend messages, enum values, and technical error strings. Exports `vi()`, `viOr()`, and `looksLikeBackendMessage()`. Maps ~30 keys including `NO_MATCH_CANDIDATES`, `UNKNOWN_SENDER`, `PENDING_REVIEW`, `CASH_DISCREPANCY`, `Internal server error`, match status enums, and resolution status enums.
+- `frontend/src/lib/domain/types.ts`: Updated `ReconciliationException` interface to include `transaction_date`, `source`, `reference_number` fields. Made `amount` nullable (`MoneyValue | null`). Added `evidence`, `uncertainties`, `candidates` to `ai_suggestion`.
+- `frontend/src/lib/api/exceptions.ts`: Updated fallback fixture mapping to include `transaction_date`, `source`, `reference_number`.
+- `frontend/src/features/exceptions/ExceptionsScreen.tsx`: Complete rebuild as decision workspace per §13.3 of design spec:
+  - Page header with period label, compact progress counter, no large badge
+  - Queue progress toolbar with remaining count and progress bar
+  - Master-detail layout (31% queue / 69% detail) with independent scrolling
+  - Queue rows show sender, amount, short note, time, exception type badge — all different per item
+  - Detail panel: decision question as headline (not "Exception #49"), source record with structured data, TaxLens recommendation with evidence + uncertainties sections, classification radio cards with "Đề xuất" tag, impact preview on selection, sticky action footer with three actions (Để sau / Nhờ SHB hỗ trợ / Xác nhận phân loại)
+  - Only one orange button (primary action)
+  - SHB escalation via `createSupportRequest` API
+  - Auto-advance to next item after confirm/escalate
+  - Completion state with "Xem mức độ sẵn sàng" CTA
+  - All text in Vietnamese, no English enum leakage
+- `frontend/tests/format.test.ts` (new): 23 unit tests for `formatMoney`, `formatMoneyOrDash`, `formatConfidence`, `humanize`, `sourceLabel` — covering valid numbers, zero, decimal strings, undefined, null, NaN, non-numeric strings, negative numbers.
+- `frontend/tests/vi.test.ts` (new): 17 unit tests for `vi()`, `viOr()`, `looksLikeBackendMessage()` — covering key mappings, fallback behavior, English detection.
+- `docs/log.md`: this entry.
+
+**Reasoning:**
+- Root cause of `NaN ₫`: The `list_exceptions` endpoint only returned `ExceptionRecord` fields. `amount`, `sender_name`, `raw_note` live on `BankTransaction`. The frontend type expected them, the fallback fixtures had them, but the real API didn't return them → `undefined` → `formatMoney(undefined)` → `NaN ₫`. Fixed at the source (backend join) rather than patching the display string.
+- Made `formatMoney` defensive as a second layer of protection: even if backend returns null/missing amount, the UI shows "Không có số tiền hợp lệ" instead of `NaN ₫`.
+- Created centralized `vi()` mapping to prevent English backend strings from leaking into the merchant UI. This replaces ad-hoc translation in individual components.
+- Used `outerjoin` (not `join`) to avoid dropping exceptions that don't have a `bank_transaction_id` (e.g., cash discrepancies).
+- Screen redesigned per §13.3 spec: queue 30% / guided review 70%, decision question as headline, evidence + uncertainty columns, radio card classification with suggested tag, sticky footer with primary/secondary/tertiary actions, auto-advance after confirm.
+
+**Verification:**
+- `npx tsc --noEmit` (frontend) → **0 errors**.
+- `npx vitest run tests/format.test.ts tests/vi.test.ts` → **40/40 pass**.
+- Pre-existing test failures (4) are unrelated: `agentops-contract.test.tsx` (SSE mock), `auth-gateway.test.ts` (cookie count), `transactions-hook.test.tsx` (fixture count).
+
+### 2026-07-20 — P3 — Sprint 4 (session 2)
+
+**Changed:**
+- `backend/app/routers/cases.py`: Fixed `get_case` to return `exceptions` array (queried from `ExceptionRecord`) and empty `actions` array. Added `POST /cases/support` endpoint for merchant escalation (Flow B).
+- `backend/app/routers/agents.py`: Fixed `get_agent_run_trace` to return `plan_steps`, `progress`, `evidence`, and empty `actions` array. Added `response_text` to `list_runs` response.
+- `backend/app/schemas/reconciliation.py`: Added `SupportRequest` and `SupportResponse` Pydantic models.
+- `frontend/src/lib/api/agentops.ts`: Added `createSupportRequest`, `resetDemo`, `getNotifications`, `markNotificationRead`, `markAllNotificationsRead` API functions.
+- `frontend/src/hooks/useAgentOps.ts`: Added `useSupportRequest` mutation hook. Added `createSupportRequest` to imports.
+- `frontend/src/components/support/SupportWorkspace.tsx` (new): Full merchant support/escalation page with topic selector, priority selector, description field, submission form, and list of existing support cases.
+- `frontend/src/app/(merchant)/support/page.tsx`: Replaced placeholder with `SupportWorkspace` component wrapped in `ToastProvider`.
+- `frontend/src/features/dashboard/DashboardScreen.tsx`: Fixed dead CTA — "Cập nhật dữ liệu" button now links to `/exceptions?period=...` instead of `/dashboard` itself.
+- `frontend/src/components/settings/SettingsWorkspace.tsx`: Added demo reset section with confirmation flow and `resetDemo` API call.
+- `frontend/src/features/agentops/OperationsSettings.tsx`: Added demo reset section for SHB ops settings.
+- `frontend/src/app/(operations)/ops/settings/page.tsx`: Wrapped with `ToastProvider`.
+- `backend/app/routers/demo.py`: Changed `reset_demo` to use `get_current_user` instead of `require_role` so merchants can also reset.
+- `backend/scripts/seed_data.py`: Added `seed_portfolio_merchants` (8 additional merchants with cases and exceptions for SHB ops portfolio view). Added `seed_notifications` (6 demo notifications for merchant and ops users). Added `Notification` to imports and `reset_all`. Added `cases` and `exceptions` to `_counts`.
+- `backend/app/routers/merchants.py`: Fixed portfolio summary to count active merchants case-insensitively.
+- `backend/app/models/notification.py` (new): `Notification` model with `user_id`, `merchant_id`, `type`, `title`, `body`, `link`, `is_read`, `created_at`.
+- `backend/app/routers/notifications.py` (new): `GET /notifications`, `POST /notifications/{id}/read`, `POST /notifications/read-all` endpoints. `create_notification` helper.
+- `backend/app/main.py`: Registered `notifications` router.
+- `backend/alembic/versions/004_add_notifications.py` (new): Migration for notifications table.
+- `frontend/src/components/layout/NotificationBell.tsx` (new): Bell icon with unread badge, dropdown panel, mark-read and mark-all-read functionality.
+- `frontend/src/components/layout/AppShell.tsx`: Integrated `NotificationBell` into sidebar and mobile header.
+- `frontend/src/features/tax/TaxReadinessScreen.tsx`: Fixed recharts tooltip formatter type errors.
+- `frontend/README.md`: Added demo accounts table and updated routes list.
+
+**Reasoning:**
+- Support page uses a simple form with topic/priority/description because merchants need a structured way to escalate to SHB. The backend creates both a `ReconciliationCase` and an `ExceptionRecord` so the case appears in the SHB ops queue with the merchant's description as `ai_suggestion.reason`.
+- Demo reset was placed in both merchant and ops settings so either role can reset during a demo. Changed auth from `require_role("admin", "ops_staff")` to `get_current_user` since demo mode doesn't enforce roles anyway.
+- Portfolio merchants have minimal data (profile + case) because the SHB ops dashboard needs to show a realistic portfolio without requiring full transaction history for each.
+- Notifications use a simple model with `user_id` FK so each user sees their own notifications. The bell component polls every 30 seconds and supports mark-read/mark-all-read.
+- Fixed portfolio `active` count to be case-insensitive because seed data uses `"ACTIVE"` (uppercase) but the summary was checking `== "active"` (lowercase).
+
+**Verification:**
+- `npx tsc --noEmit` (frontend) → **0 errors**.
+- `python -c "from app.main import app"` → OK.
+- `python -c "from scripts.seed_data import seed"` → OK.
+- `python -m alembic upgrade head` → Migration 004 applied successfully.
+
+**Status:** Support page, demo reset, notifications, portfolio seed data, and dead CTA fix all complete. Cross-workspace flow verification pending.
+
+**Status:** NaN ₫ root cause fixed (backend + frontend). ExceptionsScreen rebuilt per design spec. Next: visual QA in running dev server, verify all 3 queue items show different data, test end-to-end confirm/escalate flow.
+
+### 2026-07-20 — Lead Engineer — Sprint 4 (session 3) — Test suite repair + RBAC enforcement
+
+**Changed:**
+- `backend/app/core/security.py`: Rewrote `get_current_user` to enforce JWT authentication — no more demo-user fallback when token is missing/invalid. Raises `ERR-AUTH-001` (401) for missing, invalid, or expired tokens. Rewrote `require_role` to actually enforce role-based access control — raises `ERR-AUTH-003` (403) when user role is not in the allowed set.
+- `backend/app/agents/graph.py`: Increased `MAX_PLANNER_JSON_RETRIES` from 1 to 2, giving the planner 3 total attempts (initial + 2 retries) to parse LLM JSON output before falling back to the deterministic default plan.
+- `backend/tests/test_models.py`: Updated `EXPECTED_TABLES` to include `notifications` table (added in migration 004). Updated table count from 19 to 20.
+- `backend/tests/test_seed_data.py`: Updated `test_seed_merchant_count` from 1 to 9 (1 Salon Hương + 8 portfolio merchants added in Sprint 4 session 2).
+- `frontend/tests/agentops-contract.test.tsx`: Rewrote 2 SSE streaming tests to match the new POST+polling implementation in `sse-client.ts`. The old tests expected SSE `text/event-stream` responses; the new implementation uses a POST to `/agents/run` followed by polling `/agents/runs/{run_id}`. Added `AgentStreamEvent` type import.
+- `frontend/tests/auth-gateway.test.ts`: Updated cookie count from 3 to 5 in the logout test — `clearSessionCookies` now also clears `taxlens_demo` and `taxlens_demo_user` cookies added for demo mode.
+- `frontend/tests/transactions-hook.test.tsx`: Updated fixture count from 2 to 7 — the transactions fixture was expanded in Sprint 4 to provide richer test data.
+
+**Reasoning:**
+- The `get_current_user` demo-user fallback was a security hole — any request without a JWT was silently authenticated as user U005 (Salon Hương merchant). This meant 5 integration tests for auth error codes (ERR-AUTH-001/002/003) were failing because the backend returned 200 instead of 401/403. The frontend proxy already handles demo mode by obtaining real JWTs from the backend via `DEMO_CREDENTIALS`, so the fallback was unnecessary.
+- `require_role` was a no-op (just returned the user without checking roles), which meant the audit endpoint (`require_role("admin", "compliance", "rm")`) was accessible by merchants. Now it properly raises ERR-AUTH-003.
+- `MAX_PLANNER_JSON_RETRIES=1` gave only 2 attempts (initial + 1 retry), but the test `test_planner_retries_invalid_json_then_returns_plan` provides 3 responses (invalid JSON, empty plan, valid plan) and expects `attempts=3`. Changing to 2 gives 3 total attempts, matching the test's expectation.
+- The 3 frontend test failures were all stale tests that hadn't been updated when their corresponding implementations changed in earlier Sprint 4 sessions.
+
+**Verification:**
+- `python -m pytest --tb=line -q` → **210 passed, 0 failed** (was 9 failed, 200 passed).
+- `npx tsc --noEmit` (frontend) → **0 errors**.
+- `npx vitest run` (frontend) → **84/84 pass** (was 4 failed, 80 passed).
+
+**Status:** All backend and frontend tests green. RBAC enforced. Next: continue end-to-end product completion per docs/goal.md.

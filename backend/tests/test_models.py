@@ -27,6 +27,7 @@ EXPECTED_TABLES = {
     "agent_runs",
     "tool_calls",
     "audit_events",
+    "notifications",
 }
 
 
@@ -34,9 +35,9 @@ def test_base_is_declarative_base():
     assert issubclass(Base, DeclarativeBase)
 
 
-def test_all_19_tables_registered():
+def test_all_20_tables_registered():
     tables = set(Base.metadata.tables.keys())
-    assert len(tables) == 19, f"Expected 19 tables, got {len(tables)}: {tables}"
+    assert len(tables) == 20, f"Expected 20 tables, got {len(tables)}: {tables}"
 
 
 def test_expected_table_names_match():

@@ -175,15 +175,19 @@ def planner_node(state: AgentGraphState) -> dict[str, Any]:
         for attempt in range(MAX_PLANNER_JSON_RETRIES + 1):
             try:
                 budget.record_llm_call(input_text=system_prompt + user_payload)
-                response = client.chat.completions.create(
+                kwargs: dict[str, Any] = dict(
                     model=settings.model,
                     temperature=settings.deterministic_temperature,
-                    response_format={"type": "json_object"},
+                    timeout=30,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_payload},
                     ],
                 )
+                # Only set response_format if the model likely supports it
+                if "deepseek" in settings.model.lower():
+                    kwargs["response_format"] = {"type": "json_object"}
+                response = client.chat.completions.create(**kwargs)
                 content = response.choices[0].message.content or ""
                 budget.record_output(content)
                 plan = _parse_planner_output(content)
@@ -345,6 +349,65 @@ def build_agent_workflow() -> Any:
 agent_workflow: Any = build_agent_workflow()
 
 
+def generate_response(request_text: str, workflow_output: dict[str, Any]) -> str:
+    """Generate a conversational Vietnamese response from the workflow output.
+
+    Tries the LLM first; falls back to a deterministic summary if the LLM
+    is unavailable or too slow.
+    """
+    reconciliation = workflow_output.get("reconciliation") or {}
+    tax = workflow_output.get("tax_compliance") or {}
+    merchant_ops = workflow_output.get("merchant_ops") or {}
+    errors = workflow_output.get("errors") or []
+
+    # Deterministic fallback — always available
+    matched = reconciliation.get("matched", 0) if isinstance(reconciliation, dict) else 0
+    unmatched = reconciliation.get("unmatched", 0) if isinstance(reconciliation, dict) else 0
+    missing_invoices = reconciliation.get("missing_invoice_cases", 0) if isinstance(reconciliation, dict) else 0
+    exceptions = reconciliation.get("exceptions", []) if isinstance(reconciliation, dict) else []
+    ready = tax.get("ready", False) if isinstance(tax, dict) else False
+    rule_version = tax.get("rule_version", "2026.07") if isinstance(tax, dict) else "2026.07"
+    cases_created = merchant_ops.get("cases_created", 0) if isinstance(merchant_ops, dict) else 0
+    messages_drafted = merchant_ops.get("messages_drafted", 0) if isinstance(merchant_ops, dict) else 0
+
+    # Simple greeting detection
+    lower_req = request_text.strip().lower()
+    greeting_words = ["hello", "hi", "chào", "xin chào", "hey", "halo"]
+    is_greeting = any(lower_req.startswith(g) for g in greeting_words) and len(lower_req) < 30
+
+    if is_greeting and not errors:
+        return "Chào chị! Em là TaxLens, trợ lý thuế của SHB. Em có thể kiểm tra giao dịch, đối soát, hóa đơn và tình trạng sẵn sàng thuế tháng 7. Chị cần em giúp gì ạ?"
+
+    if errors and not matched and not unmatched:
+        return f"Em đã thử xử lý yêu cầu nhưng gặp vấn đề: {errors[0]}. Chị thử lại hoặc mô tả cụ thể hơn giúp em nhé."
+
+    parts: list[str] = []
+    if matched or unmatched:
+        parts.append(f"Em đã kiểm tra {matched + unmatched} giao dịch: {matched} đã khớp tự động")
+        if unmatched:
+            parts.append(f", {unmatched} cần xác nhận")
+        if missing_invoices:
+            parts.append(f", {missing_invoices} đơn thiếu hóa đơn")
+        parts.append(".")
+
+    if ready:
+        parts.append(f" Mức sẵn sàng thuế đạt (bộ quy tắc {rule_version}).")
+    else:
+        parts.append(f" Chưa sẵn sàng thuế — cần xử lý các mục trên (bộ quy tắc {rule_version}).")
+
+    if cases_created:
+        parts.append(f" Em đã tạo {cases_created} case")
+    if messages_drafted:
+        parts.append(" và soạn thông báo cho merchant")
+    if cases_created or messages_drafted:
+        parts.append(".")
+
+    if exceptions:
+        parts.append(f" Có {len(exceptions)} ngoại lệ cần chị xác nhận ở trang Ngoại lệ.")
+
+    return "".join(parts) if parts else "Em đã hoàn thành kiểm tra. Chị có thể xem chi tiết ở các bảng bên cạnh."
+
+
 __all__ = [
     "ALLOWED_SPECIALIST_AGENTS",
     "AgentGraphState",
@@ -355,6 +418,7 @@ __all__ = [
     "agent_workflow",
     "build_agent_workflow",
     "build_single_agent_graph",
+    "generate_response",
     "make_placeholder_node",
     "planner_node",
 ]

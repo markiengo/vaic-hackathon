@@ -12,7 +12,7 @@ import {
   resolveCaseException,
   type AgentAction,
 } from "@/lib/api/agentops";
-import { streamAgentRun } from "@/lib/api/sse-client";
+import { streamAgentRun, type AgentStreamEvent } from "@/lib/api/sse-client";
 
 const action: AgentAction = {
   id: "ACT-1",
@@ -46,42 +46,51 @@ afterEach(() => {
 });
 
 describe("agent operations contracts", () => {
-  it("parses the authenticated POST stream in order", async () => {
+  it("starts a run via POST /agents/run and yields run_started + progress", async () => {
     document.cookie = "taxlens_csrf=csrf-test; path=/";
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
-        'data: {"type":"run_started","run_id":"RUN-1"}\n\n' +
-          'data: {"type":"progress_summary","agent":"planner","status":"PLANNING","message":"Dang kiem tra"}\r\n\r\n' +
-          'data: {"type":"done","run_id":"RUN-1"}\n\n',
-        { status: 200, headers: { "content-type": "text/event-stream" } },
+        JSON.stringify({
+          run_id: "RUN-1",
+          status: "PLANNING",
+          plan: { steps: [{ step: 1, action: "Đối soát", agent: "reconciliation" }] },
+        }),
+        { status: 202, headers: { "content-type": "application/json" } },
       ),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const events = [];
-    for await (const event of streamAgentRun("M001", "Kiểm tra tháng 7", "2026-07")) events.push(event);
+    const events: AgentStreamEvent[] = [];
+    for await (const event of streamAgentRun("M001", "Kiểm tra tháng 7", "2026-07")) {
+      events.push(event);
+      if (events.length >= 3) break;
+    }
 
-    expect(events.map((event) => event.type)).toEqual(["run_started", "progress_summary", "done"]);
+    expect(events[0].type).toBe("run_started");
+    expect(events[1].type).toBe("plan");
+    expect(events[2].type).toBe("progress_summary");
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/backend/agents/runs/stream");
+    expect(url).toBe("/api/backend/agents/run");
     expect(init.method).toBe("POST");
     expect(new Headers(init.headers).get("x-csrf-token")).toBe("csrf-test");
-    expect(JSON.parse(String(init.body))).toEqual({ merchant_id: "M001", request_text: "Kiểm tra tháng 7", period: "2026-07" });
+    expect(JSON.parse(String(init.body))).toEqual({ merchant_id: "M001", request: "Kiểm tra tháng 7", period: "2026-07" });
   });
 
-  it("falls back to the merged agent-run endpoint when streaming is unavailable", async () => {
+  it("polls the run status endpoint after starting a run", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(null, { status: 404 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ run_id: "RUN-2", status: "PLANNING", plan: { steps: [] } }), { status: 202 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ run_id: "RUN-2", status: "EXECUTING" }), { status: 202 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "COMPLETED", response_text: "Xong" }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const events = [];
-    for await (const event of streamAgentRun("M001", "Đối soát tháng 7", "2026-07")) events.push(event);
+    const events: AgentStreamEvent[] = [];
+    for await (const event of streamAgentRun("M001", "Đối soát tháng 7", "2026-07")) {
+      events.push(event);
+    }
 
-    expect(events.map((event) => event.type)).toEqual(["run_started", "progress_summary"]);
-    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
-    expect(url).toBe("/api/backend/agents/run");
-    expect(JSON.parse(String(init.body))).toEqual({ merchant_id: "M001", request: "Đối soát tháng 7", period: "2026-07" });
+    expect(events.map((e) => e.type)).toContain("run_started");
+    expect(events.map((e) => e.type)).toContain("done");
+    const pollUrl = (fetchMock.mock.calls[1] as [string, RequestInit])[0];
+    expect(pollUrl).toBe("/api/backend/agents/runs/RUN-2");
   });
 
   it("keeps approval and execution as separate versioned requests", async () => {
