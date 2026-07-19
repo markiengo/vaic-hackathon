@@ -467,6 +467,7 @@ export function AssistantWorkspace() {
                 {stream.runId && hasApproval && (
                   <div className="space-y-3 pt-4">
                     <p className="text-sm font-semibold text-ink">Cần chị xác nhận</p>
+                    <p className="text-xs text-text-secondary">Bằng chứng, không phải suy nghĩ riêng.</p>
                     {actions.isLoading && <Skeleton className="h-32" />}
                     {actions.isError && <ErrorState title="Không tải được hành động" description={actions.error.message} retry={() => actions.refetch()} compact />}
                     {actions.data?.map((action) => <AgentActionCard key={action.id} action={action} runId={stream.runId!} />)}

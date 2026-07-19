@@ -68,6 +68,7 @@ export async function* streamAgentRun(
     // Poll run status until terminal
     const pollInterval = 1000;
     const maxAttempts = 60;
+    let traceFetched = false;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       if (signal?.aborted) return;
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
@@ -103,6 +104,41 @@ export async function* streamAgentRun(
                 ? `Lỗi xử lý: ${runState.error ?? "không xác định"}`
                 : `Đang xử lý… (${runState.status})`,
         };
+
+        // When the run reaches WAITING_FOR_HUMAN or a terminal state, fetch the trace
+        // to surface tool calls and approval-required actions to the UI.
+        if (["WAITING_FOR_HUMAN", "COMPLETED", "DONE", "FAILED"].includes(runState.status) && !traceFetched) {
+          traceFetched = true;
+          try {
+            const traceUrl = demo
+              ? `${baseUrl}/agents/runs/${accepted.run_id}/trace`
+              : `/api/backend/agents/runs/${accepted.run_id}/trace`;
+            const traceResp = await fetch(traceUrl, {
+              method: "GET",
+              credentials: demo ? undefined : "same-origin",
+              headers: new Headers({ accept: "application/json" }),
+              signal,
+            });
+            if (traceResp.ok) {
+              const trace = await traceResp.json() as {
+                tool_calls?: Array<{ tool_name: string; agent_name: string; duration_ms?: number; output?: Record<string, unknown> }>;
+                actions?: Array<{ id: string; status: string; human_summary: string; action_type: string }>;
+              };
+              for (const tc of trace.tool_calls ?? []) {
+                yield { type: "tool_started", tool: tc.tool_name, args: {}, agent: tc.agent_name };
+                yield { type: "tool_completed", tool: tc.tool_name, output: tc.output ?? {}, duration_ms: tc.duration_ms ?? 0 };
+              }
+              for (const act of trace.actions ?? []) {
+                if (act.status === "PROPOSED") {
+                  yield { type: "approval_required", action_id: act.id, summary: act.human_summary, impact: act.action_type };
+                }
+              }
+            }
+          } catch {
+            // Trace fetch failed — continue without tool/approval events
+          }
+        }
+
         if (["COMPLETED", "DONE", "FAILED"].includes(runState.status)) {
           if (runState.status === "FAILED") {
             yield { type: "error", message: runState.error ?? "Xử lý thất bại." };

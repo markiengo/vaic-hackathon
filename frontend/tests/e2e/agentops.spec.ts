@@ -27,25 +27,44 @@ test.describe("Assistant and SHB operations", () => {
   });
 
   test("streams safe assistant evidence and exposes one-action review", async ({ page }) => {
-    const sse = [
-      { type: "run_started", run_id: "RUN-1" },
-      { type: "progress_summary", agent: "planner", status: "PLANNING", message: "Đang phân tích yêu cầu theo dữ liệu TaxLens." },
-      { type: "plan", steps: [{ step: 1, action: "Đối soát giao dịch", agent: "reconciliation" }] },
-      { type: "tool_started", tool: "get_bank_transactions", args: { merchant_id: "M001", period: "2026-07" }, agent: "reconciliation" },
-      { type: "tool_completed", tool: "get_bank_transactions", output: { kind: "collection", count: 23 }, duration_ms: 12 },
-      { type: "approval_required", action_id: "ACT-1", summary: action.human_summary, impact: "CREATE_CASE" },
-      { type: "artifact", artifact: { reconciliation: { matched: 15, unmatched: 8 }, status: "WAITING_FOR_HUMAN" } },
-      { type: "done", run_id: "RUN-1" },
-    ].map((event) => `data: ${JSON.stringify(event)}\n\n`).join("");
-    await page.route("**/api/backend/agents/runs/stream", (route) => route.fulfill({ body: sse, contentType: "text/event-stream" }));
+    // Mock the POST /agents/run endpoint (new polling-based implementation)
+    await page.route("**/api/backend/agents/run", (route) => route.fulfill({
+      status: 202,
+      json: {
+        run_id: "RUN-1",
+        status: "WAITING_FOR_HUMAN",
+        plan: { steps: [{ step: 1, action: "Đối soát giao dịch", agent: "reconciliation" }] },
+      },
+    }));
+    // Mock the polling endpoint to return terminal status with tool calls
+    await page.route("**/api/backend/agents/runs/RUN-1", (route) => route.fulfill({
+      json: {
+        run_id: "RUN-1",
+        status: "COMPLETED",
+        plan: { steps: [{ step: 1, action: "Đối soát giao dịch", agent: "reconciliation" }] },
+        response_text: "Đã đối soát 23 giao dịch. 15 khớp, 8 ngoại lệ.",
+      },
+    }));
+    await page.route("**/api/backend/agents/runs/RUN-1/trace", (route) => route.fulfill({
+      json: {
+        run_id: "RUN-1",
+        status: "WAITING_FOR_HUMAN",
+        plan: [{ step: 1, action: "Đối soát giao dịch", agent: "reconciliation" }],
+        progress: [{ agent: "planner", stage: "PLANNED", summary: "Đã lập kế hoạch." }],
+        evidence: { tool_call_count: 1 },
+        tool_calls: [{ agent_name: "reconciliation", tool_name: "get_bank_transactions", input_hash: "ih", output_hash: "oh", confidence: 0.96, rule_version: "2026.07", called_at: "2026-07-18T00:00:01Z", duration_ms: 12 }],
+        actions: [action],
+      },
+    }));
     await page.route("**/api/backend/agents/actions?run_id=RUN-1", (route) => route.fulfill({ json: [action] }));
-    await page.route("**/api/backend/agents/actions", (route) => route.fulfill({ json: [] }));
+    await page.route("**/api/backend/agents/actions", (route) => route.fulfill({ json: [action] }));
 
     await page.goto("/assistant");
     await expect(page.locator("main").getByText("Salon Hương", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: "Trợ lý TaxLens" })).toBeVisible();
-    await page.getByRole("button", { name: "Bắt đầu kiểm tra" }).click();
-    await expect(page.getByText("get_bank_transactions").first()).toBeVisible();
+    await page.getByRole("button", { name: /Kiểm tra tháng 7/ }).first().click();
+    await page.getByRole("button", { name: "Gửi yêu cầu" }).click();
+    await expect(page.getByText("get_bank_transactions").first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: /Duyệt riêng hành động này/ })).toBeVisible();
     await expect(page.getByText("Bằng chứng, không phải suy nghĩ riêng.")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
