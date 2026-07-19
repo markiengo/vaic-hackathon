@@ -21,6 +21,7 @@ from app.routers import (
     confirm,
     invoices,
     ws,
+    demo,
 )
 from app.adapters.sepay import router as sepay_webhook_router
 
@@ -105,6 +106,7 @@ app.include_router(confirm.router, prefix=PREFIX)
 app.include_router(invoices.router, prefix=PREFIX)
 app.include_router(sepay_webhook_router, prefix=PREFIX)
 app.include_router(ws.router, prefix=PREFIX)
+app.include_router(demo.router, prefix=PREFIX)
 
 
 @app.get("/health")

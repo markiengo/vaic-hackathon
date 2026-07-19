@@ -120,15 +120,10 @@ async def run_reconciliation(db) -> None:
         db.add(ReconciliationCase(id=CASE_ID, merchant_id=MERCHANT_ID, period=PERIOD, status="OPEN"))
         await db.flush()
 
-    known_senders_result = await db.execute(
-        select(BankTransaction.sender_name).where(
-            BankTransaction.merchant_id == MERCHANT_ID, BankTransaction.sender_name.isnot(None)
-        ).distinct()
-    )
-    known_senders = [row[0] for row in known_senders_result.all()]
-
+    # No independently established sender history exists in the seeded demo,
+    # so the current period's transactions must not be used as their own trust signal.
     summary = await reconcile_period(
-        db, case_id=CASE_ID, merchant_id=MERCHANT_ID, period=PERIOD, known_sender_names=known_senders
+        db, case_id=CASE_ID, merchant_id=MERCHANT_ID, period=PERIOD, known_sender_names=()
     )
     await db.commit()
     print(

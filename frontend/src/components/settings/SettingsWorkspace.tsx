@@ -84,8 +84,8 @@ function ImportResult({ result }: { result: LedgerImportResult }) {
           ["Đã nhập", result.imported_rows],
         ].map(([label, value]) => (
           <div key={label} className="rounded-xl border bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">{label}</p>
-            <p className="font-display mt-2 text-3xl text-text">{value}</p>
+            <p className="text-[13px] font-medium text-text-tertiary">{label}</p>
+            <p className="font-display mt-2 text-3xl text-ink">{value}</p>
           </div>
         ))}
       </div>
@@ -96,7 +96,7 @@ function ImportResult({ result }: { result: LedgerImportResult }) {
 
       {result.errors.length ? (
         <div className="rounded-xl border border-danger/25 bg-danger/5 p-4">
-          <h3 className="font-semibold text-text">Dòng cần sửa trước khi nhập</h3>
+          <h3 className="font-semibold text-ink">Dòng cần sửa trước khi nhập</h3>
           <ul className="mt-3 grid gap-2 text-sm text-text-secondary">
             {result.errors.slice(0, 8).map((error) => (
               <li key={`${error.row_number}:${error.reason}`} className="flex gap-3">
@@ -231,7 +231,7 @@ export function SettingsWorkspace() {
       <section aria-labelledby="appearance-title">
         <div className="mb-4 flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-full bg-accent text-secondary"><Sun aria-hidden size={18} /></span>
-          <div><h2 id="appearance-title" className="font-display text-2xl">Giao diện</h2><p className="text-sm text-text-secondary">Chọn cách TaxLens hiển thị trên thiết bị này.</p></div>
+          <div><h2 id="appearance-title" className="font-display text-2xl text-ink">Giao diện</h2><p className="text-sm text-text-secondary">Chọn cách TaxLens hiển thị trên thiết bị này.</p></div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {themes.map((option) => {
@@ -249,7 +249,7 @@ export function SettingsWorkspace() {
                   <span className="grid size-10 place-items-center rounded-full bg-background text-secondary"><Icon aria-hidden size={18} /></span>
                   {selected ? <CheckCircle2 aria-hidden className="text-success" size={20} /> : null}
                 </span>
-                <strong className="mt-5 block font-normal text-text">{option.label}</strong>
+                <strong className="mt-5 block font-normal text-ink">{option.label}</strong>
                 <span className="mt-1 block text-sm leading-6 text-text-secondary">{option.description}</span>
               </button>
             );
@@ -263,17 +263,17 @@ export function SettingsWorkspace() {
             <span className="grid size-11 place-items-center rounded-full bg-surface text-secondary"><Building2 aria-hidden size={21} /></span>
             {profile ? <Badge tone={profile.status === "ACTIVE" ? "success" : "warning"}>{profile.status}</Badge> : null}
           </div>
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-secondary">Hồ sơ cửa hàng</p>
+          <p className="mt-6 text-[13px] font-medium text-text-tertiary">Hồ sơ cửa hàng</p>
           {merchantQuery.isLoading ? <div className="mt-4"><LoadingState label="Đang tải hồ sơ" /></div> : null}
           {merchantQuery.isError ? <div className="mt-4"><ErrorState compact title="Không tải được hồ sơ" description="Thông tin pháp lý đang tạm gián đoạn." retry={() => merchantQuery.refetch()} /></div> : null}
           {profile ? (
             <>
-              <h2 className="font-display mt-2 text-3xl">{profile.name}</h2>
+              <h2 className="font-display mt-2 text-3xl text-ink">{profile.name}</h2>
               <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
-                <div><dt className="text-text-secondary">Mã số thuế</dt><dd className="font-mono mt-1 text-text">{profile.tax_id || "Chưa cập nhật"}</dd></div>
-                <div><dt className="text-text-secondary">Loại hình</dt><dd className="mt-1 text-text">{profile.business_category || profile.business_type}</dd></div>
-                <div><dt className="text-text-secondary">Điện thoại</dt><dd className="mt-1 text-text">{profile.contact_phone || "Chưa cập nhật"}</dd></div>
-                <div><dt className="text-text-secondary">Email</dt><dd className="mt-1 break-all text-text">{profile.contact_email || "Chưa cập nhật"}</dd></div>
+                <div><dt className="text-text-secondary">Mã số thuế</dt><dd className="font-mono mt-1 text-ink">{profile.tax_id || "Chưa cập nhật"}</dd></div>
+                <div><dt className="text-text-secondary">Loại hình</dt><dd className="mt-1 text-ink">{profile.business_category || profile.business_type}</dd></div>
+                <div><dt className="text-text-secondary">Điện thoại</dt><dd className="mt-1 text-ink">{profile.contact_phone || "Chưa cập nhật"}</dd></div>
+                <div><dt className="text-text-secondary">Email</dt><dd className="mt-1 break-all text-ink">{profile.contact_email || "Chưa cập nhật"}</dd></div>
               </dl>
               <p className="mt-6 flex items-start gap-2 border-t pt-4 text-xs leading-5 text-text-secondary"><ShieldCheck aria-hidden className="mt-0.5 shrink-0 text-success" size={16} />Thông tin pháp lý được quản trị viên TaxLens kiểm soát để tránh sửa nhầm dữ liệu kê khai.</p>
             </>
@@ -285,8 +285,8 @@ export function SettingsWorkspace() {
             <span className="grid size-11 place-items-center rounded-full bg-accent text-secondary"><CloudCog aria-hidden size={21} /></span>
             {integration ? <Badge tone={integration.configured ? syncTone(latestRun?.status) : "warning"}>{integration.configured ? (latestRun?.status ?? "ĐÃ KẾT NỐI") : "CHƯA CẤU HÌNH"}</Badge> : null}
           </div>
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-secondary">Kết nối ngân hàng</p>
-          <h2 className="font-display mt-2 text-3xl">SePay</h2>
+          <p className="mt-6 text-[13px] font-medium text-text-tertiary">Kết nối ngân hàng</p>
+          <h2 className="font-display mt-2 text-3xl text-ink">SePay</h2>
           <p className="mt-2 text-sm leading-6 text-text-secondary">Token SePay được giữ ở backend. Trình duyệt chỉ có thể kiểm tra trạng thái và yêu cầu đồng bộ.</p>
           {integrationQuery.isLoading ? <div className="mt-5"><LoadingState label="Đang kiểm tra SePay" /></div> : null}
           {integrationQuery.isError ? <div className="mt-5"><ErrorState compact title="Không kiểm tra được kết nối" description="Trạng thái SePay đang tạm gián đoạn." retry={() => integrationQuery.refetch()} /></div> : null}
@@ -317,7 +317,7 @@ export function SettingsWorkspace() {
         <div className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-secondary"><FileSpreadsheet aria-hidden size={21} /></span>
-            <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary">Nguồn dữ liệu</p><h2 id="import-title" className="font-display mt-1 text-3xl">Nhập sao kê</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">Kiểm tra CSV/XLSX trước, xem từng dòng lỗi, rồi mới xác nhận ghi vào sổ giao dịch.</p></div>
+            <div><p className="text-[13px] font-medium text-text-tertiary">Nguồn dữ liệu</p><h2 id="import-title" className="font-display mt-1 text-3xl text-ink">Nhập sao kê</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">Kiểm tra CSV/XLSX trước, xem từng dòng lỗi, rồi mới xác nhận ghi vào sổ giao dịch.</p></div>
           </div>
           {importResult ? <Badge tone={importResult.rejected_rows ? "warning" : "success"}>{importResult.status}</Badge> : null}
         </div>
@@ -332,9 +332,9 @@ export function SettingsWorkspace() {
           >
             <div>
               <UploadCloud aria-hidden className="mx-auto text-secondary" size={32} />
-              <p className="mt-4 font-semibold text-text">Kéo file sao kê vào đây</p>
+              <p className="mt-4 font-semibold text-ink">Kéo file sao kê vào đây</p>
               <p className="mt-1 text-sm text-text-secondary">CSV hoặc XLSX, tối đa 5 MB</p>
-              <label htmlFor="ledger-file" className="mt-5 inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-border-strong bg-surface px-4 text-sm font-semibold text-text hover:border-secondary hover:text-secondary">
+              <label htmlFor="ledger-file" className="mt-5 inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-border-strong bg-surface px-4 text-sm font-semibold text-ink hover:border-secondary hover:text-secondary">
                 Chọn file sao kê
               </label>
               <input id="ledger-file" aria-label="Chọn file sao kê" type="file" accept=".csv,.xlsx" className="sr-only" onChange={(event) => chooseFile(event.target.files?.item(0) ?? null)} />
@@ -343,8 +343,8 @@ export function SettingsWorkspace() {
           <div className="grid content-start gap-4">
             <Field label="Kỳ dữ liệu" type="month" value={reportingPeriod} onChange={(event) => setReportingPeriod(event.target.value)} />
             <div className={cn("rounded-xl border p-4", file ? "border-success/25 bg-success/5" : "bg-background") }>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">File đã chọn</p>
-              <p className="mt-2 break-all text-sm text-text">{file?.name ?? "Chưa có file"}</p>
+              <p className="text-[13px] font-medium text-text-tertiary">File đã chọn</p>
+              <p className="mt-2 break-all text-sm text-ink">{file?.name ?? "Chưa có file"}</p>
               {file ? <p className="mt-1 text-xs text-text-secondary">{new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(file.size / 1024)} KB</p> : null}
             </div>
             {fileError ? <p role="alert" className="text-sm text-danger">{fileError}</p> : null}

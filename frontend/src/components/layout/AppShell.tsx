@@ -35,8 +35,8 @@ function NavigationLinks({ items }: { items: NavigationItem[] }) {
           href={item.href}
           aria-current={active ? "page" : undefined}
           className={cn(
-            "flex items-center gap-3 rounded-xl px-4 py-2.5 text-[14px] whitespace-nowrap text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-text",
-            active && "bg-[#EAF0FF] font-semibold text-secondary border-l-4 border-secondary hover:bg-[#EAF0FF] hover:text-secondary",
+            "flex items-center gap-3 rounded-xl px-4 py-2.5 text-[14px] whitespace-nowrap text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-ink",
+            active && "bg-[#EAF0FF] font-semibold text-active border-l-4 border-active hover:bg-[#EAF0FF] hover:text-active",
           )}
         >
           <Icon aria-hidden size={18} strokeWidth={1.9} />
@@ -60,7 +60,7 @@ function ThemeButton() {
     <button
       type="button"
       onClick={() => setTheme(dark ? "light" : "dark")}
-      className="grid size-10 place-items-center rounded-xl border bg-surface text-text-secondary transition-[background-color,color,transform] duration-150 ease-out hover:-translate-y-0.5 hover:text-text"
+      className="grid size-10 place-items-center rounded-xl border bg-surface text-text-secondary transition-[background-color,color,transform] duration-150 ease-out hover:-translate-y-0.5 hover:text-ink"
         aria-label={mounted ? (dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối") : "Chuyển giao diện"}
       >
         {mounted ? (dark ? <Sun size={18} /> : <Moon size={18} />) : <span aria-hidden className="size-[18px]" />}
@@ -83,7 +83,7 @@ function MobileNavigation({ items }: { items: NavigationItem[] }) {
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex min-h-12 min-w-16 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[10px] text-text-tertiary",
-              active && "bg-secondary text-white",
+              active && "bg-active text-white",
             )}
           >
             <Icon size={18} strokeWidth={1.9} />
@@ -120,15 +120,15 @@ export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
           <NavigationLinks items={items} />
         </nav>
         <div className="p-6">
-          <Link href={operations ? "/ops/cases" : "/assistant"} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-text">
+          <Link href={operations ? "/ops/cases" : "/assistant"} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-ink">
             <LifeBuoy aria-hidden size={18} />
             {operations ? "Hỗ trợ nội bộ" : "Hỗ trợ SHB"}
           </Link>
-          <Link href={operations ? "/ops/settings" : "/settings"} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-text">
+          <Link href={operations ? "/ops/settings" : "/settings"} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-ink">
             <Settings aria-hidden size={18} />
             Cài đặt
           </Link>
-          <button type="button" onClick={() => void logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-text">
+          <button type="button" onClick={() => void logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] text-text-secondary transition-colors hover:bg-[#F5F6F8] hover:text-ink">
             <LogOut aria-hidden size={18} />
             Đăng xuất
           </button>
@@ -151,5 +151,6 @@ export function AppShell({ children, workspace = "merchant" }: AppShellProps) {
         </main>
       </div>
       <MobileNavigation items={items} />
-    </div>;
+    </div>
+  );
 }

@@ -46,6 +46,7 @@ from app.adapters import invoice as invoice_adapter
 from app.adapters import shb
 from app.adapters.sepay import normalize_note, split_sender_and_note
 from app.core.database import AsyncSessionLocal, engine
+from app.core.security import hash_password
 from app.models.agent import AgentRun, AuditEvent, ToolCall
 from app.models.cash import CashSession
 from app.models.invoice import Invoice
@@ -72,11 +73,6 @@ def _dt(day: int, hour: int, minute: int = 0) -> datetime:
 
 async def reset_all(db) -> None:
     """Delete all TaxLens rows in FK-safe (child-first) order."""
-
-    # Clear tables without ORM models first (they have FKs to merchants)
-    from sqlalchemy import text
-    for tbl in ("import_batches", "integration_sync_runs", "agent_actions", "public_confirmation_tokens"):
-        await db.execute(text(f"DELETE FROM {tbl}"))
 
     for model in (
         AuditEvent,
@@ -146,6 +142,7 @@ async def seed_merchant_and_org(db) -> None:
             email="admin@shb.com.vn",
             role="admin",
             merchant_id=None,
+            password_hash=hash_password("TaxLensDemo!2026"),
         ),
         User(
             id="U002",
@@ -153,6 +150,7 @@ async def seed_merchant_and_org(db) -> None:
             email="long.ops@shb.com.vn",
             role="ops_staff",
             merchant_id=None,
+            password_hash=hash_password("TaxLensDemo!2026"),
         ),
         User(
             id="U003",
@@ -160,6 +158,7 @@ async def seed_merchant_and_org(db) -> None:
             email="duc.rm@shb.com.vn",
             role="rm",
             merchant_id=None,
+            password_hash=hash_password("TaxLensDemo!2026"),
         ),
         User(
             id="U004",
@@ -167,6 +166,7 @@ async def seed_merchant_and_org(db) -> None:
             email="lan.compliance@shb.com.vn",
             role="compliance",
             merchant_id=None,
+            password_hash=hash_password("TaxLensDemo!2026"),
         ),
         User(
             id="U005",
@@ -174,6 +174,7 @@ async def seed_merchant_and_org(db) -> None:
             email="huong.salonhoa@gmail.com",
             role="merchant",
             merchant_id=MERCHANT_ID,
+            password_hash=hash_password("TaxLensDemo!2026"),
         ),
     ]
     for user in users:

@@ -6,7 +6,7 @@ const badgeVariants = cva("inline-flex min-h-6 items-center gap-1.5 rounded-full
   variants: {
     tone: {
       neutral: "bg-background text-text-secondary",
-      info: "border-secondary/25 bg-accent text-text",
+      info: "border-secondary/25 bg-accent text-ink",
       success: "border-success/25 bg-success/10 text-success",
       warning: "border-warning/25 bg-warning/10 text-warning",
       danger: "border-danger/25 bg-danger/10 text-danger",

@@ -7,7 +7,7 @@ function FieldShell({ label, hint, error, required, inputId, children }: FieldSh
   const messageId = `${inputId}-message`;
   return (
     <div className="grid gap-2">
-      <label htmlFor={inputId} className="text-sm font-semibold text-text">{label}{required && <span aria-hidden className="ml-1 text-danger">*</span>}</label>
+      <label htmlFor={inputId} className="text-sm font-semibold text-ink">{label}{required && <span aria-hidden className="ml-1 text-danger">*</span>}</label>
       {children}
       {(error || hint) && <p id={messageId} className={cn("text-xs leading-5 text-text-secondary", error && "text-danger")} aria-live={error ? "polite" : undefined}>{error ?? hint}</p>}
     </div>
@@ -21,7 +21,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({ l
   const inputId = id ?? generatedId;
   return (
     <FieldShell label={label} hint={hint} error={error} required={required} inputId={inputId}>
-      <input ref={ref} id={inputId} required={required} aria-invalid={Boolean(error)} aria-describedby={(error || hint) ? `${inputId}-message` : undefined} className={cn("min-h-10 w-full rounded-xl border bg-surface px-3.5 text-sm text-text placeholder:text-text-secondary disabled:cursor-not-allowed disabled:bg-background disabled:opacity-60", error && "border-danger", className)} {...props} />
+      <input ref={ref} id={inputId} required={required} aria-invalid={Boolean(error)} aria-describedby={(error || hint) ? `${inputId}-message` : undefined} className={cn("min-h-10 w-full rounded-xl border bg-surface px-3.5 text-sm text-ink placeholder:text-text-secondary disabled:cursor-not-allowed disabled:bg-background disabled:opacity-60", error && "border-danger", className)} {...props} />
     </FieldShell>
   );
 });
@@ -33,7 +33,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   const inputId = id ?? generatedId;
   return (
     <FieldShell label={label} hint={hint} error={error} required={required} inputId={inputId}>
-      <select ref={ref} id={inputId} required={required} aria-invalid={Boolean(error)} aria-describedby={(error || hint) ? `${inputId}-message` : undefined} className={cn("min-h-10 w-full rounded-xl border bg-surface px-3.5 text-sm text-text disabled:cursor-not-allowed disabled:bg-background disabled:opacity-60", error && "border-danger", className)} {...props}>{children}</select>
+      <select ref={ref} id={inputId} required={required} aria-invalid={Boolean(error)} aria-describedby={(error || hint) ? `${inputId}-message` : undefined} className={cn("min-h-10 w-full rounded-xl border bg-surface px-3.5 text-sm text-ink disabled:cursor-not-allowed disabled:bg-background disabled:opacity-60", error && "border-danger", className)} {...props}>{children}</select>
     </FieldShell>
   );
 });

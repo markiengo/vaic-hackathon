@@ -6,9 +6,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import AsyncSessionLocal, get_db
+from app.core.database import get_db
 from app.core.security import TaxLensError, get_current_user
-from app.core.ws_manager import ws_manager
 from app.models.agent import AgentRun
 from app.models.merchant import Merchant
 from app.models.payment import PaymentAllocation
@@ -17,7 +16,7 @@ from app.models.transaction import BankTransaction
 from app.models.sale import Sale
 from app.models.invoice import Invoice
 from app.schemas.reconciliation import ReconcileRequest, ReconcileResponse
-from app.services.reconciliation import reconcile_period
+from app.services.reconciliation_bg import run_reconciliation_bg
 
 router = APIRouter(prefix="/merchants", tags=["merchants"])
 logger = logging.getLogger(__name__)
@@ -48,6 +47,51 @@ async def list_merchants(
         ],
         "total": len(merchants),
     }
+
+
+@router.get("/portfolio")
+async def get_portfolio(
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> dict:
+    merchants_result = await db.execute(select(Merchant).order_by(Merchant.name.asc()))
+    merchants = merchants_result.scalars().all()
+
+    case_result = await db.execute(
+        select(ReconciliationCase.merchant_id, func.count(ReconciliationCase.id))
+        .where(ReconciliationCase.status.notin_(["RESOLVED", "CLOSED"]))
+        .group_by(ReconciliationCase.merchant_id)
+    )
+    open_cases_by_merchant = {row[0]: row[1] for row in case_result.all()}
+
+    run_result = await db.execute(
+        select(AgentRun.merchant_id, func.count(AgentRun.id))
+        .where(AgentRun.status.notin_(["COMPLETED", "FAILED", "CANCELLED"]))
+        .group_by(AgentRun.merchant_id)
+    )
+    active_runs_by_merchant = {row[0]: row[1] for row in run_result.all()}
+
+    merchant_list = []
+    for m in merchants:
+        merchant_list.append(
+            {
+                "id": m.id,
+                "name": m.name,
+                "business_type": m.business_type,
+                "business_category": m.business_category,
+                "status": m.status or "active",
+                "open_cases": open_cases_by_merchant.get(m.id, 0),
+                "active_runs": active_runs_by_merchant.get(m.id, 0),
+            }
+        )
+
+    summary = {
+        "total": len(merchant_list),
+        "active": sum(1 for m in merchant_list if m["status"] == "active"),
+        "open_cases": sum(m["open_cases"] for m in merchant_list),
+        "active_runs": sum(m["active_runs"] for m in merchant_list),
+    }
+    return {"merchants": merchant_list, "summary": summary}
 
 
 @router.get("/{merchant_id}")
@@ -197,47 +241,6 @@ async def dashboard(
     }
 
 
-async def _run_reconciliation(merchant_id: str, case_id: str, period: str) -> None:
-    """Background task: run real reconciliation and update case."""
-    try:
-        async with AsyncSessionLocal() as session:
-            summary = await reconcile_period(
-                session,
-                case_id=case_id,
-                merchant_id=merchant_id,
-                period=period,
-            )
-            case = await session.get(ReconciliationCase, case_id)
-            if case is not None:
-                case.status = "COMPLETED"
-                case.summary = {
-                    "transactions_scanned": summary.transactions_scanned,
-                    "matched": summary.matched,
-                    "exceptions": summary.exceptions,
-                    "ambiguous": summary.ambiguous,
-                    "no_match": summary.no_match,
-                    "review_required": summary.review_required,
-                    "cash_discrepancies": summary.cash_discrepancies,
-                    "matched_transaction_ids": list(summary.matched_transaction_ids),
-                    "exception_ids": list(summary.exception_ids),
-                }
-            await session.commit()
-        await ws_manager.broadcast({
-            "type": "reconciliation_completed",
-            "merchant_id": merchant_id,
-            "case_id": case_id,
-            "period": period,
-        })
-    except Exception as exc:
-        logger.exception("Reconciliation background task failed for case %s", case_id)
-        async with AsyncSessionLocal() as session:
-            case = await session.get(ReconciliationCase, case_id)
-            if case is not None:
-                case.status = "FAILED"
-                case.summary = {"error": str(exc)}
-            await session.commit()
-
-
 @router.post("/{merchant_id}/reconcile", status_code=202, response_model=ReconcileResponse)
 async def trigger_reconcile(
     merchant_id: str,
@@ -297,6 +300,6 @@ async def trigger_reconcile(
     db.add(case)
     await db.commit()
 
-    background_tasks.add_task(_run_reconciliation, merchant_id, case_id, body.period)
+    background_tasks.add_task(run_reconciliation_bg, merchant_id, case_id, body.period)
 
     return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})

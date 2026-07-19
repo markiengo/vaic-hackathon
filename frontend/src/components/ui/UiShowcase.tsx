@@ -18,7 +18,7 @@ const columns: DataTableColumn<LedgerRow>[] = [
   { key: "reference", header: "Mã giao dịch", primary: true, cell: (row) => row.reference },
   { key: "source", header: "Nguồn", cell: (row) => row.source },
   { key: "status", header: "Trạng thái", cell: (row) => <Badge tone={row.status === "Khớp" ? "success" : "warning"}>{row.status}</Badge> },
-  { key: "amount", header: "Số tiền", align: "right", cell: (row) => <span className="font-mono text-xs text-text">{row.amount}</span> },
+  { key: "amount", header: "Số tiền", align: "right", cell: (row) => <span className="font-mono text-xs text-ink">{row.amount}</span> },
 ];
 
 function InteractiveShowcase() {

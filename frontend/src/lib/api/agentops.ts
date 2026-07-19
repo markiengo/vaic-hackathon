@@ -205,7 +205,7 @@ export function executeAgentAction(action: AgentAction) {
 }
 
 export function getMerchantPortfolio() {
-  return apiFetch<MerchantPortfolio>("merchants");
+  return apiFetch<MerchantPortfolio>("merchants/portfolio");
 }
 
 export function getMerchantDashboard(merchantId: string, period = "2026-07") {

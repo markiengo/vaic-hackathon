@@ -5,6 +5,21 @@ const timeline = [
   { time: "09:13", text: "Giao dịch ngân hàng được ghi nhận" },
   { time: "09:15", text: "Đơn hàng DH-1023 vẫn chưa liên kết" },
   { time: "10:02", text: "Không tìm thấy hóa đơn tương ứng" },
+  {
+    time: "10:30",
+    text: "Kế toán phải đối soát thủ công từng giao dịch",
+    consequence: true,
+  },
+  {
+    time: "14:45",
+    text: "Báo cáo thuế bị trì hoãn, sai sót do nhập tay",
+    consequence: true,
+  },
+  {
+    time: "17:20",
+    text: "Khách hàng kinh doanh không được cấp tín dụng kịp thời",
+    consequence: true,
+  },
 ];
 
 export function MerchantDayStory() {
@@ -38,14 +53,30 @@ export function MerchantDayStory() {
                   <li key={event.time} className="relative flex gap-5">
                     <span
                       className={`relative z-10 mt-1.5 size-4 shrink-0 rounded-full border-2 ${
-                        i === timeline.length - 1
-                          ? "border-danger bg-danger-soft"
-                          : "border-secondary bg-surface"
+                        event.consequence
+                          ? "border-mango bg-mango/15"
+                          : i === timeline.length - 1
+                            ? "border-danger bg-danger-soft"
+                            : "border-secondary bg-surface"
                       }`}
                     />
                     <div>
-                      <div className="font-mono text-sm font-semibold text-text">{event.time}</div>
-                      <div className="mt-1 text-base leading-relaxed text-text-secondary">{event.text}</div>
+                      <div
+                        className={`font-mono text-sm font-semibold ${
+                          event.consequence ? "text-mango" : "text-text"
+                        }`}
+                      >
+                        {event.time}
+                      </div>
+                      <div
+                        className={`mt-1 text-base leading-relaxed ${
+                          event.consequence
+                            ? "font-semibold text-mango"
+                            : "text-text-secondary"
+                        }`}
+                      >
+                        {event.text}
+                      </div>
                     </div>
                   </li>
                 ))}

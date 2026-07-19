@@ -13,7 +13,7 @@ function StateFrame({ icon, title, description, action, compact }: StateProps & 
   return (
     <div className={cn("grid place-items-center rounded-xl border border-dashed bg-surface px-5 py-12 text-center", compact && "py-7")}>
       <div className="grid size-11 place-items-center rounded-full bg-background text-secondary">{icon}</div>
-      <h3 className="font-display mt-4 text-2xl text-text">{title}</h3>
+      <h3 className="font-display mt-4 text-2xl text-ink">{title}</h3>
       <p className="mt-2 max-w-md text-sm leading-6 text-text-secondary">{description}</p>
       {action && <div className="mt-5">{action}</div>}
     </div>

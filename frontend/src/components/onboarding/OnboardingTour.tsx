@@ -132,7 +132,7 @@ export function OnboardingTour({ role }: { role: Role }) {
         <button
           type="button"
           onClick={skip}
-          className="absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-lg text-text-tertiary transition-colors hover:bg-neutral-soft hover:text-text"
+          className="absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-xl text-text-tertiary transition-colors hover:bg-neutral-soft hover:text-ink"
           aria-label="Bỏ qua hướng dẫn"
         >
           <X size={18} />
@@ -161,7 +161,7 @@ export function OnboardingTour({ role }: { role: Role }) {
             <span className="h-px flex-1 bg-border" />
           </div>
 
-          <h3 id="onboarding-title" className="font-display mt-4 text-2xl leading-tight tracking-[-0.02em] text-text">
+          <h3 id="onboarding-title" className="font-display mt-4 text-2xl leading-tight tracking-[-0.02em] text-ink">
             {current.title}
           </h3>
           <p className="mt-3 text-sm leading-6 text-text-secondary">{current.description}</p>
@@ -188,7 +188,7 @@ export function OnboardingTour({ role }: { role: Role }) {
               <button
                 type="button"
                 onClick={next}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-on-primary transition-all hover:bg-primary-hover active:scale-[0.97]"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary transition-all hover:bg-primary-hover active:scale-[0.97]"
               >
                 {isLast ? "Bắt đầu" : "Tiếp tục"}
                 <ArrowRight size={16} />

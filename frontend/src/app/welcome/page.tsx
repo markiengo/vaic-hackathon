@@ -39,7 +39,7 @@ export default function WelcomePage() {
           <TaxLensLogo inverse />
         </div>
         <div className="relative max-w-2xl">
-          <p className="animate-welcome-enter-left text-sm uppercase tracking-[0.22em] text-white/65" style={{ animationDelay: "150ms" }}>
+          <p className="animate-welcome-enter-left text-[13px] font-medium text-white/65" style={{ animationDelay: "150ms" }}>
             TaxOps được SHB đồng hành
           </p>
           <h1 className="font-display animate-welcome-enter-left mt-6 text-[64px] leading-[0.94] tracking-[-0.04em]" style={{ animationDelay: "300ms" }}>
@@ -62,10 +62,10 @@ export default function WelcomePage() {
           <div className="animate-welcome-enter mb-9 lg:hidden" style={{ animationDelay: "0ms" }}>
             <TaxLensLogo />
           </div>
-          <p className="animate-welcome-enter text-xs font-semibold uppercase tracking-[0.18em] text-secondary" style={{ animationDelay: "200ms" }}>
+          <p className="animate-welcome-enter text-[13px] font-medium text-text-tertiary" style={{ animationDelay: "200ms" }}>
             Chọn trải nghiệm demo
           </p>
-          <h2 className="font-display animate-welcome-enter mt-3 text-4xl leading-tight tracking-[-0.03em]" style={{ animationDelay: "300ms" }}>
+          <h2 className="font-display animate-welcome-enter mt-3 text-4xl leading-tight tracking-[-0.03em] text-ink" style={{ animationDelay: "300ms" }}>
             Bạn là ai?
           </h2>
           <p className="animate-welcome-enter mt-3 text-sm leading-6 text-text-secondary" style={{ animationDelay: "400ms" }}>
@@ -79,7 +79,7 @@ export default function WelcomePage() {
                 <Link
                   key={role.href}
                   href={role.href}
-                  className="group animate-welcome-enter flex flex-col gap-4 rounded-xl border bg-surface p-5 transition-all hover:border-secondary hover:shadow-md hover:-translate-y-0.5"
+                  className="group animate-welcome-enter flex flex-col gap-4 rounded-xl border bg-surface p-5 transition-all hover:border-primary hover:shadow-md hover:-translate-y-0.5"
                   style={{ animationDelay: `${500 + index * 100}ms` }}
                 >
                   <div className="flex items-center gap-4">
@@ -87,10 +87,10 @@ export default function WelcomePage() {
                       <Icon aria-hidden size={24} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">{role.label}</p>
-                      <strong className="block text-base font-semibold text-text">{role.name}</strong>
+                      <p className="text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">{role.label}</p>
+                      <strong className="block text-base font-semibold text-ink">{role.name}</strong>
                     </div>
-                    <ArrowRight aria-hidden size={20} className="shrink-0 text-text-tertiary transition-colors group-hover:text-secondary" />
+                    <ArrowRight aria-hidden size={20} className="shrink-0 text-text-tertiary transition-colors group-hover:text-primary" />
                   </div>
                   <ul className="grid gap-2">
                     {role.bullets.map((bullet) => (
@@ -107,7 +107,7 @@ export default function WelcomePage() {
 
           <p className="animate-welcome-enter mt-7 text-center text-sm text-text-tertiary" style={{ animationDelay: "700ms" }}>
             Đã có tài khoản?{" "}
-            <Link href="/login" className="font-semibold text-secondary transition-colors hover:text-secondary-hover">
+            <Link href="/login" className="font-semibold text-primary transition-colors hover:text-primary-hover">
               Đăng nhập
             </Link>
           </p>

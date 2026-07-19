@@ -69,7 +69,7 @@ function PublicFrame({ children }: { children: React.ReactNode }) {
       <div className="mx-auto w-full max-w-5xl">
         <header className="mb-6 flex items-center justify-between gap-4 sm:mb-8">
           <TaxLensLogo />
-          <span className="inline-flex items-center gap-2 rounded-full border bg-surface/90 px-3 py-2 text-xs font-semibold text-text">
+          <span className="inline-flex items-center gap-2 rounded-full border bg-surface/90 px-3 py-2 text-xs font-semibold text-ink">
             <ShieldCheck aria-hidden className="text-success" size={16} /> Liên kết bảo mật
           </span>
         </header>
@@ -86,8 +86,8 @@ function LoadingConfirmation() {
   return (
     <section role="status" className="surface-shadow mx-auto grid min-h-96 max-w-2xl place-items-center rounded-xl border bg-surface p-8 text-center">
       <div>
-        <span className="mx-auto grid size-14 place-items-center rounded-full bg-accent text-secondary"><RefreshCw aria-hidden className="animate-spin motion-reduce:animate-none" size={23} /></span>
-        <h1 className="font-display mt-6 text-3xl">Đang kiểm tra liên kết</h1>
+        <span className="mx-auto grid size-14 place-items-center rounded-full bg-accent text-primary"><RefreshCw aria-hidden className="animate-spin motion-reduce:animate-none" size={23} /></span>
+        <h1 className="font-display mt-6 text-3xl text-ink">Đang kiểm tra liên kết</h1>
         <p className="mt-3 text-sm leading-6 text-text-secondary">TaxLens đang tải đúng giao dịch và thời hạn xác nhận.</p>
       </div>
     </section>
@@ -109,9 +109,9 @@ function TerminalState({
 }) {
   return (
     <section className="surface-shadow mx-auto max-w-2xl rounded-xl border bg-surface p-7 text-center sm:p-11">
-      <span className="mx-auto grid size-16 place-items-center rounded-full bg-accent text-secondary">{icon}</span>
-      <p className="mt-7 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{eyebrow}</p>
-      <h1 className="font-display mt-3 text-4xl leading-tight tracking-[-0.03em]">{title}</h1>
+      <span className="mx-auto grid size-16 place-items-center rounded-full bg-accent text-primary">{icon}</span>
+      <p className="mt-7 text-[13px] font-medium text-text-tertiary">{eyebrow}</p>
+      <h1 className="font-display mt-3 text-4xl leading-tight tracking-[-0.03em] text-ink">{title}</h1>
       <p className="mx-auto mt-4 max-w-lg text-[15px] leading-7 text-text-secondary">{description}</p>
       {action ? <div className="mt-7 flex justify-center">{action}</div> : null}
     </section>
@@ -143,7 +143,7 @@ function ConfirmationForm({
       <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
         <div className="relative overflow-hidden bg-brand-navy p-6 text-white sm:p-9">
           <div aria-hidden className="absolute -right-16 -top-16 size-48 rounded-full border-[32px] border-white/5" />
-          <p className="relative text-xs font-semibold uppercase tracking-[0.17em] text-white/70">Giao dịch cần xác nhận</p>
+          <p className="relative text-[13px] font-medium text-white/70">Giao dịch cần xác nhận</p>
           <div className="relative mt-8">
             <p className="text-sm text-white/70">Số tiền nhận</p>
             {data.amount ? <Money value={Number(data.amount)} className="font-display mt-2 text-4xl text-white sm:text-5xl" /> : <p className="font-display mt-2 text-3xl">Chưa có số tiền</p>}
@@ -156,36 +156,36 @@ function ConfirmationForm({
         </div>
 
         <div className="p-6 sm:p-9">
-          <p className="text-xs font-semibold uppercase tracking-[0.17em] text-secondary">Một quyết định ngắn</p>
-          <h1 className="font-display mt-3 text-4xl leading-tight tracking-[-0.035em]">Khoản tiền này là gì?</h1>
+          <p className="text-[13px] font-medium text-text-tertiary">Một quyết định ngắn</p>
+          <h1 className="font-display mt-3 text-4xl leading-tight tracking-[-0.035em] text-ink">Khoản tiền này là gì?</h1>
           <p className="mt-3 text-[15px] leading-7 text-text-secondary">Chọn đúng bản chất giao dịch. TaxLens sẽ dùng câu trả lời này để làm sạch sổ, không tự thay đổi quyết định của bạn.</p>
 
           {data.ai_suggestion ? (
-            <div className="mt-6 rounded-xl border border-secondary/20 bg-accent p-4 text-text">
+            <div className="mt-6 rounded-xl border border-primary/20 bg-primary-soft p-4 text-ink">
               <div className="flex items-start gap-3">
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface text-secondary"><Sparkles aria-hidden size={17} /></span>
+                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface text-primary"><Sparkles aria-hidden size={17} /></span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">TaxLens đề xuất: {classificationLabel(data.ai_suggestion)}</p>
-                    {confidence != null ? <span className="rounded-full border bg-surface px-2.5 py-1 font-mono text-xs text-text">{confidence}% tin cậy</span> : null}
+                    <p className="text-sm font-semibold text-ink">TaxLens đề xuất: {classificationLabel(data.ai_suggestion)}</p>
+                    {confidence != null ? <span className="rounded-full border bg-surface px-2.5 py-1 font-mono text-xs text-ink">{confidence}% tin cậy</span> : null}
                   </div>
-                  {data.suggestion_summary ? <p className="mt-2 text-sm leading-6 text-text">{data.suggestion_summary}</p> : null}
+                  {data.suggestion_summary ? <p className="mt-2 text-sm leading-6 text-ink">{data.suggestion_summary}</p> : null}
                 </div>
               </div>
             </div>
           ) : null}
 
           <fieldset className="mt-7">
-            <legend className="text-sm font-semibold text-text">Chọn một phân loại</legend>
+            <legend className="text-sm font-semibold text-ink">Chọn một phân loại</legend>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {allowedOptions.map((option) => {
                 const selected = choice === option.value;
                 return (
-                  <label key={option.value} className={cn("relative cursor-pointer rounded-xl border bg-background p-4 transition-colors hover:border-secondary", selected && "border-secondary bg-accent/45 ring-2 ring-secondary/10") }>
+                  <label key={option.value} className={cn("relative cursor-pointer rounded-xl border bg-background p-4 transition-colors hover:border-primary", selected && "border-primary bg-primary-soft ring-2 ring-primary/10") }>
                     <input type="radio" name="classification" value={option.value} checked={selected} onChange={() => onChoice(option.value)} className="sr-only" />
                     <span className="flex items-start justify-between gap-3">
-                      <span><strong className="block font-normal text-text">{option.label}</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">{option.description}</span></span>
-                      <span aria-hidden className={cn("grid size-6 shrink-0 place-items-center rounded-full border bg-surface text-transparent", selected && "border-secondary bg-secondary text-white")}><Check size={14} /></span>
+                      <span><strong className="block font-normal text-ink">{option.label}</strong><span className="mt-1 block text-xs leading-5 text-text-secondary">{option.description}</span></span>
+                      <span aria-hidden className={cn("grid size-6 shrink-0 place-items-center rounded-full border bg-surface text-transparent", selected && "border-primary bg-primary text-white")}><Check size={14} /></span>
                     </span>
                   </label>
                 );
@@ -193,11 +193,11 @@ function ConfirmationForm({
             </div>
           </fieldset>
 
-          {error ? <p role="alert" className="mt-4 rounded-lg border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</p> : null}
+          {error ? <p role="alert" className="mt-4 rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</p> : null}
             <Button size="lg" className="mt-6 w-full" disabled={!choice || busy} onClick={onSubmit}>
               <CheckCircle2 aria-hidden size={18} /> {busy ? "Đang ghi nhận" : "Xác nhận đề xuất"}
             </Button>
-            <button type="button" className="mt-3 w-full text-center text-sm font-semibold text-secondary underline-offset-4 hover:underline" onClick={() => onChoice(null)} disabled={busy}>
+            <button type="button" className="mt-3 w-full text-center text-sm font-semibold text-primary underline-offset-4 hover:underline" onClick={() => onChoice(null)} disabled={busy}>
               Chọn phân loại khác
             </button>
           <p className="mt-4 flex items-start justify-center gap-2 text-center text-xs leading-5 text-text-secondary"><Clock3 aria-hidden className="mt-0.5 shrink-0" size={14} /> Liên kết dùng một lần và hết hạn lúc {new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(new Date(data.expires_at))}.</p>

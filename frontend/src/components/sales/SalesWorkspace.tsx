@@ -100,10 +100,10 @@ function CatalogProduct({ product, disabled, onAdd }: { product: PosProduct; dis
       className="surface-lift group flex min-h-32 flex-col justify-between rounded-xl border bg-surface p-4 text-left transition-[border-color,transform,box-shadow] enabled:hover:-translate-y-0.5 enabled:hover:border-secondary disabled:cursor-not-allowed disabled:opacity-55"
     >
       <span>
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">
+        <span className="text-[13px] font-medium text-text-tertiary">
           {product.category ?? "Khác"}
         </span>
-        <strong className="mt-2 block font-normal leading-6 text-text">{product.name}</strong>
+        <strong className="mt-2 block font-normal leading-6 text-ink">{product.name}</strong>
       </span>
       <span className="mt-4 flex items-center justify-between gap-3">
         <Money value={product.price} className="text-sm" />
@@ -144,8 +144,8 @@ function CartPanel({
     <Card variant="workspace" className="lg:sticky lg:top-6 lg:self-start">
       <div className="flex items-center justify-between gap-3 border-b pb-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary">Đơn hiện tại</p>
-          <h2 className="font-display mt-1 text-2xl">{cart.length} mặt hàng</h2>
+          <p className="text-[13px] font-medium text-text-tertiary">Đơn hiện tại</p>
+          <h2 className="font-display mt-1 text-2xl text-ink">{cart.length} mặt hàng</h2>
         </div>
         <span className="grid size-11 place-items-center rounded-full bg-accent text-secondary">
           <ShoppingBag aria-hidden size={20} />
@@ -158,7 +158,7 @@ function CartPanel({
             <li key={item.key} className="py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <strong className="block truncate text-sm font-normal text-text">{item.product_name}</strong>
+                  <strong className="block truncate text-sm font-normal text-ink">{item.product_name}</strong>
                   <Money value={item.unit_price} className="mt-1 text-xs" />
                 </div>
                 <button
@@ -206,7 +206,7 @@ function CartPanel({
       )}
 
       {locked ? (
-        <p className="mb-4 rounded-xl border border-secondary/25 bg-accent px-4 py-3 text-sm leading-6 text-text">
+        <p className="mb-4 rounded-xl border border-secondary/25 bg-accent px-4 py-3 text-sm leading-6 text-ink">
           Đơn đã được lưu và đang chờ chuyển khoản. Mở lại mã QR để tiếp tục hoặc tạo mã mới khi hết hạn.
         </p>
       ) : null}
@@ -303,8 +303,8 @@ function HistoryPanel({
         <Card variant="information">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-secondary">Dòng chứng từ</p>
-              <h3 className="font-display mt-1 text-2xl">{selected.lines.map((line) => line.product_name).join(", ")}</h3>
+              <p className="text-[13px] font-medium text-text-tertiary">Dòng chứng từ</p>
+              <h3 className="font-display mt-1 text-2xl text-ink">{selected.lines.map((line) => line.product_name).join(", ")}</h3>
             </div>
             <Money value={selected.net_amount} className="text-lg" />
           </div>
@@ -355,8 +355,8 @@ function CashClosePanel({ context, onClosed }: { context: PosContext | undefined
   return (
     <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
       <Card variant="information">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary">Ca #{session.id}</p>
-        <h2 className="font-display mt-2 text-3xl">Đối chiếu tiền trong quầy</h2>
+        <p className="text-[13px] font-medium text-text-tertiary">Ca #{session.id}</p>
+        <h2 className="font-display mt-2 text-3xl text-ink">Đối chiếu tiền trong quầy</h2>
         <dl className="mt-7 grid gap-4">
           <div className="flex items-center justify-between border-b pb-4"><dt className="text-text-secondary">Tiền đầu ca</dt><dd><Money value={session.opening_cash} /></dd></div>
           <div className="flex items-center justify-between border-b pb-4"><dt className="text-text-secondary">Thu tiền mặt dự kiến</dt><dd><Money value={expected - session.opening_cash + session.cash_expenses} /></dd></div>
@@ -546,11 +546,11 @@ export function SalesWorkspace() {
           <label className="relative block flex-1">
             <span className="sr-only">Tìm dịch vụ</span>
             <Search aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={17} />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm dịch vụ, sản phẩm..." className="min-h-11 w-full rounded-lg border bg-background pl-10 pr-4 text-sm" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm dịch vụ, sản phẩm..." className="min-h-10 w-full rounded-xl border bg-background pl-10 pr-4 text-sm" />
           </label>
           <div className="flex gap-2 overflow-x-auto" aria-label="Danh mục">
             {categories.map((item) => (
-              <button key={item} type="button" onClick={() => setCategory(item)} className={cn("min-h-9 shrink-0 rounded-full border px-3 text-xs font-semibold text-text-secondary", category === item && "border-secondary bg-secondary text-white")}>{item}</button>
+              <button key={item} type="button" onClick={() => setCategory(item)} className={cn("min-h-9 shrink-0 rounded-full border px-3 text-xs font-semibold text-text-secondary", category === item && "border-primary bg-primary text-white")}>{item}</button>
             ))}
           </div>
         </div>
@@ -603,7 +603,7 @@ export function SalesWorkspace() {
         <Card variant="information" className="border-success/30">
           <div className="mb-4 flex items-start gap-3">
             <CheckCircle2 aria-hidden className="mt-0.5 text-success" size={22} />
-            <div><h2 className="font-display text-2xl">Đã nhận thanh toán · Đã tự động khớp</h2><p className="mt-1 text-sm text-text">Dòng quan hệ này là bằng chứng cho đơn vừa hoàn tất.</p></div>
+            <div><h2 className="font-display text-2xl text-ink">Đã nhận thanh toán · Đã tự động khớp</h2><p className="mt-1 text-sm text-ink">Dòng quan hệ này là bằng chứng cho đơn vừa hoàn tất.</p></div>
           </div>
           <RecordRelationshipChain order={{ id: receipt.orderId, amount: receipt.amount }} payment={{ id: receipt.paymentId, amount: receipt.amount }} invoice={null} />
         </Card>
@@ -671,7 +671,7 @@ export function SalesWorkspace() {
               <Clock3 aria-hidden size={16} />
               {remaining ? `Còn ${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}` : "Mã đã hết hạn"}
             </p>
-            <p className="mt-4 max-w-sm text-sm font-semibold leading-6 text-text">Đang chờ thanh toán</p><p className="max-w-sm text-sm leading-6 text-text-secondary">Giữ cửa sổ này mở. Khi tiền về, trạng thái sẽ đổi tự động qua kết nối realtime.</p>
+            <p className="mt-4 max-w-sm text-sm font-semibold leading-6 text-ink">Đang chờ thanh toán</p><p className="max-w-sm text-sm leading-6 text-text-secondary">Giữ cửa sổ này mở. Khi tiền về, trạng thái sẽ đổi tự động qua kết nối realtime.</p>
           </div>
         ) : null}
       </Dialog>

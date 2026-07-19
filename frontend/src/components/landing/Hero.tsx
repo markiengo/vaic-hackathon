@@ -6,10 +6,19 @@ import { LandingProductPreview } from "./LandingProductPreview";
 export function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-border bg-background" aria-labelledby="hero-heading">
-      {/* Decorative background geometry */}
-      <div className="pointer-events-none absolute -right-32 -top-20 size-[28rem] rounded-full border border-border/40" />
-      <div className="pointer-events-none absolute -right-10 top-32 size-64 rounded-full border border-mango/15" />
-      <div className="pointer-events-none absolute right-40 top-72 size-3 rounded-full bg-mango/40" />
+      {/* Warm sunrise glow (top-right) */}
+      <div className="pointer-events-none absolute -right-40 -top-40 size-[36rem] rounded-full bg-[radial-gradient(circle_at_center,_var(--color-mango)_0%,_var(--color-primary)_40%,_transparent_70%)] opacity-[0.18] blur-3xl" />
+      {/* Cool accent panel behind product preview (right) */}
+      <div className="pointer-events-none absolute right-0 top-1/2 hidden h-[28rem] w-[28rem] -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_center,_var(--color-accent)_0%,_transparent_65%)] opacity-30 blur-2xl lg:block" />
+      {/* Subtle texture grid */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, var(--color-secondary) 1px, transparent 1px)",
+          backgroundSize: "22px 22px",
+        }}
+      />
 
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:py-24">
         {/* Left: copy */}
@@ -55,18 +64,6 @@ export function Hero() {
         <Reveal delay={200} translate={24} className="relative">
           <div className="hero-float">
             <LandingProductPreview variant="hero" className="surface-shadow-lg" />
-          </div>
-          {/* Floating badge */}
-          <div className="absolute -left-4 top-1/3 hidden rounded-lg border bg-surface surface-shadow-md px-3 py-2 lg:block">
-            <div className="flex items-center gap-2">
-              <span className="flex size-8 items-center justify-center rounded-md bg-secondary/10 text-secondary">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-              </span>
-              <div>
-                <div className="text-xs font-semibold text-text">Dữ liệu mô phỏng</div>
-                <div className="text-[10px] text-text-tertiary">Kịch bản demo</div>
-              </div>
-            </div>
           </div>
         </Reveal>
       </div>

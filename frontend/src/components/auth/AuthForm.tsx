@@ -135,7 +135,7 @@ export function AuthForm(): React.ReactNode {
           />
 
           <div className="grid gap-1.5">
-            <span className="text-[13px] font-medium text-text">Mật khẩu</span>
+            <span className="text-[13px] font-medium text-ink">Mật khẩu</span>
             <div className="relative">
               <input
                 name="password"
@@ -144,7 +144,7 @@ export function AuthForm(): React.ReactNode {
                 required
                 minLength={8}
                 placeholder="Nhập mật khẩu"
-                className="h-[46px] w-full rounded-[10px] border border-border bg-white px-4 pr-11 text-[14px] text-text outline-none transition-colors placeholder:text-text-tertiary focus:border-primary"
+                className="h-[46px] w-full rounded-[10px] border border-border bg-white px-4 pr-11 text-[14px] text-ink outline-none transition-colors placeholder:text-text-tertiary focus:border-primary"
               />
               <button
                 type="button"
@@ -165,7 +165,7 @@ export function AuthForm(): React.ReactNode {
                 setForgotToast(true);
                 setTimeout(() => setForgotToast(false), 4000);
               }}
-              className="text-[13px] text-secondary transition-colors hover:text-secondary-hover"
+              className="text-[13px] text-primary transition-colors hover:text-primary-hover"
             >
               Quên mật khẩu?
             </button>
@@ -174,7 +174,7 @@ export function AuthForm(): React.ReactNode {
           {forgotToast && (
             <p
               role="status"
-              className="rounded-[8px] border border-secondary/20 bg-secondary/5 px-3 py-2 text-[13px] text-secondary"
+              className="rounded-[8px] border border-primary/20 bg-primary/5 px-3 py-2 text-[13px] text-primary"
             >
               Vui lòng liên hệ hỗ trợ SHB để khôi phục mật khẩu.
             </p>

@@ -22,7 +22,11 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npm run start -- --port ${port}`,
     url: baseURL,
-    env: { PLAYWRIGHT_TEST: "1" },
+    env: {
+      PLAYWRIGHT_TEST: "1",
+      TAXLENS_BACKEND_URL: "http://127.0.0.1:8000",
+      NEXT_PUBLIC_TAXLENS_WS_PORT: "8000",
+    },
     reuseExistingServer: !process.env.CI,
   },
 });

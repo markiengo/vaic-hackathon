@@ -120,7 +120,7 @@ export function TransactionsScreen() {
 
       {/* Summary strip */}
       <div className="flex flex-wrap items-center gap-4 rounded-xl border bg-surface px-5 py-4 text-sm">
-        <span className="font-semibold text-text">{counts.all} giao dịch</span>
+        <span className="font-semibold text-ink">{counts.all} giao dịch</span>
         <span className="text-text-secondary">·</span>
         <span className="text-text-secondary">{counts.matched} đã khớp tự động</span>
         <span className="text-text-secondary">·</span>
@@ -165,8 +165,8 @@ export function TransactionsScreen() {
                   type="button"
                   onClick={() => setStatus(filter.value)}
                   className={cn(
-                    "min-h-10 rounded-lg border px-2 text-xs font-semibold text-text-secondary transition-colors hover:border-secondary hover:text-secondary 2xl:px-3 2xl:text-sm",
-                    status === filter.value && "border-secondary bg-secondary text-white hover:text-white",
+                    "min-h-10 rounded-xl border px-2 text-xs font-semibold text-text-secondary transition-colors hover:border-primary hover:text-primary 2xl:px-3 2xl:text-sm",
+                    status === filter.value && "border-primary bg-primary text-white hover:text-white",
                   )}
                 >
                   {filter.label} ({counts[filter.value]})
@@ -237,8 +237,8 @@ function TransactionDetail({ transaction, period }: { transaction: BankTransacti
       <div className="border-b p-5 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">Bản ghi ngân hàng</p>
-            <h2 className="font-display mt-2 text-3xl">{transaction.sender_name ?? "Người gửi chưa rõ"}</h2>
+            <p className="text-[13px] font-medium text-text-tertiary">Bản ghi ngân hàng</p>
+            <h2 className="font-display mt-2 text-3xl text-ink">{transaction.sender_name ?? "Người gửi chưa rõ"}</h2>
             <Money value={transaction.amount} className="mt-3 block text-3xl tracking-[-0.04em]" />
           </div>
           <StatusPill status={matchStatusLabel(transaction.match_status)} />
@@ -277,7 +277,7 @@ function TransactionDetail({ transaction, period }: { transaction: BankTransacti
             </span>
           </div>
           <div className="mt-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Bằng chứng</p>
+            <p className="text-[13px] font-medium text-text-tertiary">Bằng chứng</p>
             <ul className="mt-3 grid gap-2 text-sm text-text-secondary">
               {suggestion.evidence.map((item) => (
                 <li key={item} className="flex gap-2"><span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-secondary" />{item}</li>
@@ -341,11 +341,11 @@ function Evidence({ icon: Icon, label, value }: { icon: typeof Banknote; label: 
   return (
     <div className="flex gap-3 rounded-xl border p-4">
       <Icon aria-hidden className="mt-0.5 shrink-0 text-secondary" size={18} />
-      <div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-text-secondary">{label}</p><p className="mt-2 text-sm">{value}</p></div>
+      <div><p className="text-[13px] font-medium text-text-tertiary">{label}</p><p className="mt-2 text-sm">{value}</p></div>
     </div>
   );
 }
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div><p className="text-xs uppercase tracking-[0.1em] text-text-secondary">{label}</p><p className="mt-2 text-sm font-semibold">{value}</p></div>;
+  return <div><p className="text-[13px] font-medium text-text-tertiary">{label}</p><p className="mt-2 text-sm font-semibold">{value}</p></div>;
 }

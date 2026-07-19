@@ -8,11 +8,11 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary: "border-primary bg-primary text-on-primary hover:bg-primary-hover",
-        secondary: "border-primary bg-transparent text-primary hover:bg-primary-soft",
+        secondary: "border-primary bg-surface text-primary hover:bg-primary-soft",
         secondaryPill: "border-primary bg-surface text-primary rounded-full hover:bg-primary-soft",
-        tertiary: "border-transparent bg-transparent text-secondary hover:bg-accent hover:text-text",
-        outline: "border-border-strong bg-surface text-text hover:border-secondary hover:text-secondary",
-        ghost: "border-transparent bg-transparent text-text-secondary hover:bg-accent hover:text-text",
+        tertiary: "border-transparent bg-transparent text-secondary hover:bg-accent hover:text-ink",
+        outline: "border-border-strong bg-surface text-ink hover:border-primary hover:text-primary",
+        ghost: "border-transparent bg-transparent text-text-secondary hover:bg-accent hover:text-ink",
         danger: "border-danger bg-danger text-white hover:brightness-90",
       },
       size: {

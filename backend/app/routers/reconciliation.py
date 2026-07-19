@@ -7,9 +7,8 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import AsyncSessionLocal, get_db
+from app.core.database import get_db
 from app.core.security import TaxLensError, get_current_user
-from app.core.ws_manager import ws_manager
 from app.models.merchant import Merchant
 from app.models.payment import PaymentAllocation
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
@@ -17,7 +16,7 @@ from app.models.transaction import BankTransaction
 from app.schemas.reconciliation import ExceptionResolveRequest, ExceptionResolveResponse, ReconcileResponse
 from app.services.allocation import AllocationLeg, AllocationType
 from app.services.matching import MatchMethod
-from app.services.reconciliation import reconcile_period
+from app.services.reconciliation_bg import run_reconciliation_bg
 
 router = APIRouter(prefix="/reconciliation", tags=["reconciliation"])
 logger = logging.getLogger(__name__)
@@ -27,47 +26,6 @@ class ReconciliationStartRequest(BaseModel):
     merchant_id: str
     period: str  # "YYYY-MM"
     request_text: str | None = None
-
-
-async def _run_reconciliation_bg(merchant_id: str, case_id: str, period: str) -> None:
-    """Background task: run real reconciliation and update case."""
-    try:
-        async with AsyncSessionLocal() as session:
-            summary = await reconcile_period(
-                session,
-                case_id=case_id,
-                merchant_id=merchant_id,
-                period=period,
-            )
-            case = await session.get(ReconciliationCase, case_id)
-            if case is not None:
-                case.status = "COMPLETED"
-                case.summary = {
-                    "transactions_scanned": summary.transactions_scanned,
-                    "matched": summary.matched,
-                    "exceptions": summary.exceptions,
-                    "ambiguous": summary.ambiguous,
-                    "no_match": summary.no_match,
-                    "review_required": summary.review_required,
-                    "cash_discrepancies": summary.cash_discrepancies,
-                    "matched_transaction_ids": list(summary.matched_transaction_ids),
-                    "exception_ids": list(summary.exception_ids),
-                }
-            await session.commit()
-        await ws_manager.broadcast({
-            "type": "reconciliation_completed",
-            "merchant_id": merchant_id,
-            "case_id": case_id,
-            "period": period,
-        })
-    except Exception as exc:
-        logger.exception("Reconciliation background task failed for case %s", case_id)
-        async with AsyncSessionLocal() as session:
-            case = await session.get(ReconciliationCase, case_id)
-            if case is not None:
-                case.status = "FAILED"
-                case.summary = {"error": str(exc)}
-            await session.commit()
 
 
 @router.get("/exceptions")
@@ -166,7 +124,7 @@ async def start_reconciliation(
     db.add(case)
     await db.commit()
 
-    background_tasks.add_task(_run_reconciliation_bg, body.merchant_id, case_id, body.period)
+    background_tasks.add_task(run_reconciliation_bg, body.merchant_id, case_id, body.period)
     return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})
 
 

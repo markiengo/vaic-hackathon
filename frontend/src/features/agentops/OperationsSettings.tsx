@@ -29,7 +29,7 @@ export function OperationsSettings() {
         description="Chọn chế độ hiển thị cho bàn điều hành. Thay đổi được lưu trên thiết bị này và không tác động dữ liệu merchant."
       />
       <Card>
-        <h2 className="font-display text-3xl">Chế độ hiển thị</h2>
+        <h2 className="font-display text-3xl text-ink">Chế độ hiển thị</h2>
         <p className="mt-2 text-sm leading-6 text-text-secondary">Mọi chế độ dùng cùng token TaxLens và giữ nguyên ý nghĩa màu trạng thái.</p>
         <div className="mt-6 grid gap-3 md:grid-cols-3">
           {modes.map(({ value, label, description, icon: Icon }) => (

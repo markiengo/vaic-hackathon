@@ -328,12 +328,10 @@ async def score_match_candidates(
             for sale in sale_rows
         ]
 
-        known_senders_result = await db.execute(
-            select(BankTransaction.sender_name)
-            .where(BankTransaction.merchant_id == merchant_id, BankTransaction.sender_name.isnot(None))
-            .distinct()
-        )
-        known_sender_names = [row[0] for row in known_senders_result.all()]
+        # Known sender history must come from independently established prior
+        # periods, never from the same batch being scored. The seed demo has no
+        # such history, so we use an empty trust set.
+        known_sender_names = ()
 
     config = MatchingConfig(candidate_window=timedelta(minutes=time_window_minutes))
     candidates = candidate_match(

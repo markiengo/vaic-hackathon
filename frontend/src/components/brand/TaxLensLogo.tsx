@@ -22,7 +22,7 @@ export function TaxLensLogo({ compact = false, className, inverse = false }: Tax
         {!inverse && <Image className="hidden object-cover dark:block" src="/brand/taxlens-icon-dark.png" alt="" fill sizes="40px" priority />}
       </span>
       {!compact && (
-        <span className="leading-tight">
+        <span className="translate-y-[1px] leading-tight">
           <span className="font-display block text-[26px] font-bold leading-tight tracking-[-0.02em]">TaxLens</span>
         </span>
       )}

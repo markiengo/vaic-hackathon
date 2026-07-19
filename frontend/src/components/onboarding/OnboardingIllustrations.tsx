@@ -40,7 +40,7 @@ export function MerchantDashboardIllustration() {
           <div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(var(--taxlens-primary) 0% 78%, var(--taxlens-border) 78% 100%)" }} />
           <div className="absolute inset-2 rounded-full bg-surface" />
           <div className="relative text-center">
-            <div className="font-display text-lg leading-none text-text">78%</div>
+            <div className="font-display text-lg leading-none text-ink">78%</div>
             <div className="text-[7px] text-text-tertiary">Sẵn sàng</div>
           </div>
         </div>

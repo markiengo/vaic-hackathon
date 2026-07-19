@@ -26,7 +26,7 @@ export function RecordRelationshipChain({
       {records.map((record, index) => (
         <li className="contents" key={nodeLabels[index]}>
           <div className="min-w-0 rounded-xl border bg-surface p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">
+            <p className="text-[13px] font-medium text-text-tertiary">
               {nodeLabels[index]}
             </p>
             {record ? (

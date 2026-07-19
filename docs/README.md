@@ -54,13 +54,38 @@ Invoices           ──┘                                          ┌──�
 
 | | |
 |---|---|
-| REST endpoints | 20+ |
-| SQLAlchemy models | 16 |
+| REST endpoints | 35+ |
+| SQLAlchemy models | 16+ |
 | Error codes (spec + tests) | 28 / 28 covered |
-| Test functions | 188 |
-| Integration tests (HTTP level) | 37 — in-memory SQLite, không cần Postgres |
-| AI agents | 4 |
-| Frontend pages | 11 |
+| Test functions | 209+ (backend pytest) |
+| Frontend unit tests | 44 |
+| Playwright E2E smoke | 2/2 pass |
+| AI agents | 4 (planner + 3 specialists) |
+| Frontend pages | 11+ |
+
+---
+
+## Chạy local
+
+1. PostgreSQL 16 local trên `localhost:5432`, database `taxlens`.
+2. Copy root `.env.example` thành `.env` và điền `OPENROUTER_API_KEY` (optional, fallback deterministic khi trống).
+3. Backend:
+   ```
+   cd backend
+   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+4. Frontend:
+   ```
+   cd frontend
+   npm install
+   npm run dev
+   ```
+5. Kiểm tra:
+   ```
+   cd backend && python -m pytest -q
+   cd frontend && npm run test -- --run
+   npx playwright test tests/e2e/smoke.spec.ts --project=desktop
+   ```
 
 ---
 

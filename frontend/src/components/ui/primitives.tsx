@@ -49,7 +49,7 @@ export function QuickActionCard({
       className="flex flex-col items-center justify-center gap-3 rounded-2xl border bg-surface p-6 text-center shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
     >
       <Icon aria-hidden className="text-primary" size={30} />
-      <span className="text-sm font-semibold text-text">{label}</span>
+      <span className="text-sm font-semibold text-ink">{label}</span>
     </Link>
   );
 }

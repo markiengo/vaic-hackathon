@@ -112,19 +112,19 @@ export function DashboardScreen() {
             </div>
             <div className="mb-8 flex-1 space-y-4">
               {data.unclassified_count > 0 && (
-                <div className="flex items-center gap-3 text-sm text-text">
+                <div className="flex items-center gap-3 text-sm text-ink">
                   <span className="size-2 rounded-full bg-primary" />
                   <span>Còn {data.unclassified_count} giao dịch chưa phân loại</span>
                 </div>
               )}
               {data.missing_invoice_count > 0 && (
-                <div className="flex items-center gap-3 text-sm text-text">
+                <div className="flex items-center gap-3 text-sm text-ink">
                   <span className="size-2 rounded-full bg-primary" />
                   <span>Còn {data.missing_invoice_count} đơn thiếu hóa đơn</span>
                 </div>
               )}
               {data.unclassified_count === 0 && data.missing_invoice_count === 0 && (
-                <div className="flex items-center gap-3 text-sm text-text">
+                <div className="flex items-center gap-3 text-sm text-ink">
                   <CheckCircle2 aria-hidden className="text-success" size={16} />
                   <span>Tất cả mục đã được xử lý</span>
                 </div>
@@ -183,19 +183,19 @@ export function DashboardScreen() {
               {data.missing_invoice_count > 0 && (
                 <div className="flex items-start gap-3">
                   <TriangleAlert aria-hidden className="mt-0.5 shrink-0 text-primary" size={18} />
-                  <span className="text-sm text-text">{data.missing_invoice_count} đơn thiếu hóa đơn</span>
+                  <span className="text-sm text-ink">{data.missing_invoice_count} đơn thiếu hóa đơn</span>
                 </div>
               )}
               {data.exception_count > 0 && (
                 <div className="flex items-start gap-3">
                   <CircleAlert aria-hidden className="mt-0.5 shrink-0 text-primary" size={18} />
-                  <span className="text-sm text-text">{data.exception_count} mục đang chờ xác nhận</span>
+                  <span className="text-sm text-ink">{data.exception_count} mục đang chờ xác nhận</span>
                 </div>
               )}
               {data.missing_invoice_count === 0 && data.exception_count === 0 && (
                 <div className="flex items-start gap-3">
                   <CheckCircle2 aria-hidden className="mt-0.5 shrink-0 text-success" size={18} />
-                  <span className="text-sm text-text">Không có blocker nào</span>
+                  <span className="text-sm text-ink">Không có blocker nào</span>
                 </div>
               )}
             </div>
@@ -283,12 +283,12 @@ export function DashboardScreen() {
                         <div className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-soft">
                           <Store aria-hidden className="text-text-tertiary" size={18} />
                         </div>
-                        <span className="truncate text-sm font-medium text-text">
+                        <span className="truncate text-sm font-medium text-ink">
                           {tx.sender_name ?? "Người gửi chưa rõ"}
                         </span>
                       </div>
                     </td>
-                    <td className="py-6 px-6 text-right text-sm font-semibold whitespace-nowrap tabular-nums text-text">
+                    <td className="py-6 px-6 text-right text-sm font-semibold whitespace-nowrap tabular-nums text-ink">
                       {formatMoney(tx.amount)}
                     </td>
                     <td className="py-6 px-6">
@@ -338,7 +338,7 @@ function ExceptionFeatureCard({ exception, period }: { exception: Reconciliation
             <Store aria-hidden className="text-text-tertiary" size={24} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-text">{exception.sender_name ?? "Người gửi chưa rõ"}</p>
+            <p className="text-sm font-semibold text-ink">{exception.sender_name ?? "Người gửi chưa rõ"}</p>
             <p className="text-xs text-text-secondary">
               {exception.created_at ? formatDateTime(exception.created_at) : "Hôm nay"}
             </p>
@@ -349,7 +349,7 @@ function ExceptionFeatureCard({ exception, period }: { exception: Reconciliation
         </span>
       </div>
       <div className="mb-8 flex-1">
-        <p className="mb-3 whitespace-nowrap font-display text-[36px] font-bold tabular-nums text-text">
+        <p className="mb-3 whitespace-nowrap font-display text-[36px] font-bold tabular-nums text-ink">
           {formatMoney(exception.amount)}
         </p>
         <div className="rounded-xl bg-[#F5F6F8] p-4">
@@ -357,21 +357,12 @@ function ExceptionFeatureCard({ exception, period }: { exception: Reconciliation
         </div>
       </div>
       {suggestion && (
-        <div className="mb-8 rounded-xl border border-border bg-surface p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Sparkles aria-hidden className="text-secondary" size={18} />
-            <span className="text-sm font-bold text-secondary">
-              Gợi ý từ TaxLens: {humanize(suggestion.suggested_type)} ({confidence ?? "--"}%)
-            </span>
-          </div>
-          {reasoning.length > 0 && (
-            <ul className="list-inside list-disc space-y-2 text-xs text-text-secondary">
-              {reasoning.slice(0, 3).map((reason, i) => (
-                <li key={i}>{reason}</li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <RecommendationPanel
+          title={`${humanize(suggestion.suggested_type)}`}
+          confidence={confidence != null ? `${confidence}%` : null}
+          reasoning={reasoning}
+          className="mb-8"
+        />
       )}
       <div className="flex gap-3">
         <Link
@@ -408,11 +399,11 @@ function ExceptionCompactCard({ exception, period }: { exception: Reconciliation
             <Store aria-hidden className="text-text-tertiary" size={18} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-text">{exception.sender_name ?? "Người gửi chưa rõ"}</p>
+            <p className="text-sm font-semibold text-ink">{exception.sender_name ?? "Người gửi chưa rõ"}</p>
             <p className="text-xs text-text-secondary">Hôm nay</p>
           </div>
         </div>
-        <p className="whitespace-nowrap font-display text-[22px] font-bold tabular-nums text-text">
+        <p className="whitespace-nowrap font-display text-[22px] font-bold tabular-nums text-ink">
           {formatMoney(exception.amount)}
         </p>
       </div>

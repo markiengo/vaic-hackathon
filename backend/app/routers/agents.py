@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -38,7 +39,8 @@ async def _dispatch_agent_run(run_id: str, merchant_id: str, period: str, reques
         })
 
         runner = AgentRunner()
-        response = runner.run(
+        response = await asyncio.to_thread(
+            runner.run,
             AgentRunRequest(
                 merchant_id=merchant_id,
                 period=period,
@@ -136,15 +138,14 @@ async def start_agent_run(
 
 @router.get("/runs")
 async def list_runs(
-    merchant_id: str = Query(...),
+    merchant_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
 ) -> list[dict]:
-    result = await db.execute(
-        select(AgentRun)
-        .where(AgentRun.merchant_id == merchant_id)
-        .order_by(AgentRun.started_at.desc())
-    )
+    stmt = select(AgentRun).order_by(AgentRun.started_at.desc())
+    if merchant_id:
+        stmt = stmt.where(AgentRun.merchant_id == merchant_id)
+    result = await db.execute(stmt)
     runs = result.scalars().all()
     return [
         {

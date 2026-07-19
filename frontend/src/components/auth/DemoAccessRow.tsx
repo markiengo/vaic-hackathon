@@ -56,7 +56,7 @@ export function DemoAccessRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="block text-[14px] font-semibold text-text">{name}</span>
+          <span className="block text-[14px] font-semibold text-ink">{name}</span>
           <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", styles.badge)}>
             {roleLabel}
           </span>

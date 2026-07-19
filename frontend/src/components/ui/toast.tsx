@@ -33,8 +33,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div key={item.id} role={tone === "danger" ? "alert" : "status"} className={cn("surface-shadow-md pointer-events-auto flex items-start gap-3 rounded-xl border bg-surface p-4", tone === "success" && "border-success/30", tone === "danger" && "border-danger/30")}>
               <Icon aria-hidden size={20} className={cn("mt-0.5 shrink-0 text-secondary", tone === "success" && "text-success", tone === "danger" && "text-danger")} />
-              <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-text">{item.title}</p>{item.description && <p className="mt-1 text-xs leading-5 text-text-secondary">{item.description}</p>}</div>
-              <button type="button" aria-label="Đóng thông báo" onClick={() => dismiss(item.id)} className="rounded-md p-1 text-text-secondary hover:bg-background hover:text-text"><X aria-hidden size={16} /></button>
+              <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-ink">{item.title}</p>{item.description && <p className="mt-1 text-xs leading-5 text-text-secondary">{item.description}</p>}</div>
+              <button type="button" aria-label="Đóng thông báo" onClick={() => dismiss(item.id)} className="rounded-md p-1 text-text-secondary hover:bg-background hover:text-ink"><X aria-hidden size={16} /></button>
             </div>
           );
         })}

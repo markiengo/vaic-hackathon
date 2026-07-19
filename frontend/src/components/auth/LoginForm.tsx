@@ -86,13 +86,13 @@ export function LoginForm(): React.ReactNode {
   return (
     <>
       {error ? (
-        <p role="alert" className="mb-5 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+        <p role="alert" className="mb-5 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
 
       <div className="grid gap-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+        <p className="text-[13px] font-medium text-text-tertiary">
           Truy cập demo ngay
         </p>
         {demoAccounts.map((account) => {
@@ -103,17 +103,17 @@ export function LoginForm(): React.ReactNode {
               type="button"
               disabled={isPending}
               onClick={() => demo(account.email)}
-              className="group flex items-start gap-4 rounded-xl border bg-background p-5 text-left transition-all hover:border-secondary hover:shadow-sm disabled:opacity-60"
+              className="group flex items-start gap-4 rounded-xl border bg-background p-5 text-left transition-all hover:border-primary hover:shadow-sm disabled:opacity-60"
             >
               <span className={`grid size-12 shrink-0 place-items-center rounded-xl ${account.accent}`}>
                 <Icon aria-hidden size={24} />
               </span>
               <span className="min-w-0 flex-1">
-                <strong className="block text-sm font-semibold text-text">{account.name}</strong>
+                <strong className="block text-sm font-semibold text-ink">{account.name}</strong>
                 <span className="mt-0.5 block text-xs text-text-secondary">{account.role}</span>
                 <span className="mt-2 block text-xs leading-5 text-text-tertiary">{account.description}</span>
               </span>
-              <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-primary-hover">
+              <span className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-primary-hover">
                 {isPending ? <LoaderCircle aria-hidden className="animate-spin" size={14} /> : <ArrowRight aria-hidden size={14} />}
                 Vào demo
               </span>
@@ -122,7 +122,7 @@ export function LoginForm(): React.ReactNode {
         })}
       </div>
 
-      <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.14em] text-text-tertiary">
+      <div className="my-6 flex items-center gap-3 text-[13px] font-medium text-text-tertiary">
         <span className="h-px flex-1 bg-border" />
         <button
           type="button"
@@ -145,7 +145,7 @@ export function LoginForm(): React.ReactNode {
               autoComplete="username"
               required
               defaultValue={initialEmail}
-              className="min-h-12 rounded-lg border bg-background px-4 text-text outline-none transition-shadow focus:border-secondary"
+              className="min-h-12 rounded-xl border bg-background px-4 text-ink outline-none transition-shadow focus:border-primary"
               placeholder="huong.salonhoa@gmail.com"
             />
           </label>
@@ -157,14 +157,14 @@ export function LoginForm(): React.ReactNode {
               autoComplete="current-password"
               required
               minLength={8}
-              className="min-h-12 rounded-lg border bg-background px-4 text-text outline-none transition-shadow focus:border-secondary"
+              className="min-h-12 rounded-xl border bg-background px-4 text-ink outline-none transition-shadow focus:border-primary"
               placeholder="••••••••"
             />
           </label>
           <button
             type="submit"
             disabled={isPending}
-            className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-white transition-[background-color,transform] duration-150 ease-out hover:bg-primary-hover active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-white transition-[background-color,transform] duration-150 ease-out hover:bg-primary-hover active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
           >
             {isPending ? <LoaderCircle aria-hidden className="animate-spin" size={18} /> : <ArrowRight aria-hidden size={18} />}
             {isPending ? "Đang đăng nhập..." : "Đăng nhập"}
@@ -176,13 +176,13 @@ export function LoginForm(): React.ReactNode {
                 setForgotToast(true);
                 setTimeout(() => setForgotToast(false), 4000);
               }}
-              className="text-sm text-secondary transition-colors hover:text-secondary-hover"
+              className="text-sm text-primary transition-colors hover:text-primary-hover"
             >
               Quên mật khẩu?
             </button>
           </div>
           {forgotToast && (
-            <p role="status" className="rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3 text-sm text-secondary">
+            <p role="status" className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary">
               Vui lòng liên hệ hỗ trợ SHB để khôi phục mật khẩu.
             </p>
           )}
