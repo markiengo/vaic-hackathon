@@ -2316,3 +2316,52 @@ whoever owns `app/agents/graph.py` next, since it blocks the entire agent
 path independent of the two previously-known placeholders. Not committed
 — left for the user to review.
 
+### 2026-07-19 — P5: merged origin/main (43 commits) onto p5-nhi, post-merge verification pending
+
+**Changed:**
+- Merged `origin/main` into `p5-nhi` (commit `9c0a637`), bringing in P1/P2/P4's
+  Sprint 3 work and the frontend redesign — 43 commits, touching (among many
+  files) exactly the ones this session's Sprint 4 entry above flagged as
+  gaps: `app/routers/agents.py`, `app/agents/graph.py`,
+  `app/agents/specialists.py`, `app/routers/reconciliation.py`.
+- Resolved 2 conflicts: `docs/log.md` (this file was renamed from root
+  `log.md` on `origin/main` while both sides appended new entries after the
+  same shared history — kept `origin/main`'s full content, then appended
+  this session's Sprint 4 entry after it, preserving both) and
+  `frontend/package-lock.json` (took `origin/main`'s version outright; the
+  local diff predated this session and wasn't part of any of my commits).
+
+**Reasoning:**
+- A quick post-merge read of the changed files suggests some — not
+  necessarily all — of the gaps documented in the Sprint 4 entry above may
+  already be closed on `main`: `app/routers/agents.py::_dispatch_agent_run`
+  now has a real body (`AgentRunner` + persisting status/plan/tool_calls,
+  the same shape `run_demo.py`'s Scene 1 workaround already re-implemented
+  independently), and `app/agents/specialists.py::reconciliation_node` now
+  only creates an exception `if not candidates:` and attaches a new
+  `note_interpretation` (P2's new `app/services/vietnamese_nlp.py`,
+  `suggested_type` + `confidence` fields) to `ai_suggestion` instead of
+  always hardcoding `PENDING_REVIEW` with just match candidates.
+- Did **not** re-run `scripts/run_demo.py` / `scripts/verify_kpis.py` /
+  `pytest tests` against the merged state: `app.main` now fails to import
+  because the merge added new required `Settings` fields (`LLM_PROVIDER`,
+  `LLM_API_KEY`, `LLM_MODEL_PLANNER`, `LLM_MODEL_SPECIALIST`,
+  `INVOICE_API_URL`, `CASE_API_URL` — see `expected_vars.txt`) that this
+  local `backend/.env` doesn't have yet, and the sandbox this session runs
+  in blocks reading or writing `.env` directly. Asked the user how to
+  proceed; they chose to skip re-verification for now rather than have the
+  user add the vars mid-session.
+
+**Verification:** none performed against the merged state — see above.
+
+**Status:** Merge complete and pushable, but **the Sprint 4 entry above
+should be treated as pre-merge findings, not the current state of `main`**.
+The two P2-scope gaps it describes (agent dispatch no-op,
+`reconciliation_node`'s hardcoded exception) look plausibly fixed by this
+merge from a read of the diff alone; the P4 gap (`resolve_exception` not
+audit-logging human decisions) and the `AgentGraphState` None-handling
+crash were not specifically checked against the merged
+`app/routers/reconciliation.py` / `app/agents/graph.py`. Whoever continues
+from here should add the missing env vars and re-run
+`scripts/run_demo.py`, `scripts/verify_kpis.py`, and `pytest tests` before
+trusting either log entry's PASS/FAIL lines against current `main`.
