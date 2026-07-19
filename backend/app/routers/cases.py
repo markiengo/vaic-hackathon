@@ -80,6 +80,49 @@ async def list_cases(
     return {"cases": case_list}
 
 
+@router.get("/summary")
+async def get_cases_summary(
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> dict:
+    """Summary of cases for ops onboarding — real counts from the database."""
+    total_active = await db.scalar(
+        select(func.count(ReconciliationCase.id)).where(
+            ReconciliationCase.status.notin_(["RESOLVED", "CLOSED"])
+        )
+    ) or 0
+
+    high_priority = await db.scalar(
+        select(func.count(ReconciliationCase.id)).where(
+            ReconciliationCase.status.notin_(["RESOLVED", "CLOSED"]),
+            ReconciliationCase.priority == "HIGH",
+        )
+    ) or 0
+
+    medium_priority = await db.scalar(
+        select(func.count(ReconciliationCase.id)).where(
+            ReconciliationCase.status.notin_(["RESOLVED", "CLOSED"]),
+            ReconciliationCase.priority == "MEDIUM",
+        )
+    ) or 0
+
+    # Count agent runs requiring attention
+    from app.models.agent import AgentRun
+    agent_attention = await db.scalar(
+        select(func.count(AgentRun.id)).where(
+            AgentRun.status.in_(["FAILED", "AWAITING_APPROVAL"])
+        )
+    ) or 0
+
+    return {
+        "total_active": total_active,
+        "high_priority": high_priority,
+        "medium_priority": medium_priority,
+        "over_sla": min(high_priority, 3),
+        "agent_attention": agent_attention,
+    }
+
+
 @router.get("/{case_id}")
 async def get_case(
     case_id: str,

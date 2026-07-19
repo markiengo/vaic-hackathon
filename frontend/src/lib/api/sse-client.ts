@@ -18,12 +18,6 @@ function readCookie(name: string): string | null {
   return item ? decodeURIComponent(item.slice(prefix.length)) : null;
 }
 
-function isDemoMode(): boolean {
-  return readCookie("taxlens_demo") === "1";
-}
-
-const DEMO_BACKEND_URL = "http://127.0.0.1:8000/api/v1";
-
 export async function* streamAgentRun(
   merchantId: string,
   requestText: string,
@@ -34,16 +28,15 @@ export async function* streamAgentRun(
   const csrf = readCookie("taxlens_csrf");
   if (csrf) headers.set("x-csrf-token", csrf);
 
-  // Demo mode: call backend directly, no auth needed
-  const demo = isDemoMode();
-  const baseUrl = demo ? DEMO_BACKEND_URL : "";
-
-  const fallbackUrl = demo ? `${baseUrl}/agents/run` : "/api/backend/agents/run";
+  // Always route through the Next.js proxy so auth tokens (including demo
+  // tokens) and CSRF are handled server-side.  Direct backend calls from the
+  // browser fail with CORS preflight + missing JWT.
+  const fallbackUrl = "/api/backend/agents/run";
 
   {
     const fallback = await fetch(fallbackUrl, {
       method: "POST",
-      credentials: demo ? undefined : "same-origin",
+      credentials: "same-origin",
       headers: new Headers(headers),
       signal,
       body: JSON.stringify({ merchant_id: merchantId, request: requestText, period }),
@@ -73,12 +66,10 @@ export async function* streamAgentRun(
       if (signal?.aborted) return;
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
       try {
-        const pollUrl = demo
-          ? `${baseUrl}/agents/runs/${accepted.run_id}`
-          : `/api/backend/agents/runs/${accepted.run_id}`;
+        const pollUrl = `/api/backend/agents/runs/${accepted.run_id}`;
         const pollResp = await fetch(pollUrl, {
           method: "GET",
-          credentials: demo ? undefined : "same-origin",
+          credentials: "same-origin",
           headers: new Headers({ accept: "application/json" }),
           signal,
         });
@@ -110,12 +101,10 @@ export async function* streamAgentRun(
         if (["WAITING_FOR_HUMAN", "COMPLETED", "DONE", "FAILED"].includes(runState.status) && !traceFetched) {
           traceFetched = true;
           try {
-            const traceUrl = demo
-              ? `${baseUrl}/agents/runs/${accepted.run_id}/trace`
-              : `/api/backend/agents/runs/${accepted.run_id}/trace`;
+            const traceUrl = `/api/backend/agents/runs/${accepted.run_id}/trace`;
             const traceResp = await fetch(traceUrl, {
               method: "GET",
-              credentials: demo ? undefined : "same-origin",
+              credentials: "same-origin",
               headers: new Headers({ accept: "application/json" }),
               signal,
             });

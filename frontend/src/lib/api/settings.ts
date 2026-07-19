@@ -115,3 +115,82 @@ export function importLedger(
   body.set("file", file, file.name);
   return apiFetch("imports/ledger", { method: "POST", body });
 }
+
+export interface UpdateMerchantRequest {
+  name?: string;
+  business_type?: string;
+  business_category?: string;
+  tax_id?: string;
+  contact_phone?: string;
+  contact_email?: string;
+}
+
+export function updateMerchantProfile(
+  merchantId: string,
+  body: UpdateMerchantRequest,
+): Promise<MerchantProfile> {
+  return apiFetch(`merchants/${encodeURIComponent(merchantId)}`, {
+    method: "PUT",
+    ...jsonBody(body),
+  });
+}
+
+export interface OnboardingSyncStep {
+  label: string;
+  count: number;
+  done: boolean;
+}
+
+export interface OnboardingSyncResponse {
+  merchant_id: string;
+  period: string;
+  case_id: string | null;
+  steps: OnboardingSyncStep[];
+  sync: {
+    transactions: number;
+    sales: number;
+    cash_sessions: number;
+    invoices: number;
+    matched: number;
+  };
+  reconciliation: {
+    total_transactions: number;
+    matched: number;
+    pending_exceptions: number;
+    missing_invoices: number;
+    readiness_score: number;
+    summary: Record<string, unknown> | null;
+  };
+}
+
+export function runOnboardingSync(merchantId: string): Promise<OnboardingSyncResponse> {
+  return apiFetch(`merchants/${encodeURIComponent(merchantId)}/onboarding-sync`, {
+    method: "POST",
+  });
+}
+
+export interface CasesSummary {
+  total_active: number;
+  high_priority: number;
+  medium_priority: number;
+  over_sla: number;
+  agent_attention: number;
+}
+
+export function getCasesSummary(): Promise<CasesSummary> {
+  return apiFetch("cases/summary");
+}
+
+export interface PortfolioMerchant {
+  id: string;
+  name: string;
+  business_type: string | null;
+  business_category: string | null;
+  status: string;
+  open_cases: number;
+  active_runs: number;
+}
+
+export function getPortfolio(): Promise<{ merchants: PortfolioMerchant[]; summary: Record<string, number> }> {
+  return apiFetch("merchants/portfolio");
+}
