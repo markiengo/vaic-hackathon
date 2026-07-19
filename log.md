@@ -1401,3 +1401,162 @@ backend verification for seed-backed API/tool suites.
   `test_agents.py`, left alone).
 - Not committed — left for the user to review.
 
+### 2026-07-19 — P5 Sprint 4: demo scene runner, KPI/AC verification, audit-trail fix
+
+**Changed:**
+- `backend/scripts/run_demo.py` (new): drives all 6 demo scenes from
+  `docs/04-delivery/00-work-split.md` §Sprint 4 end-to-end against a real
+  `app.main:app` instance over in-process ASGI (`httpx.ASGITransport` —
+  no separate `uvicorn` needed), printing a PASS/FAIL report per scene
+  checklist item. Also exercises the fallback SePay webhook path and
+  `scripts/backup_demo.backup()`.
+- `backend/scripts/verify_kpis.py` (new): reads current DB state (assumes
+  `run_demo.py` ran first) and checks it against the 5 hackathon KPIs
+  (`docs/01-foundation/03-product-spec.md` §19) and all 12 MVP acceptance
+  criteria (§20).
+- `backend/tests/test_demo_flow.py` (new): pytest wrapper reusing
+  `run_demo.py`'s scene functions so `pytest tests` covers the same demo
+  flow. Its module fixture reseeds before *and* after running (mirroring
+  `test_sepay_webhook.py`'s own `cleanup_test_tx` leave-no-trace pattern),
+  because Scene 2 adds a real bank_transaction that would otherwise shift
+  the hardcoded `== 23` / `== 8` counts other test files
+  (`test_sepay_webhook.py`, `test_end_to_end.py`) assert on if this file's
+  alphabetically-early name let it run before them in a plain `pytest
+  tests` sweep.
+- `backend/app/tools/_tracing.py` (P5's own file — in scope): `_persist_call`
+  now falls back to the run's own `AgentRun.merchant_id` when a tool's
+  arguments don't carry one directly (`assign_task_to_rm`,
+  `retrieve_tax_rules`, `validate_rule_version`, `find_payment_reference`,
+  `classify_revenue_category`, `update_case_status`, `send_confirmation_request`
+  all lack a top-level `merchant_id` kwarg). Previously those tool calls'
+  `audit_events` rows had `merchant_id=NULL`, so `GET /audit/export?merchant_id=`
+  silently dropped them — real transactions in a live run went from 15 to
+  21 visible audit events for the same 19 tool calls once fixed.
+
+**Reasoning — why P5 ended up touching agent-run internals:**
+- Per AGENTS.md, asked the user which role first; confirmed P5, Sprint 4.
+  Sprint 4's P5 task is explicitly to run all 6 demo scenes end-to-end and
+  verify the 5 KPIs/12 ACs — a verification role, not an implementation
+  one, so before writing anything I surveyed what Scene 1 (NL request →
+  Planner) actually needed and found `POST /agents/run`'s background
+  dispatch (`app/routers/agents.py::_dispatch_agent_run`) is still a
+  literal `pass` (P4 scope) and `reconciliation_node`
+  (`app/agents/specialists.py`, P2 scope) still hardcodes a
+  `PENDING_REVIEW` exception — both already flagged as known placeholders
+  in the Sprint 3 entry above.
+- Asked the user whether to fix those two cross-role gaps or stay
+  strictly within P5's file list; they chose to stay P5-scoped. So
+  `run_demo.py`'s Scene 1 creates the real `AgentRun` row through the real
+  endpoint, then calls the already-built LangGraph workflow
+  (`app.agents.graph.agent_workflow`) directly from the script — the same
+  call P4's dispatcher is meant to make once wired — without editing
+  `agents.py` or `specialists.py`.
+- That direct invocation immediately surfaced a **third, more severe**
+  P2-scope bug that had never been exercised for real before (matches
+  Sprint 3's own admission that the agent path "is not actually called by
+  anything running"): LangGraph pre-populates every declared-but-unset
+  `AgentGraphState` TypedDict key as `None` in its internal channels
+  rather than leaving it absent, so any node's `state.get(key, default)`
+  returns the stored `None` instead of `default` the first time that key
+  is touched. This crashes `planner_node`'s LLM-unavailable fallback
+  branch (`errors = list(state.get("errors", []))` →
+  `TypeError: 'NoneType' object is not iterable`), and after routing
+  around that by supplying a precomputed plan (`planner_node`'s own
+  documented early-return path), crashes again in `_append_trace`
+  (`list(state.get("trace", []))`), and again in `reconciliation_node`
+  (`Decimal(str(state.get("amount", "0")))` → `Decimal(str(None))`).
+  Confirmed via `pytest tests -q` that this is genuinely pre-existing, not
+  something this session introduced: `tests/test_agents.py::
+  test_agent_workflow_returns_specialist_summary_json` already calls
+  `agent_workflow.invoke()` directly and hits the exact same
+  `_append_trace` crash — this is almost certainly the "1 pre-existing,
+  not-mine failure in `test_agents.py`, left alone" the Sprint 3 entry
+  above only noted without root-causing. Worked around in `run_demo.py`
+  by explicitly seeding every list/dict/scalar `AgentGraphState` field the
+  graph touches on this run instead of leaving them for LangGraph's
+  channel defaults; not fixed at the source (`graph.py`/`specialists.py`)
+  per the decision to stay P5-scoped. **Whoever picks up P2/P4's agent-run
+  wiring next should fix this first — it will crash any real run in an
+  environment without a working LLM call, not just this script.**
+- The `_tracing.py` fix (merchant_id fallback) *was* made directly, not
+  just flagged, because `app/tools/_tracing.py` is P5's own file per
+  AGENTS.md's role map (`backend/app/tools/`) — this isn't a cross-role
+  boundary, and it's the same traceability guarantee (DEC-001/DEC-004)
+  P5 built in Sprint 2, just closing a real hole in it.
+- Two other real gaps surfaced by Scene 3 (ambiguous 5,000,000₫ "ck cho
+  em" transaction) were left as documented `[FAIL] GAP (...)` lines in
+  `run_demo.py`'s output and `xfail(strict=True)` tests in
+  `test_demo_flow.py`, not fixed, since both are outside P5's files:
+  (1) `app/services/reconciliation.py`'s exception creation only ever
+  stores match candidates in `ai_suggestion`, never
+  `classify_revenue_category`'s result (P5's own classifier, confirmed
+  correct: `internal_transfer` @ confidence 0.82, matching the seed
+  fixture and `test_tools.py`/`test_end_to_end.py`'s existing pins) — so
+  the demo narrative's "AI suggests chuyển nội bộ 82%" is real and
+  computable but not actually wired onto the exception record shown in
+  the Exception Inbox (P1 scope). (2)
+  `app/routers/reconciliation.py::resolve_exception` writes no
+  `audit_events` row for the human decision at all — KPI 3 explicitly
+  requires "mọi human approval có record trong audit_events" (P4 scope).
+- `test_demo_flow.py`'s classification-confidence assertion uses `>=0.82`
+  not `==0.82`: `classify_revenue_category` applies a prior-pattern
+  confidence bonus on repeat classification of the same transaction
+  (already documented in `test_tools.py`'s own equivalent lower-bound
+  assertion), and this file's own fixture classifies the fixture
+  transaction once before the dedicated classification test classifies it
+  again.
+- `run_demo.py`/`verify_kpis.py`'s "missing invoices" checks assert the 2
+  documented seed-fixture orders (`ORDER-1868`, `ORDER-1869`) are a
+  *subset* of the actual missing-invoice set, not an exact count of 2 —
+  Scene 2's own new POS sale is itself uninvoiced once matched, so the
+  real count becomes 3 once that scene has run. Also discovered
+  `GET /api/v1/tax/readiness` (P4's router) exposes
+  `check_required_fields`'s raw per-field checks (`merchant_name`,
+  `tax_id`, `revenue_total`, `invoice_count`, `cash_revenue`,
+  `bank_revenue`) directly and never calls the richer
+  `generate_tax_readiness_report` tool that actually names a
+  `missing_invoices` checklist item — so the router and the tool/agent
+  path currently expose differently-shaped checklists for the same
+  question. Noted, not changed (P4 router scope).
+
+**Verification:**
+- `PYTHONPATH=. .venv/bin/python scripts/run_demo.py` (fresh reset) — 7/8
+  scene groups pass; the one failure is exactly the 2 documented P1/P2
+  GAP lines inside Scene 3, nothing else.
+- `PYTHONPATH=. .venv/bin/python scripts/verify_kpis.py` — KPI 4 (action
+  completion) and KPI 5 (latency: initial ~0.3s, full case ~0.7s, both
+  well under the 5s/30s targets) pass; all 12 acceptance criteria pass;
+  KPI 1/2 (auto-reconciliation 68%, exception reduction 64%, both target
+  ≥80%) fail — this is the same real, already-documented P1 scoring-weight
+  tuning gap from the Sprint 3 entry above (was 69.6% there), now
+  precisely re-measured against Sprint 4's live state, still unresolved;
+  KPI 3 (traceability) fails only on the P4 human-approval-audit-logging
+  gap noted above — every tool call itself does have a tool_call + audit
+  record with input/output hashes, confirmed after the `_tracing.py` fix.
+- `PYTHONPATH=. .venv/bin/python -m pytest tests/test_demo_flow.py -v` —
+  8 passed, 2 xfailed (exactly the 2 documented gaps, `strict=True` so
+  they'll hard-fail the moment either is actually fixed and someone
+  forgets to remove the marker).
+- `PYTHONPATH=. .venv/bin/python -m pytest tests -q` (full suite, after
+  all changes) — 164 passed, 2 xfailed, 1 failed. The 1 failure is
+  `test_agents.py::test_agent_workflow_returns_specialist_summary_json`,
+  confirmed pre-existing and unrelated to this session's changes (`git
+  diff --stat` shows only `_tracing.py` touched inside `app/`, plus 3 new
+  files — `graph.py`/`specialists.py` untouched) — now root-caused per
+  above instead of just "left alone."
+- Backup/restore path re-verified via `run_demo.py`'s own backup step
+  (`scripts/backup_demo.backup()` succeeds using local `pg_dump`).
+
+**Status:** P5 Sprint 4 deliverables (`run_demo.py`, `verify_kpis.py`,
+`test_demo_flow.py`) complete and green modulo real, clearly-labeled
+cross-role gaps. Demo is NOT yet at the ≥80%/≥80% KPI 1/2 bar — that is
+P1's tuning task, unchanged since Sprint 3. Two P2/P4 gaps block full
+Scene 1/3 fidelity: agent-run dispatch is still a no-op background task,
+and human exception approvals aren't audit-logged. A third, more urgent
+P2 bug was found and root-caused this session (not previously known):
+`AgentGraphState`'s `None`-vs-default handling crashes `agent_workflow.invoke()`
+in any environment without a working LLM key — flagged prominently for
+whoever owns `app/agents/graph.py` next, since it blocks the entire agent
+path independent of the two previously-known placeholders. Not committed
+— left for the user to review.
+

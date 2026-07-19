@@ -31,7 +31,7 @@ from functools import wraps
 from typing import Any, Awaitable, Callable, TypeVar
 
 from app.core.database import AsyncSessionLocal
-from app.models.agent import AuditEvent, ToolCall
+from app.models.agent import AgentRun, AuditEvent, ToolCall
 
 _current_agent_run_id: ContextVar[str | None] = ContextVar("current_agent_run_id", default=None)
 _current_agent_name: ContextVar[str | None] = ContextVar("current_agent_name", default=None)
@@ -121,6 +121,16 @@ async def _persist_call(
     merchant_id = _extract_merchant_id(bound_args)
 
     async with AsyncSessionLocal() as db:
+        if merchant_id is None and agent_run_id is not None:
+            # Several tools (assign_task_to_rm, retrieve_tax_rules,
+            # find_payment_reference, classify_revenue_category, ...) have no
+            # merchant_id in their own arguments, which otherwise leaves this
+            # audit_events row unscoped and invisible to a merchant-filtered
+            # GET /audit/export — fall back to the run's own merchant_id.
+            run = await db.get(AgentRun, agent_run_id)
+            if run is not None:
+                merchant_id = run.merchant_id
+
         if agent_run_id is not None:
             db.add(
                 ToolCall(
