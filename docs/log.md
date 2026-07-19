@@ -2136,3 +2136,23 @@ Final run results (66 tests total):
 - `python -m pytest tests/test_agents.py tests/test_agent_evaluation.py tests/test_vietnamese_nlp.py -q` → **16 passed**.
 
 **Status:** Agent orchestration layer can now locate the provided DeepSeek/OpenRouter key. Next: continue toward onboarding persistence and end-to-end goal.md flows.
+
+### 2026-07-19 — Onboarding persistence backend
+
+**Changed:**
+- `backend/app/models/user.py`: added `onboarding_completed_at` nullable timestamp.
+- `backend/alembic/versions/003_add_user_onboarding.py`: migration adding the column.
+- `backend/app/schemas/auth.py`: `MeResponse` includes `onboarding_completed`.
+- `backend/app/routers/auth.py`: `GET /auth/me` returns onboarding flag; `POST /auth/me/onboarding` marks complete.
+- `frontend/src/lib/auth/contracts.ts`, `frontend/src/app/api/auth/login/route.ts`, `frontend/src/app/api/auth/session/route.ts`: `SessionUser` carries `onboarding_completed` for demo accounts.
+
+**Reasoning:**
+- `goal.md` requires first-run onboarding to be persisted so it is honored across sessions and devices. LocalStorage-only status is lost in incognito/sessions and makes E2E resets fragile.
+- Updating `MeResponse` lets the frontend decide whether to render the tour immediately on session hydration without an extra round trip.
+
+**Verification:**
+- `python -m alembic upgrade head` → applied `003_add_user_onboarding` successfully.
+- `python -m pytest tests/test_agents.py tests/test_agent_evaluation.py tests/test_vietnamese_nlp.py -q` → **16 passed**.
+- `npx tsc --noEmit` (frontend) → **0 errors**.
+
+**Status:** Backend onboarding flag persisted. Frontend `OnboardingTour` still relies on localStorage; still need to wire it to the backend state.

@@ -8,6 +8,7 @@ export interface SessionUser {
   email: string;
   role: UserRole;
   merchant_id: string | null;
+  onboarding_completed?: boolean;
 }
 
 export interface SessionResponse {
