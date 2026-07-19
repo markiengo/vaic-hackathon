@@ -2120,3 +2120,19 @@ Final run results (66 tests total):
 - `npx playwright test tests/e2e/smoke.spec.ts --project=desktop` → **2/2 passed** (merchant dashboard + SHB ops login).
 
 **Status:** Local development environment stabilized, E2E smoke green, committed and pushed. Remaining goal.md gaps (onboarding wizard, full POS/invoices/exports) are preserved as target state for follow-up work.
+
+### 2026-07-19 — LLM env wiring for agent orchestration
+
+**Changed:**
+- `backend/app/agents/deepseek.py`: `get_deepseek_settings()` now falls back to the backend `.env` keys `LLM_API_KEY`, `LLM_PROVIDER`, and `LLM_MODEL_PLANNER`/`LLM_MODEL_SPECIALIST`. Auto-detects OpenRouter when the key prefix is `sk-or-v1`.
+- `docs/log.md`: this entry.
+
+**Reasoning:**
+- The user provided a DeepSeek API key via `LLM_API_KEY` in `backend/.env`. The previous `deepseek.py` only looked for `DEEPSEEK_API_KEY`/`OPENROUTER_API_KEY`, so the Planner would raise a missing-key error at runtime.
+- Reading `LLM_PROVIDER` and the `sk-or-v1` prefix lets the same code switch to OpenRouter base URL and model slug (`deepseek/deepseek-chat`) without hardcoding the key type.
+
+**Verification:**
+- `python -c "from app.agents.deepseek import get_deepseek_settings; print(get_deepseek_settings().base_url, get_deepseek_settings().model)"` → `https://openrouter.ai/api/v1` `deepseek/deepseek-chat`.
+- `python -m pytest tests/test_agents.py tests/test_agent_evaluation.py tests/test_vietnamese_nlp.py -q` → **16 passed**.
+
+**Status:** Agent orchestration layer can now locate the provided DeepSeek/OpenRouter key. Next: continue toward onboarding persistence and end-to-end goal.md flows.

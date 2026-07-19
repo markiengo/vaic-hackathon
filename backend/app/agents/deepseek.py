@@ -57,27 +57,38 @@ class DeepSeekClientSettings:
 
 
 def get_deepseek_settings() -> DeepSeekClientSettings:
-    """Load DeepSeek/OpenRouter-compatible client settings from environment."""
+    """Load DeepSeek/OpenRouter-compatible client settings from environment.
+
+    Supports the canonical backend .env keys (LLM_API_KEY, LLM_PROVIDER,
+    LLM_MODEL_*) in addition to the explicit DeepSeek/OpenRouter keys.
+    """
 
     _load_dotenv_if_available()
 
     deepseek_key = _env("DEEPSEEK_API_KEY")
     openrouter_key = _env("OPENROUTER_API_KEY")
-    api_key = deepseek_key or openrouter_key
+    llm_key = _env("LLM_API_KEY")
+    api_key = deepseek_key or openrouter_key or llm_key
 
     if not api_key:
-        raise RuntimeError("Set DEEPSEEK_API_KEY or OPENROUTER_API_KEY before using the LLM client.")
+        raise RuntimeError("Set DEEPSEEK_API_KEY, OPENROUTER_API_KEY, or LLM_API_KEY before using the LLM client.")
 
-    using_openrouter = deepseek_key is None and openrouter_key is not None
+    explicit_openrouter = openrouter_key is not None
+    llm_provider = (_env("LLM_PROVIDER") or "").lower()
+    openrouter_heuristic = api_key.startswith("sk-or-v1") or llm_provider in {"openrouter", "openai"}
+    using_openrouter = explicit_openrouter or openrouter_heuristic
     default_base_url = OPENROUTER_BASE_URL if using_openrouter else DEEPSEEK_BASE_URL
     default_model = DEFAULT_OPENROUTER_DEEPSEEK_MODEL if using_openrouter else DEFAULT_DEEPSEEK_MODEL
+
+    # Prefer explicit DEEPSEEK_MODEL, then backend planner/specialist model vars, then default.
+    model = _env("DEEPSEEK_MODEL") or _env("LLM_MODEL_PLANNER") or _env("LLM_MODEL_SPECIALIST") or default_model
 
     return DeepSeekClientSettings(
         api_key=api_key,
         base_url=_env("DEEPSEEK_BASE_URL", default_base_url) or default_base_url,
-        model=_env("DEEPSEEK_MODEL", default_model) or default_model,
+        model=model,
         deterministic_temperature=float(
-            _env("DEEPSEEK_TEMPERATURE", str(DEFAULT_DETERMINISTIC_TEMPERATURE))
+            _env("DEEPSEEK_TEMPERATURE") or _env("LLM_TEMPERATURE", str(DEFAULT_DETERMINISTIC_TEMPERATURE))
             or str(DEFAULT_DETERMINISTIC_TEMPERATURE)
         ),
         message_draft_temperature=float(
