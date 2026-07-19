@@ -2156,3 +2156,19 @@ Final run results (66 tests total):
 - `npx tsc --noEmit` (frontend) → **0 errors**.
 
 **Status:** Backend onboarding flag persisted. Frontend `OnboardingTour` still relies on localStorage; still need to wire it to the backend state.
+
+### 2026-07-19 — Onboarding frontend wiring
+
+**Changed:**
+- `frontend/src/app/api/auth/onboarding/route.ts` (new): Next.js proxy route that forwards `POST /api/auth/onboarding` to `POST /api/v1/auth/me/onboarding` using the access-token cookie.
+- `frontend/src/components/onboarding/OnboardingTour.tsx`: fetches `/api/auth/session` to check `user.onboarding_completed`; POSTs to `/api/auth/onboarding` on completion/skip; keeps `localStorage` as a local fallback.
+- `docs/log.md`: this entry.
+
+**Reasoning:**
+- Persisting the tour completion in the user row means the tour won't reappear in a fresh browser/incognito session once the user has completed it, satisfying the first-run persistence requirement in `goal.md`.
+- The `localStorage` fallback ensures the modal still disappears immediately without waiting for the backend round trip.
+
+**Verification:**
+- `npx tsc --noEmit` (frontend) → **0 errors**.
+
+**Status:** First-run onboarding is now persisted end-to-end (backend + frontend). Next: continue toward remaining goal.md flows (notifications, SHB case handling, POS/cash/invoices exports, etc.).

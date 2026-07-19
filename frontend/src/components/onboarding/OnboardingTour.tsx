@@ -61,28 +61,69 @@ export function OnboardingTour({ role }: { role: Role }) {
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [backendCompleted, setBackendCompleted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    try {
-      const completed = localStorage.getItem(STORAGE_KEY);
-      if (!completed) {
-        const timer = window.setTimeout(() => setVisible(true), 400);
-        return () => window.clearTimeout(timer);
+    let timer: number | undefined;
+    (async () => {
+      let localCompleted = false;
+      try {
+        localCompleted = Boolean(localStorage.getItem(STORAGE_KEY));
+      } catch {
+        // localStorage unavailable
       }
-    } catch {
-      // localStorage unavailable
-    }
+
+      if (localCompleted) {
+        setVisible(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/auth/session", { credentials: "same-origin" });
+        if (res.ok) {
+          const data = (await res.json()) as { user?: { onboarding_completed?: boolean } };
+          if (data.user?.onboarding_completed) {
+            setBackendCompleted(true);
+            try {
+              localStorage.setItem(STORAGE_KEY, "1");
+            } catch {
+              // localStorage unavailable
+            }
+            return;
+          }
+        }
+      } catch {
+        // offline / session unavailable
+      }
+
+      timer = window.setTimeout(() => setVisible(true), 400);
+    })();
+
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
   }, []);
 
-  const dismiss = useCallback(() => {
+  const dismiss = useCallback(async () => {
     setVisible(false);
     try {
       localStorage.setItem(STORAGE_KEY, "1");
     } catch {
       // localStorage unavailable
     }
-  }, []);
+    if (!backendCompleted) {
+      try {
+        await fetch("/api/auth/onboarding", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        setBackendCompleted(true);
+      } catch {
+        // ignore — local completion is authoritative for UI
+      }
+    }
+  }, [backendCompleted]);
 
   const next = useCallback(() => {
     setStep((prev) => {
