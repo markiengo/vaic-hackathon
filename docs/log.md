@@ -2293,3 +2293,24 @@ Final run results (66 tests total):
 - `npx vitest run` (frontend) → **84/84 pass** (was 4 failed, 80 passed).
 
 **Status:** All backend and frontend tests green. RBAC enforced. Next: continue end-to-end product completion per docs/goal.md.
+
+### 2026-07-20 — Cascade — Post-test-fix agent streaming fix
+
+**Changed:**
+- `frontend/src/lib/api/sse-client.ts`: Fixed polling `streamAgentRun` to fetch `/agents/runs/{id}/trace` when run reaches `WAITING_FOR_HUMAN` or terminal status. Yields `tool_started`, `tool_completed`, and `approval_required` events from trace data so the AssistantWorkspace can display tool calls and approval buttons.
+- `frontend/src/features/agentops/AssistantWorkspace.tsx`: Added "Bằng chứng, không phải suy nghĩ riêng." tagline to the approval section.
+- `frontend/tests/e2e/agentops.spec.ts`: Updated E2E test to click suggestion button + send instead of non-existent "Bắt đầu kiểm tra" button. Added trace route mock. Added tagline assertion.
+- `docs/QA-REPORT.md`: Updated known limitations and changelog.
+
+**Reasoning:**
+- The POST+polling `streamAgentRun` implementation only yielded `run_started`, `plan`, `progress_summary`, `agent_response`, `artifact`, and `done` events. It never yielded `tool_started`, `tool_completed`, or `approval_required` events, which meant the AssistantWorkspace couldn't show tool call evidence or approval buttons — a critical product gap.
+- Fixed by fetching the trace endpoint when the run reaches `WAITING_FOR_HUMAN` or terminal status, then yielding tool and approval events from the trace data.
+- The `traceFetched` flag prevents duplicate trace fetches across poll cycles.
+- The E2E test was clicking a "Bắt đầu kiểm tra" button that doesn't exist in the UI. The actual flow is: click a suggestion card (which fills the textarea), then click the send button. Fixed the test to match.
+
+**Verification:**
+- `npx vitest run` → **84/84 pass** (no regressions from sse-client changes).
+- `npx tsc --noEmit` → **0 errors**.
+- `npx next build` → **success**, all 22 routes compile.
+
+**Status:** Agent streaming now surfaces tool calls and approval gates. E2E test fixed. Committed and pushed to main.

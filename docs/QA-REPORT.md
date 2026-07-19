@@ -87,7 +87,7 @@
 
 ## Known Limitations
 
-1. **WebSocket agent trace** — In single-service deployment, WebSocket may not work through proxy. Agent trace uses polling fallback.
+1. **Agent streaming** — POST+polling implementation (not SSE). Trace fetched when run reaches WAITING_FOR_HUMAN or terminal status to surface tool calls and approval gates.
 2. **Email/Zalo** — Simulated, not real integrations.
 3. **Invoice issuance** — Sandbox only, not production invoice issuance.
 4. **Tax filing** — Export only, no direct tax filing.
@@ -118,4 +118,9 @@ npx playwright test
 
 ## Verification Date
 
-2026-07-20 — All tests passing on commit `ef534c2` (main branch).
+2026-07-20 — All tests passing on commit `460505d` (main branch).
+
+### Changelog
+- **sse-client.ts**: Fixed to fetch `/agents/runs/{id}/trace` when run reaches WAITING_FOR_HUMAN or terminal status, yielding `tool_started`, `tool_completed`, and `approval_required` events.
+- **AssistantWorkspace.tsx**: Added "Bằng chứng, không phải suy nghĩ riêng." tagline to approval section.
+- **agentops.spec.ts**: Updated E2E test to match POST+polling implementation with trace fetching.
