@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import TaxLensError, get_current_user
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
+from app.models.user import User
+from app.routers.notifications import create_notification
 from app.schemas.reconciliation import CaseCreateRequest, CaseResponse, SupportRequest, SupportResponse
 
 router = APIRouter(prefix="/cases", tags=["cases"])
@@ -271,6 +273,22 @@ async def create_support_request(
         status="PENDING",
     )
     db.add(ex)
+
+    # Notify all SHB ops users about the new support case
+    ops_users = await db.execute(
+        select(User).where(User.role == "ops_staff", User.is_active == True)
+    )
+    for ops_user in ops_users.scalars():
+        await create_notification(
+            db,
+            user_id=ops_user.id,
+            merchant_id=body.merchant_id,
+            type="case_update",
+            title=f"Case mới từ merchant {body.merchant_id}",
+            body=f"{case_id}: {body.topic} — {body.description[:100]}",
+            link="/ops/cases",
+        )
+
     await db.commit()
 
     return SupportResponse(
@@ -308,6 +326,23 @@ async def resolve_case(
         )
 
     case.status = body.decision
+
+    # Notify the merchant user that their case has been resolved
+    if case.merchant_id:
+        merchant_users = await db.execute(
+            select(User).where(User.merchant_id == case.merchant_id, User.is_active == True)
+        )
+        for m_user in merchant_users.scalars():
+            await create_notification(
+                db,
+                user_id=m_user.id,
+                merchant_id=case.merchant_id,
+                type="case_update",
+                title=f"Case {case.id} đã được giải quyết",
+                body=f"Case {case.id} cho kỳ {case.period} đã được cập nhật: {body.decision}.",
+                link=f"/support/{case.id}",
+            )
+
     await db.commit()
 
     return {

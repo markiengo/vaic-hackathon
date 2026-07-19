@@ -13,6 +13,8 @@ from app.models.merchant import Merchant
 from app.models.payment import PaymentAllocation
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
 from app.models.transaction import BankTransaction
+from app.models.user import User
+from app.routers.notifications import create_notification
 from app.schemas.reconciliation import ExceptionResolveRequest, ExceptionResolveResponse, ReconcileResponse
 from app.services.allocation import AllocationLeg, AllocationType
 from app.services.matching import MatchMethod
@@ -250,6 +252,24 @@ async def resolve_exception(
         if ex.ai_suggestion is None:
             ex.ai_suggestion = {}
         ex.ai_suggestion = {**ex.ai_suggestion, "human_classification": body.classification}
+
+    # Notify the merchant user that their exception has been resolved
+    if ex.case_id:
+        case = await db.get(ReconciliationCase, ex.case_id)
+        if case and case.merchant_id:
+            merchant_users = await db.execute(
+                select(User).where(User.merchant_id == case.merchant_id, User.is_active == True)
+            )
+            for m_user in merchant_users.scalars():
+                await create_notification(
+                    db,
+                    user_id=m_user.id,
+                    merchant_id=case.merchant_id,
+                    type="exception",
+                    title="Ngoại lệ đã được xử lý",
+                    body=f"Ngoại lệ #{ex.id} đã được xác nhận: {body.decision}.",
+                    link="/exceptions",
+                )
 
     await db.commit()
 
