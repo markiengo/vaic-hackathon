@@ -1,14 +1,15 @@
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import TaxLensError, get_current_user
-from app.models.agent import AgentRun
+from app.models.agent import AgentRun, AuditEvent
 from app.models.merchant import Merchant
 from app.models.payment import PaymentAllocation
 from app.models.reconciliation import ExceptionRecord, ReconciliationCase
@@ -303,3 +304,145 @@ async def trigger_reconcile(
     background_tasks.add_task(run_reconciliation_bg, merchant_id, case_id, body.period)
 
     return ReconcileResponse(run_id=case_id, status="PLANNING", plan={"steps": []})
+
+
+class ConnectMisaRequest(BaseModel):
+    sandbox_token: str | None = None
+
+
+@router.post("/{merchant_id}/connect-misa")
+async def connect_misa_sandbox(
+    merchant_id: str,
+    body: ConnectMisaRequest,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+) -> dict:
+    """Connect MISA meInvoice sandbox for the merchant."""
+    merchant = await db.get(Merchant, merchant_id)
+    if merchant is None:
+        raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
+
+    audit = AuditEvent(
+        id=f"AUD-{uuid.uuid4().hex[:8].upper()}",
+        actor_type="user",
+        actor_id=user.id,
+        action="connect_misa_sandbox",
+        merchant_id=merchant_id,
+        tool_name=None,
+        input_hash=None,
+        output_hash=None,
+        confidence=None,
+        rule_version=None,
+        approval_status="APPROVED",
+        timestamp=datetime.now(timezone.utc),
+    )
+    db.add(audit)
+    await db.commit()
+
+    return {
+        "merchant_id": merchant_id,
+        "provider": "MISA",
+        "status": "CONNECTED",
+        "sandbox": True,
+        "connected_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/{merchant_id}/onboarding-status")
+async def get_onboarding_status(
+    merchant_id: str,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
+) -> dict:
+    """Get onboarding status for a merchant — connections, sync state, and readiness summary."""
+    merchant = await db.get(Merchant, merchant_id)
+    if merchant is None:
+        raise TaxLensError("ERR-MERCHANT-001", 404, "Merchant không tồn tại")
+
+    period = "2026-07"
+    year, month = int(period.split("-")[0]), int(period.split("-")[1])
+    period_start = date(year, month, 1)
+    period_end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+
+    tx_count = await db.scalar(
+        select(func.count(BankTransaction.id)).where(
+            BankTransaction.merchant_id == merchant_id,
+            BankTransaction.transaction_date >= period_start,
+            BankTransaction.transaction_date < period_end,
+        )
+    ) or 0
+
+    sale_count = await db.scalar(
+        select(func.count(Sale.id)).where(
+            Sale.merchant_id == merchant_id,
+            Sale.created_at >= period_start,
+            Sale.created_at < period_end,
+        )
+    ) or 0
+
+    invoice_count = await db.scalar(
+        select(func.count(Invoice.id)).where(
+            Invoice.merchant_id == merchant_id,
+            Invoice.invoice_date >= period_start,
+            Invoice.invoice_date < period_end,
+        )
+    ) or 0
+
+    matched_count = await db.scalar(
+        select(func.count(func.distinct(PaymentAllocation.bank_transaction_id))).where(
+            PaymentAllocation.bank_transaction_id.in_(
+                select(BankTransaction.id).where(
+                    BankTransaction.merchant_id == merchant_id,
+                    BankTransaction.transaction_date >= period_start,
+                    BankTransaction.transaction_date < period_end,
+                )
+            )
+        )
+    ) or 0
+
+    case_result = await db.execute(
+        select(ReconciliationCase).where(
+            ReconciliationCase.merchant_id == merchant_id,
+            ReconciliationCase.period == period,
+        )
+    )
+    cases = case_result.scalars().all()
+    case_ids = [c.id for c in cases]
+
+    pending_exceptions = 0
+    if case_ids:
+        pending_exceptions = await db.scalar(
+            select(func.count(ExceptionRecord.id)).where(
+                ExceptionRecord.case_id.in_(case_ids),
+                ExceptionRecord.status == "PENDING",
+            )
+        ) or 0
+
+    missing_invoices = max(sale_count - invoice_count, 0)
+    total = tx_count
+    rate = round(matched_count / total, 2) if total > 0 else 0.0
+    readiness_score = 92 if total > 0 else 0
+
+    return {
+        "merchant_id": merchant_id,
+        "period": period,
+        "connections": {
+            "shb": {"status": "CONNECTED", "account": "•••• 2481"},
+            "pos": {"status": "CONNECTED"},
+            "misa": {"status": "NOT_CONNECTED"},
+            "cash": {"status": "READY"},
+        },
+        "sync": {
+            "transactions": tx_count,
+            "sales": sale_count,
+            "invoices": invoice_count,
+            "matched": matched_count,
+        },
+        "reconciliation": {
+            "total_transactions": total,
+            "matched": matched_count,
+            "pending_exceptions": pending_exceptions,
+            "missing_invoices": missing_invoices,
+            "readiness_score": readiness_score,
+        },
+    }

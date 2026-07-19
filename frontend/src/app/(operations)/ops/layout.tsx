@@ -1,11 +1,11 @@
 import { AppShell } from "@/components/layout/AppShell";
-import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 export default function OperationsLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppShell workspace="operations">
       {children}
-      <OnboardingTour role="ops" />
+      <OnboardingFlow role="ops" />
     </AppShell>
   );
 }

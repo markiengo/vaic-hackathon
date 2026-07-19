@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { MerchantRealtimeProvider } from "@/components/realtime/MerchantRealtimeProvider";
-import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { ToastProvider } from "@/components/ui";
 
 export default function MerchantLayout({ children }: { children: React.ReactNode }) {
@@ -9,7 +9,7 @@ export default function MerchantLayout({ children }: { children: React.ReactNode
       <MerchantRealtimeProvider>
         <AppShell>
           {children}
-          <OnboardingTour role="merchant" />
+          <OnboardingFlow role="merchant" />
         </AppShell>
       </MerchantRealtimeProvider>
     </ToastProvider>
